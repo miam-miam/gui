@@ -1,0 +1,56 @@
+styles:
+#  - variable:
+#      name: accent
+  - widget: Button
+    properties:
+      colour: "#315dd5"
+      selectedColour: "#3259d9"
+      highlightedColour: "#3359da"
+      disabledColour: "#abb1ee"
+
+  - widget: Text
+    properties:
+      colour: "#ffffff"
+      font: arial
+      size: 12
+
+components:
+  - name: Counter # Names for components must be unique
+    variables:
+      - name: count
+        type: i32
+      - name: disabled_decrement
+        type: bool
+    child:
+      name: VStack  # Widget/Component names with states must be unique for this component
+      type: widget
+      widget: VStack
+      layoutProperties: # Under the hood these settings create a hidden layout widget so that custom widgets do not need to deal with layout.
+        padding: 10
+      properties:
+        spacing: 20
+        children:
+          - name: IncrementBtn
+            widget: Button
+            properties:
+              child:
+                name: IncrText
+                widget: Text
+                properties:
+                  text: Increment # Uses Fluent syntax https://projectfluent.org/
+
+          - name: Count
+            widget: Text
+            properties:
+              text: {$count} # Can use any variable from the component
+
+          - name: DecrementBtn
+            widget: Button
+            properties:
+              child:
+                name: DecrText
+                widget: Text
+                properties:
+                  text: Decrement # Uses Fluent syntax https://projectfluent.org/
+                  disabled:
+                    variable: disabled_decrement

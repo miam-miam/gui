@@ -1,0 +1,175 @@
+styles:
+  #  - variable:
+  #      name: accent
+  - widget: Button
+    properties:
+      colour: "#315dd5"
+      selectedColour: "#3259d9"
+      highlightedColour: "#3359da"
+      disabledColour: "#abb1ee"
+
+  - widget: Text
+    properties:
+      colour: "#ffffff"
+      font: arial
+      size: 12
+
+components:
+  - name: Todo
+    variables:
+      - name: name
+        type: String
+      - name: completed
+        type: bool
+    states:
+      - name: View
+        overrides:
+          - name: HStack
+            properties:
+              children:
+                - name: CompletedBox
+                  widget: Checkbox
+                  properties:
+                    value:
+                      variable: completed
+                - widget: Text
+                  properties:
+                    text: {$name}
+                    widthGrow: true
+                - name: EditBtn
+                  widget: Button
+                  properties:
+                    child:
+                      widget: Image
+                      properties:
+                        height: 20
+                        image: images/pencil.png
+
+      - name: Edit
+        overrides:
+          - name: HStack
+            properties:
+              children:
+                - name: NameInput
+                  widget: TextInput
+                  properties:
+                    text: {$name}
+
+                - name: DeleteBtn
+                  widget: Button
+                  properties:
+                    child:
+                      widget: HStack
+                      properties:
+                        colour: "#c3423f"
+                        children:
+                          - widget: Image
+                            properties:
+                              height: 20
+                              image: images/bin.png
+                          - widget: Text
+                            properties:
+                              text: Delete
+
+    child:
+      name: HStack
+      widget: HStack
+
+  - name: Todos
+    variables:
+      - name: sum_tasks
+        type: u32
+      - name: tasks
+        components: Todo
+    states: # The first state is selected as the default one
+      - name: All
+        overrides:
+          - name: TodoText
+            properties:
+              text: You have not created a task yet
+
+          - name: All
+            properties:
+              colour: "#3259d9"
+
+      - name: Active
+        overrides:
+          - name: TodoText
+            properties:
+              text: All your tasks are done ☺️
+
+          - name: Active
+            properties:
+              colour: "#3259d9"
+
+      - name: Completed
+        overrides:
+          - name: TodoText
+            properties:
+              text: You have not completed a task yet
+
+          - name: Completed
+            properties:
+              colour: "#3259d9"
+
+    child:
+      type: widget
+      widget: VStack
+      properties:
+        spacing: 20
+        children:
+          - widget: Text
+            properties:
+              text: Todos
+
+          - name: TodoDescription
+            widget: TextInput
+            properties:
+              label: What needs to be done?
+
+          - widget: HStack
+            properties:
+              children:
+                - widget: Text
+                  layoutProperties:
+                    widthGrow: true
+                  properties:
+                    text: |
+                      {$sum_tasks ->
+                        [0] No tasks left
+                        [one] A task left
+                        *[other] {$sum_tasks} tasks left
+                      }
+
+                - name: All
+                  widget: Button
+                  properties:
+                    child:
+                      widget: Text
+                      properties:
+                        text: All
+
+                - name: Active
+                  widget: Button
+                  properties:
+                    child:
+                      widget: Text
+                      properties:
+                        text: Active
+
+                - name: Completed
+                  widget: Button
+                  properties:
+                    child:
+                      widget: Text
+                      properties:
+                        text: Completed
+
+          - widget: HList # Spacer is like an Empty but takes as much space as possible
+            properties:
+              component: Todo
+              emptyChild:
+                name: TodoText
+                widget: Text
+              list: tasks
+
