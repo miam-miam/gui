@@ -1,6 +1,4 @@
 styles:
-#  - variable:
-#      name: accent
   - widget: Button
     properties:
       colour: "#315dd5"
@@ -18,14 +16,15 @@ components:
   - name: Counter # Names for components must be unique
     variables:
       - name: count
-        type: i32
+        type: u32
       - name: disabled_decrement
         type: bool
     child:
-      name: VStack  # Widget/Component names with states must be unique for this component
+      name: VStack  # Widget/Component names must be unique for this component
       type: widget
       widget: VStack
-      layoutProperties: # Under the hood these settings create a hidden layout widget so that custom widgets do not need to deal with layout.
+      layoutProperties: # Under the hood these settings create a layout widget
+                        # so that custom widgets do not need to deal with layout.
         padding: 10
       properties:
         spacing: 20
@@ -51,6 +50,6 @@ components:
                 name: DecrText
                 widget: Text
                 properties:
-                  text: Decrement # Uses Fluent syntax https://projectfluent.org/
+                  text: Decrement
                   disabled:
                     variable: disabled_decrement

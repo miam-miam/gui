@@ -1,6 +1,4 @@
 styles:
-  #  - variable:
-  #      name: accent
   - widget: Button
     properties:
       colour: "#315dd5"
@@ -58,10 +56,10 @@ components:
                 - name: DeleteBtn
                   widget: Button
                   properties:
+                    colour: "#c3423f"
                     child:
                       widget: HStack
                       properties:
-                        colour: "#c3423f"
                         children:
                           - widget: Image
                             properties:
@@ -96,7 +94,7 @@ components:
         overrides:
           - name: TodoText
             properties:
-              text: All your tasks are done ☺️
+              text: All your tasks are done
 
           - name: Active
             properties:
@@ -165,7 +163,7 @@ components:
                       properties:
                         text: Completed
 
-          - widget: HList # Spacer is like an Empty but takes as much space as possible
+          - widget: HList
             properties:
               component: Todo
               emptyChild:
