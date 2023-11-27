@@ -1,11 +1,11 @@
 #[derive(Component)]
 struct Counter {
-    count: Invadlidated<u32>,
+    count: Updateable<u32>,
 }
 
-impl Invalidate for gen::Disabled<Counter> {
-    fn is_invalidated(&self)  {
-        count.is_invalidated()
+impl Update for gen::Disabled<Counter> {
+    fn is_updated(&self)  {
+        count.is_updated()
     }
     fn value(&self) -> bool {
         count.value() == 0

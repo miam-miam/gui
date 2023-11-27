@@ -1,17 +1,17 @@
 mod todo {
     #[derive(Component)]
     pub struct Todo {
-        name: Invalidated<String>,
-        completed: Invalidated<bool>,
+        name: Updateable<String>,
+        completed: Updateable<bool>,
         id: usize,
     }
 
     impl Todo {
         pub fn new(todo_name: &str, task_id: usize) -> Todo {
             Todo {
-                state: Invalidated::new(gen::state::Default()),
-                name: Invalidated::new(todo_name.into()),
-                completed: Invalidated::new(false),
+                state: Updateable::new(gen::state::Default()),
+                name: Updateable::new(todo_name.into()),
+                completed: Updateable::new(false),
                 id: task_id,
             }
         }
@@ -47,7 +47,7 @@ mod todo {
 mod todos {
     #[derive(Component, Default)]
     pub struct Todos {
-        tasks: Invalidated<Vec<super::todo::Todo>>,
+        tasks: Updateable<Vec<super::todo::Todo>>,
     }
 
     pub enum Message {
@@ -64,9 +64,9 @@ mod todos {
         }
     }
 
-    impl Invalidate for gen::SumTasks<Todos> {
-        fn invalidated(&self) -> bool {
-            self.tasks.invalidated()
+    impl Update for gen::SumTasks<Todos> {
+        fn is_updated(&self) -> bool {
+            self.tasks.is_updated()
         }
 
         fn value(&self) -> u32 {
@@ -75,8 +75,8 @@ mod todos {
     }
 
     impl TextInputAction for gen::TodoDescription {
-        fn on_submit(&mut self, value: &str) {
-            self.tasks.as_mut().push(super::todo::Todo::new(value, tasks.as_ref().len()));
+        fn on_submit(&mut self, value: &mut String) {
+            self.tasks.as_mut().push(super::todo::Todo::new(&value, tasks.as_ref().len()));
         }
     }
 
