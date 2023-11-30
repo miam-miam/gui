@@ -3,7 +3,7 @@ struct Counter {
     count: Updateable<u32>,
 }
 
-impl Update for gen::Disabled<Counter> {
+impl Update for gen::disabled_decrement {
     fn is_updated(&self)  {
         count.is_updated()
     }
@@ -21,13 +21,13 @@ impl Default for Counter {
     }
 }
 
-impl ButtonAction for gen::IncrementBtn<Counter> {
+impl ButtonAction for gen::IncrementBtn {
     fn on_press(&mut self, _e: MouseEvent) {
         self.count.as_mut() += 1;
     }
 }
 
-impl ButtonAction for gen::DecrementBtn<Counter> {
+impl ButtonAction for gen::DecrementBtn {
     fn on_press(&mut self, _e: MouseEvent) {
         self.count.as_mut() -= 1;
     }

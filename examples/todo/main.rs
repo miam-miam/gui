@@ -50,6 +50,17 @@ mod todos {
         tasks: Updateable<Vec<super::todo::Todo>>,
     }
 
+    impl Update for gen::sum_tasks {
+        fn is_updated(&self) -> bool {
+            self.tasks.is_updated()
+        }
+
+        fn value(&self) -> u32 {
+            &self.tasks.value().iter().filter(|t| !t.completed).sum()
+        }
+    }
+
+
     pub enum Message {
         RemoveTask(usize)
     }
@@ -63,17 +74,6 @@ mod todos {
             }
         }
     }
-
-    impl Update for gen::SumTasks<Todos> {
-        fn is_updated(&self) -> bool {
-            self.tasks.is_updated()
-        }
-
-        fn value(&self) -> u32 {
-            &self.tasks.value().iter().filter(|t| !t.completed).sum()
-        }
-    }
-
     impl TextInputAction for gen::TodoDescription {
         fn on_submit(&mut self, value: &mut String) {
             self.tasks.as_mut().push(super::todo::Todo::new(&value, tasks.as_ref().len()));
