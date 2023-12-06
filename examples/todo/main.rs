@@ -1,4 +1,6 @@
 mod todo {
+    use super::todos::Message;
+
     #[derive(Component)]
     pub struct Todo {
         name: Updateable<String>,
@@ -31,7 +33,7 @@ mod todo {
 
     impl ButtonAction for gen::DeleteBtn {
         fn on_press(&mut self, e: MouseEvent) {
-            e.ctx().send_message(super::todos::Message::RemoveTask(self.id));
+            e.ctx().send_message(Message::RemoveTask(self.id));
         }
     }
 
@@ -45,9 +47,11 @@ mod todo {
 
 // Must be in separate modules due to #[derive(Component)] generating a mod gen.
 mod todos {
+    use super::todo::Todo;
+
     #[derive(Component, Default)]
     pub struct Todos {
-        tasks: Updateable<Vec<super::todo::Todo>>,
+        tasks: Updateable<Vec<Todo>>,
     }
 
     impl Update for gen::sum_tasks {
@@ -56,7 +60,9 @@ mod todos {
         }
 
         fn value(&self) -> u32 {
-            &self.tasks.value().iter().filter(|t| !t.completed).sum()
+            &self.tasks.value().iter()
+                .filter(|t| !t.completed)
+                .sum()
         }
     }
 
@@ -76,7 +82,8 @@ mod todos {
     }
     impl TextInputAction for gen::TodoDescription {
         fn on_submit(&mut self, value: &mut String) {
-            self.tasks.as_mut().push(super::todo::Todo::new(&value, tasks.as_ref().len()));
+            self.tasks.as_mut()
+                .push(Todo::new(&value, tasks.as_ref().len()));
         }
     }
 
