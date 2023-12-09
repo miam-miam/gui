@@ -1,3 +1,1 @@
-pub trait Widget {
-    pub fn
-}
+pub trait Widget {}
