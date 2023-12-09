@@ -56,4 +56,4 @@ jobs:
         run: printf '[target.x86_64-unknown-linux-gnu]\nlinker = "clang"\nrustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]' > ~/.cargo/config.toml
 
       - name: Test
-        run: cargo test
+        run: cargo test --all
