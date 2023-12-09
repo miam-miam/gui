@@ -60,15 +60,12 @@ mod todos {
         }
 
         fn value(&self) -> u32 {
-            &self.tasks.value().iter()
-                .filter(|t| !t.completed)
-                .sum()
+            &self.tasks.value().iter().filter(|t| !t.completed).sum()
         }
     }
 
-
     pub enum Message {
-        RemoveTask(usize)
+        RemoveTask(usize),
     }
 
     impl OnMessage<Message> for Todos {
@@ -82,7 +79,8 @@ mod todos {
     }
     impl TextInputAction for gen::TodoDescription {
         fn on_submit(&mut self, value: &mut String) {
-            self.tasks.as_mut()
+            self.tasks
+                .as_mut()
                 .push(Todo::new(&value, tasks.as_ref().len()));
         }
     }

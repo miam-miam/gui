@@ -4,7 +4,7 @@ struct Counter {
 }
 
 impl Update for gen::disabled_decrement {
-    fn is_updated(&self)  {
+    fn is_updated(&self) {
         count.is_updated()
     }
     fn value(&self) -> bool {
@@ -12,12 +12,9 @@ impl Update for gen::disabled_decrement {
     }
 }
 
-
 impl Default for Counter {
     fn default() -> Counter {
-        Counter {
-            count: 0.into(),
-        }
+        Counter { count: 0.into() }
     }
 }
 
