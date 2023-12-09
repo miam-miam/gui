@@ -1,0 +1,59 @@
+name: Test CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  RUST_BACKTRACE: short
+  CARGO_TERM_COLOR: always
+
+jobs:
+  Lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Dependencies (ubuntu only)
+        run: |
+          sudo apt-get update
+          sudo apt-get install pkg-config clang libwayland-dev libxkbcommon-x11-dev libvulkan-dev
+
+      - name: Lint fmt
+        run: cargo fmt --all -- --check
+
+      - name: Lint clippy
+        if: always()
+        run: cargo clippy -- -D warnings
+
+  Test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Dependencies (ubuntu only)
+        run: |
+          sudo apt-get update
+          sudo apt-get install pkg-config clang libwayland-dev libxkbcommon-x11-dev libvulkan-dev mold
+
+      - name: Use mold as linker
+        run: printf '[target.x86_64-unknown-linux-gnu]\nlinker = "clang"\nrustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]' > ~/.cargo/config.toml
+
+      - name: Test
+        run: cargo test
