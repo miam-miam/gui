@@ -1,4 +1,9 @@
-mod widget;
+pub mod common;
+pub mod parse;
+pub mod widget;
+
+pub use parse::colour::Colour;
+pub use parse::var::Var;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right

@@ -1,14 +1,12 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+mod text;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    fn parse_simple() {
+        let yaml = include_str!("simple.yaml");
+        let ser: gui_core::parse::GUIDeclaration =
+            serde_yaml::from_str(yaml).expect("TODO: panic message");
+        dbg!(ser);
     }
 }
