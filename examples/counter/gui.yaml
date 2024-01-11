@@ -21,7 +21,6 @@ components:
         type: bool
     child:
       name: VStack  # Widget/Component names must be unique for this component
-      type: widget
       widget: VStack
       layoutProperties: # Under the hood these settings create a layout widget
                         # so that custom widgets do not need to deal with layout.
@@ -46,10 +45,10 @@ components:
           - name: DecrementBtn
             widget: Button
             properties:
+              disabled:
+                variable: disabled_decrement
               child:
                 name: DecrText
                 widget: Text
                 properties:
                   text: Decrement
-                  disabled:
-                    variable: disabled_decrement

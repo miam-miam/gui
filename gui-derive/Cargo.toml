@@ -10,3 +10,4 @@ proc-macro = true
 
 
 [dependencies]
+gui-core = { version = "0.1.0", path = "./../gui-core" }

@@ -1,0 +1,13 @@
+styles:
+  - widget: Text
+    properties:
+      colour: "#ffffff"
+      size: 12
+
+components:
+  - name: Counter # Names for components must be unique
+    child:
+      name: Count
+      widget: Text
+      properties:
+        text: Hi

@@ -1,0 +1,20 @@
+styles:
+  - widget: Text
+    properties:
+      colour: "#ffff00"
+      size: 12
+
+components:
+  - name: Counter # Names for components must be unique
+    variables:
+      - name: test
+        type: String
+    child:
+      name: Count
+      widget: Text
+      properties:
+        text:
+          variable:
+            test
+        size: 15
+#        colour: "#00ff00"
