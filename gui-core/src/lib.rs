@@ -12,6 +12,28 @@ pub use vello;
 pub use parley::font::FontContext;
 pub use vello::SceneBuilder;
 
+struct TestBoxable {
+    test: Box<dyn Component>,
+}
+
+pub trait Component {
+    fn new() -> Self
+    where
+        Self: Sized;
+    fn render(&mut self, scene: SceneBuilder, fcx: &mut FontContext);
+
+    fn update_vars(&mut self, force_update: bool);
+}
+
+pub trait Variable {
+    type VarType;
+}
+
+pub trait Update<T: Variable> {
+    fn is_updated(&self) -> bool;
+    fn value(&self) -> T::VarType;
+}
+
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }

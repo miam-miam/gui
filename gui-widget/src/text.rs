@@ -37,11 +37,21 @@ impl Text {
         ))));
         self.layout = Some(layout_builder.build());
     }
+
+    pub fn set_text(&mut self, text: String) {
+        if self.text != text {
+            self.text = text;
+            self.layout = None;
+        }
+    }
 }
 
 impl Widget for Text {
     fn render(&mut self, mut scene: SceneBuilder, fcx: &mut FontContext) {
         if self.layout.is_none() {
+            if self.text.is_empty() {
+                return;
+            }
             self.build(fcx);
         }
 
@@ -96,9 +106,9 @@ impl WidgetBuilder for TextBuilder {
             ::gui_widget::Text::new(String::from(#text), #colour, #size)
         });
     }
-    fn on_var_update(&self, widget: Ident, var: &str, value: Ident, stream: &mut TokenStream) {
+    fn on_var_update(&self, widget: &Ident, var: &str, value: &Ident, stream: &mut TokenStream) {
         match &self.text {
-            Some(Var::Variable(v)) if v == var => stream.extend(quote! {#widget::set_text(#value)}),
+            Some(Var::Variable(v)) if v == var => stream.extend(quote! {#widget.set_text(#value)}),
             _ => {}
         }
     }

@@ -6,8 +6,7 @@ use gui_core::glazier::{
 use gui_core::vello::peniko::Color;
 use gui_core::vello::util::{RenderContext, RenderSurface};
 use gui_core::vello::{RenderParams, Renderer, RendererOptions, Scene};
-use gui_core::widget::Widget;
-use gui_core::{FontContext, SceneBuilder};
+use gui_core::{Component, FontContext, SceneBuilder};
 use std::any::Any;
 use tracing_subscriber::EnvFilter;
 
@@ -16,21 +15,21 @@ pub use gui_core;
 const WIDTH: usize = 2048;
 const HEIGHT: usize = 1536;
 
-pub fn run<W: Widget + 'static>(widget: W) {
+pub fn run<C: Component + 'static>(component: C) {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .init();
     let app = Application::new().unwrap();
     let window = WindowBuilder::new(app.clone())
         .size((WIDTH as f64 / 2., HEIGHT as f64 / 2.).into())
-        .handler(Box::new(WindowState::new(widget)))
+        .handler(Box::new(WindowState::new(component)))
         .build()
         .unwrap();
     window.show();
     app.run(None);
 }
 
-struct WindowState<W: Widget + 'static> {
+struct WindowState<C: Component + 'static> {
     handle: WindowHandle,
     renderer: Option<Renderer>,
     render: RenderContext,
@@ -38,11 +37,11 @@ struct WindowState<W: Widget + 'static> {
     scene: Scene,
     size: Size,
     font_context: FontContext,
-    widget: W,
+    component: C,
 }
 
-impl<W: Widget> WindowState<W> {
-    pub fn new(widget: W) -> Self {
+impl<C: Component> WindowState<C> {
+    pub fn new(component: C) -> Self {
         let render = RenderContext::new().unwrap();
         Self {
             handle: Default::default(),
@@ -51,7 +50,7 @@ impl<W: Widget> WindowState<W> {
             render,
             scene: Default::default(),
             font_context: FontContext::new(),
-            widget,
+            component,
             size: Size::new(800.0, 600.0),
         }
     }
@@ -80,7 +79,7 @@ impl<W: Widget> WindowState<W> {
         }
 
         let sb = SceneBuilder::for_scene(&mut self.scene);
-        self.widget.render(sb, &mut self.font_context);
+        self.component.render(sb, &mut self.font_context);
 
         if let Some(surface) = self.surface.as_mut() {
             if surface.config.width != width || surface.config.height != height {
@@ -108,9 +107,10 @@ impl<W: Widget> WindowState<W> {
     }
 }
 
-impl<W: Widget + 'static> WinHandler for WindowState<W> {
+impl<C: Component + 'static> WinHandler for WindowState<C> {
     fn connect(&mut self, handle: &WindowHandle) {
         self.handle = handle.clone();
+        self.component.update_vars(true);
         self.schedule_render();
     }
 
@@ -118,7 +118,9 @@ impl<W: Widget + 'static> WinHandler for WindowState<W> {
         self.size = size;
     }
 
-    fn prepare_paint(&mut self) {}
+    fn prepare_paint(&mut self) {
+        self.component.update_vars(false);
+    }
 
     fn paint(&mut self, _: &Region) {
         self.render();
@@ -148,9 +150,9 @@ impl<W: Widget + 'static> WinHandler for WindowState<W> {
         println!("wheel {event:?}");
     }
 
-    fn pointer_move(&mut self, event: &PointerEvent) {
+    fn pointer_move(&mut self, _event: &PointerEvent) {
         // self.handle.set_cursor(&Cursor::Arrow);
-        println!("pointer_move {event:?}");
+        // println!("pointer_move {event:?}");
     }
 
     fn pointer_down(&mut self, event: &PointerEvent) {

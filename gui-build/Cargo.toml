@@ -10,3 +10,4 @@ gui-core = { version = "0.1.0", path = "./../gui-core" }
 serde_yaml = "0.9.30"
 anyhow = "1.0.79"
 proc-macro2 = "1.0.76"
+quote = "1.0.35"
