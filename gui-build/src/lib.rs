@@ -64,7 +64,6 @@ fn create_component(out_dir: &Path, component: &mut ComponentDeclaration) -> any
     component.child.widget.create_widget(&mut stream);
 
     let path = Path::new(&out_dir).join(format!("{}.rs", component.name));
-    let comp_name = Ident::new(&component.name, Span::call_site());
 
     let update_vars: TokenStream = component
         .variables
@@ -123,7 +122,7 @@ fn create_component(out_dir: &Path, component: &mut ComponentDeclaration) -> any
                     use gui::gui_core::{Update, Variable, Component};
                     use gui::gui_core::vello::SceneBuilder;
                     use gui::gui_core::parley::font::FontContext;
-                    use super::#comp_name as CompStruct;
+                    use super::CompStruct;
 
                     #struct_vars
 

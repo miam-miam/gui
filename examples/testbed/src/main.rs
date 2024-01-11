@@ -4,6 +4,8 @@ use rand::distributions::{Alphanumeric, DistString};
 struct Counter {
     widget: ::gui_widget::Text,
 }
+use Counter as CompStruct;
+
 include!(concat!(env!("OUT_DIR"), "/Counter.rs"));
 impl Update<gen::test> for Counter {
     fn is_updated(&self) -> bool {
