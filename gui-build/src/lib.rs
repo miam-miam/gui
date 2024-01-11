@@ -1,4 +1,5 @@
 use anyhow::{anyhow, bail};
+use fluent_bundle::{FluentBundle, FluentResource};
 use gui_core::parse::{ComponentDeclaration, GUIDeclaration, VariableDeclaration};
 use gui_core::widget::AsAny;
 use proc_macro2::{Ident, Span, TokenStream};
@@ -9,6 +10,7 @@ use std::fs::File;
 use std::path::Path;
 use std::str::FromStr;
 use std::{env, fs};
+use unic_langid::LanguageIdentifier;
 
 pub fn build<P: AsRef<Path>>(path: P) {
     build_path(path.as_ref()).unwrap()
@@ -22,6 +24,9 @@ fn build_path(path: &Path) -> anyhow::Result<()> {
     let out_dir = env::var_os("OUT_DIR").ok_or_else(|| anyhow!("could not find OUT_DIR env"))?;
     let path = Path::new(&out_dir);
     let mut ser: GUIDeclaration = serde_yaml::from_reader(file)?;
+
+    let lang_id: LanguageIdentifier = "en-GB".parse()?;
+    let mut bundle = FluentBundle::<FluentResource>::new(vec![lang_id]);
 
     combine_styles(&mut ser)?;
 

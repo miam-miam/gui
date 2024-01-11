@@ -1,6 +1,8 @@
 pub mod colour;
 pub mod var;
 
+pub mod fluent;
+
 use crate::widget::WidgetBuilder;
 use serde::Deserialize;
 

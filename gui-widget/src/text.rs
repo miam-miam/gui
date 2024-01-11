@@ -3,6 +3,7 @@ use gui_core::common::text::ParleyBrush;
 use gui_core::parley::layout::Layout;
 use gui_core::parley::style::StyleProperty;
 use gui_core::parley::{layout, LayoutContext};
+use gui_core::parse::fluent::Fluent;
 use gui_core::vello::kurbo::Affine;
 use gui_core::vello::peniko::Brush;
 use gui_core::widget::{Widget, WidgetBuilder};
@@ -64,7 +65,7 @@ impl Widget for Text {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct TextBuilder {
-    pub text: Option<Var<String>>,
+    pub text: Option<Fluent>,
     pub colour: Option<Var<Colour>>,
     pub size: Option<Var<f32>>,
 }
@@ -90,7 +91,7 @@ impl WidgetBuilder for TextBuilder {
 
     fn create_widget(&self, stream: &mut TokenStream) {
         let text = match &self.text {
-            Some(Var::Value(v)) => v.to_token_stream(),
+            // Some(Var::Value(v)) => v.to_token_stream(),
             _ => "".to_token_stream(),
         };
         let colour = match &self.colour {
@@ -107,9 +108,9 @@ impl WidgetBuilder for TextBuilder {
         });
     }
     fn on_var_update(&self, widget: &Ident, var: &str, value: &Ident, stream: &mut TokenStream) {
-        match &self.text {
-            Some(Var::Variable(v)) if v == var => stream.extend(quote! {#widget.set_text(#value)}),
-            _ => {}
-        }
+        // match &self.text {
+        //     Some(Var::Variable(v)) if v == var => stream.extend(quote! {#widget.set_text(#value)}),
+        //     _ => {}
+        // }
     }
 }

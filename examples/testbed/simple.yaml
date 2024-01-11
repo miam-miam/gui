@@ -6,15 +6,10 @@ styles:
 
 components:
   - name: Counter # Names for components must be unique
-    variables:
-      - name: test
-        type: String
     child:
       name: Count
       widget: Text
       properties:
-        text:
-          variable:
-            test
+        text: Hiya
         size: 15
 #        colour: "#00ff00"
