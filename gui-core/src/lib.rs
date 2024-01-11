@@ -12,6 +12,7 @@ pub use vello;
 pub use parley::font::FontContext;
 pub use vello::SceneBuilder;
 
+#[allow(dead_code)]
 struct TestBoxable {
     test: Box<dyn Component>,
 }

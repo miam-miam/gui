@@ -2,7 +2,6 @@ styles:
   - widget: Text
     properties:
       colour: "#ffffff"
-      font: arial
       size: 12
 
 components:
