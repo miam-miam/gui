@@ -6,8 +6,8 @@ use std::fmt::Formatter;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Fluent {
-    vars: Vec<String>,
-    text: String,
+    pub vars: Vec<String>,
+    pub text: String,
 }
 
 struct FluentVisitor;

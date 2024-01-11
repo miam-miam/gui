@@ -113,4 +113,8 @@ impl WidgetBuilder for TextBuilder {
         //     _ => {}
         // }
     }
+
+    fn get_fluents(&self) -> Vec<(&'static str, &Fluent)> {
+        self.text.iter().map(|f| ("text", f)).collect()
+    }
 }

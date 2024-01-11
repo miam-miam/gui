@@ -2,6 +2,7 @@ use parley::FontContext;
 use proc_macro2::{Ident, TokenStream};
 use std::any::Any;
 use vello::SceneBuilder;
+use crate::parse::fluent::Fluent;
 
 pub trait Widget {
     fn render(&mut self, scene: SceneBuilder, fcx: &mut FontContext);
@@ -24,4 +25,7 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny {
     fn combine(&mut self, rhs: &dyn WidgetBuilder);
     fn create_widget(&self, stream: &mut TokenStream);
     fn on_var_update(&self, widget: &Ident, var: &str, value: &Ident, stream: &mut TokenStream);
+    
+    // (property_name, fluent)
+    fn get_fluents(&self) -> Vec<(&'static str, &Fluent)>;
 }

@@ -13,3 +13,4 @@ proc-macro2 = "1.0.76"
 quote = "1.0.35"
 unic-langid = "0.9.4"
 fluent-bundle = "0.15.2"
+gui-widget = {path = "./../gui-widget"}

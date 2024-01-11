@@ -12,6 +12,8 @@ use std::str::FromStr;
 use std::{env, fs};
 use unic_langid::LanguageIdentifier;
 
+extern crate gui_widget;
+
 pub fn build<P: AsRef<Path>>(path: P) {
     build_path(path.as_ref()).unwrap()
 }
@@ -25,15 +27,42 @@ fn build_path(path: &Path) -> anyhow::Result<()> {
     let path = Path::new(&out_dir);
     let mut ser: GUIDeclaration = serde_yaml::from_reader(file)?;
 
+    combine_styles(&mut ser)?;
+
     let lang_id: LanguageIdentifier = "en-GB".parse()?;
     let mut bundle = FluentBundle::<FluentResource>::new(vec![lang_id]);
-
-    combine_styles(&mut ser)?;
+    for component in ser.components.iter() {
+        populate_bundle(&mut bundle, component)?;
+    }
 
     for component in ser.components.iter_mut() {
         create_component(path, component)?;
     }
 
+    Ok(())
+}
+
+fn populate_bundle(
+    bundle: &mut FluentBundle<FluentResource>,
+    component: &ComponentDeclaration,
+) -> anyhow::Result<()> {
+    for (property_name, fluent) in component.child.widget.get_fluents() {
+        let fluent_name = format!(
+            "{}-{}-{}",
+            component.name,
+            component
+                .child
+                .name
+                .as_ref()
+                .map_or_else(|| component.child.widget.name(), |s| s.as_str()),
+            property_name
+        );
+        let resource = FluentResource::try_new(format!("{fluent_name} = {}", fluent.text))
+            .map_err(|(_, e)| anyhow!("unable to parse fluent resource: {:?}", e))?;
+        bundle
+            .add_resource(resource)
+            .map_err(|e| anyhow!("unable to add fluent resource: {:?}", e))?;
+    }
     Ok(())
 }
 
