@@ -1,8 +1,7 @@
 styles:
   - widget: Text
     properties:
-      colour: "#ffffff"
-      font: arial
+      colour: "#ffff00"
       size: 12
 
 components:
@@ -12,3 +11,5 @@ components:
       widget: Text
       properties:
         text: Hi Alec!
+        size: 15
+#        colour: "#00ff00"

@@ -20,6 +20,7 @@ impl<T: Any> AsAny for T {
 
 #[typetag::deserialize(tag = "widget", content = "properties")]
 pub trait WidgetBuilder: std::fmt::Debug + AsAny {
+    fn name(&self) -> &'static str;
     fn combine(&mut self, rhs: &dyn WidgetBuilder);
     fn create_widget(&self, stream: &mut TokenStream);
     fn on_var_update(&self, widget: Ident, var: &str, value: Ident, stream: &mut TokenStream);

@@ -11,6 +11,8 @@ use gui_core::{FontContext, SceneBuilder};
 use std::any::Any;
 use tracing_subscriber::EnvFilter;
 
+pub use gui_core;
+
 const WIDTH: usize = 2048;
 const HEIGHT: usize = 1536;
 

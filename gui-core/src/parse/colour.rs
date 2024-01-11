@@ -1,9 +1,27 @@
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
 use serde::de::{Error, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::fmt::Formatter;
 
 #[derive(Debug, Copy, Clone, Default)]
-pub struct Colour(vello::peniko::Color);
+pub struct Colour(pub vello::peniko::Color);
+
+impl ToTokens for Colour {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let r = self.0.r;
+        let g = self.0.g;
+        let b = self.0.b;
+        let a = self.0.a;
+        tokens.extend(quote!(::gui::gui_core::Colour::rgba8(#r, #g, #b, #a)))
+    }
+}
+
+impl Colour {
+    pub const fn rgba8(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Colour(vello::peniko::Color { r, g, b, a })
+    }
+}
 
 struct ColourVisitor;
 
