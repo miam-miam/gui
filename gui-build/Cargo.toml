@@ -1,5 +1,5 @@
 [package]
-name = "gui-widget"
+name = "gui-build"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,5 @@ edition = "2021"
 [dependencies]
 gui-core = { version = "0.1.0", path = "./../gui-core" }
 serde_yaml = "0.9.30"
-typetag = "0.2.15"
-serde = { version = "1.0.195", features = ["derive"] }
-proc-macro2 = { version = "1.0.76", features = [] }
-quote = "1.0.35"
+anyhow = "1.0.79"
+proc-macro2 = "1.0.76"

@@ -2,7 +2,7 @@ use serde::de::{Error, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::fmt::Formatter;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Colour(vello::peniko::Color);
 
 struct ColourVisitor;

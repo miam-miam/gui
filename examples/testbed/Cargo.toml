@@ -1,0 +1,14 @@
+[package]
+name = "testbed"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+gui = {path = "../../."}
+gui-widget = {path = "../../gui-widget"}
+
+[build-dependencies]
+gui-build = {path = "../../gui-build"}
+gui-widget = {path = "../../gui-widget"}

@@ -45,10 +45,10 @@ components:
           - name: DecrementBtn
             widget: Button
             properties:
+              disabled:
+                variable: disabled_decrement
               child:
                 name: DecrText
                 widget: Text
                 properties:
                   text: Decrement
-                  disabled:
-                    variable: disabled_decrement

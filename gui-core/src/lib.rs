@@ -5,6 +5,13 @@ pub mod widget;
 pub use parse::colour::Colour;
 pub use parse::var::Var;
 
+pub use glazier;
+pub use parley;
+pub use vello;
+
+pub use parley::font::FontContext;
+pub use vello::SceneBuilder;
+
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }

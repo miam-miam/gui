@@ -1,5 +1,7 @@
 mod text;
 
+pub use text::Text;
+
 #[cfg(test)]
 mod tests {
     #[test]

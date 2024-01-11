@@ -11,4 +11,4 @@ components:
       name: Count
       widget: Text
       properties:
-        text: Hi
+        text: Hi Alec!

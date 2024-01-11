@@ -12,3 +12,4 @@ glazier = { git = "https://github.com/linebender/glazier/", rev = "b79dd1b4daf63
 typetag = "0.2.15"
 serde = { version = "1.0.195", features = ["derive"] }
 serde_yaml = "0.9.30"
+proc-macro2 = "1.0.76"
