@@ -23,3 +23,6 @@ gui-widget = { version = "0.1.0", path = "./gui-widget" }
 instant = "0.1.12"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 pollster = "0.3.0"
+fluent-bundle = "0.15.2"
+unic-langid = { version = "0.9.4", features = ["unic-langid-macros"] }
+intl-memoizer = "0.5.1"

@@ -1,5 +1,6 @@
 use fluent_syntax::ast::{Entry, Expression, InlineExpression, Message, Pattern, PatternElement};
 use fluent_syntax::parser;
+use itertools::Itertools;
 use serde::de::{Error, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::fmt::Formatter;
@@ -35,6 +36,7 @@ fn get_vars(pattern: &Pattern<String>) -> Vec<String> {
             }
             None
         })
+        .unique()
         .collect()
 }
 
@@ -91,7 +93,7 @@ mod test {
     #[test]
     fn check_fluent_yaml_parsing() {
         let yaml = r#"test: Hello, {$userName}!
-just_var: "{$user}"
+just_var: "{$user} {$user}"
 complex_test: |
     {$userName} {$photoCount ->
         [one] added a new photo
@@ -116,7 +118,7 @@ complex_test: |
             ser.get("just_var"),
             Some(&Fluent {
                 vars: vec![String::from("user")],
-                text: String::from("{$user}")
+                text: String::from("{$user} {$user}")
             })
         );
 

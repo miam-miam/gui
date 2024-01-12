@@ -10,7 +10,11 @@ use gui_core::{Component, FontContext, SceneBuilder};
 use std::any::Any;
 use tracing_subscriber::EnvFilter;
 
+pub type FluentBundle<R> =
+    fluent_bundle::bundle::FluentBundle<R, intl_memoizer::concurrent::IntlLangMemoizer>;
+pub use fluent_bundle::{FluentArgs, FluentMessage, FluentResource};
 pub use gui_core;
+pub use unic_langid::langid;
 
 const WIDTH: usize = 2048;
 const HEIGHT: usize = 1536;

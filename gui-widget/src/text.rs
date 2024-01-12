@@ -11,6 +11,7 @@ use gui_core::{Colour, FontContext, SceneBuilder, Var};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
+use std::borrow::Cow;
 
 pub struct Text {
     text: String,
@@ -39,9 +40,9 @@ impl Text {
         self.layout = Some(layout_builder.build());
     }
 
-    pub fn set_text(&mut self, text: String) {
+    pub fn set_text(&mut self, text: Cow<'_, str>) {
         if self.text != text {
-            self.text = text;
+            self.text = text.into_owned();
             self.layout = None;
         }
     }
@@ -90,10 +91,6 @@ impl WidgetBuilder for TextBuilder {
     }
 
     fn create_widget(&self, stream: &mut TokenStream) {
-        let text = match &self.text {
-            // Some(Var::Value(v)) => v.to_token_stream(),
-            _ => "".to_token_stream(),
-        };
         let colour = match &self.colour {
             Some(Var::Value(v)) => v.to_token_stream(),
             _ => Colour::default().to_token_stream(),
@@ -104,17 +101,37 @@ impl WidgetBuilder for TextBuilder {
         };
 
         stream.extend(quote! {
-            ::gui_widget::Text::new(String::from(#text), #colour, #size)
+            ::gui_widget::Text::new(String::new(), #colour, #size)
         });
     }
-    fn on_var_update(&self, widget: &Ident, var: &str, value: &Ident, stream: &mut TokenStream) {
-        // match &self.text {
-        //     Some(Var::Variable(v)) if v == var => stream.extend(quote! {#widget.set_text(#value)}),
-        //     _ => {}
-        // }
+
+    fn on_property_update(
+        &self,
+        property: &'static str,
+        widget: &Ident,
+        value: &Ident,
+        stream: &mut TokenStream,
+    ) {
+        match property {
+            "text" => stream.extend(quote! {#widget.set_text(#value)}),
+            "colour" => {}
+            "size" => {}
+            _ => {}
+        }
     }
 
     fn get_fluents(&self) -> Vec<(&'static str, &Fluent)> {
         self.text.iter().map(|f| ("text", f)).collect()
+    }
+
+    fn get_vars(&self) -> Vec<(&'static str, &str)> {
+        let mut array = vec![];
+        if let Some(Var::Variable(v)) = &self.colour {
+            array.push(("colour", v.as_str()));
+        }
+        if let Some(Var::Variable(v)) = &self.size {
+            array.push(("size", v.as_str()));
+        }
+        array
     }
 }

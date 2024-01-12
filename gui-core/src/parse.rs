@@ -20,7 +20,7 @@ pub struct LayoutDeclaration {
     pub padding: u32,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Eq, PartialEq, Hash)]
 pub struct NormalVariableDeclaration {
     pub name: String,
     #[serde(rename = "type")]
