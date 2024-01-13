@@ -1,6 +1,5 @@
-use gui::gui_core::{Component, Update};
+use gui::gui_core::Update;
 
-#[derive(Default)]
 struct Counter;
 use Counter as __private_CompStruct;
 include!(concat!(env!("OUT_DIR"), "/Counter.rs"));
@@ -15,5 +14,5 @@ impl Update<gen::name> for Counter {
 }
 
 fn main() {
-    gui::run(gen::CounterHolder::new())
+    gui::run(Counter)
 }

@@ -18,12 +18,14 @@ struct TestBoxable {
 }
 
 pub trait Component {
-    fn new() -> Self
-    where
-        Self: Sized;
     fn render(&mut self, scene: SceneBuilder, fcx: &mut FontContext);
 
     fn update_vars(&mut self, force_update: bool);
+}
+
+pub trait ToComponent {
+    type Component: Component;
+    fn to_component_holder(self) -> Self::Component;
 }
 
 pub trait Variable {
