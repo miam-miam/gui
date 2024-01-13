@@ -33,7 +33,7 @@ jobs:
 
       - name: Lint clippy
         if: always()
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all -- -D warnings
 
   Test:
     runs-on: ubuntu-latest
