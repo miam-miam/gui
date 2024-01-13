@@ -109,9 +109,10 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let rs_path = Path::new(&out_dir).join(format!("{}.rs", component.name));
 
     let gen_module = quote! {
+        #[allow(clippy::suspicious_else_formatting)]
         mod gen {
             use gui::gui_core::widget::Widget;
-            use gui::gui_core::{Update, Variable, Component};
+            use gui::gui_core::{Update, Variable, Component, ToComponent};
             use gui::gui_core::vello::SceneBuilder;
             use gui::gui_core::parley::font::FontContext;
             use super::__private_CompStruct as CompStruct;
@@ -128,15 +129,20 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             }
 
             #[automatically_derived]
-            impl Component for #component_holder {
-                fn new() -> Self where Self: Sized {
+            impl ToComponent for CompStruct {
+                type Component = #component_holder;
+
+                fn to_component_holder(self) -> Self::Component {
                     #component_holder {
                         widget: #widget_init,
-                        comp_struct: <CompStruct as Default>::default(),
+                        comp_struct: self,
                         #( #fluent_arg_idents: FluentArgs::new() ),*
                     }
                 }
+            }
 
+            #[automatically_derived]
+            impl Component for #component_holder {
                 fn render(&mut self, scene: SceneBuilder, fcx: &mut FontContext) {
                     self.widget.render(scene, fcx);
                 }
@@ -249,7 +255,7 @@ fn gen_bundle_function() -> TokenStream {
             use gui::langid;
 
             static BUNDLE: OnceLock<FluentBundle<FluentResource>> = OnceLock::new();
-            const FTL_STRING: &'static str = include_str!(concat!(env!("OUT_DIR"), "/Counter.ftl"));
+            const FTL_STRING: &str = include_str!(concat!(env!("OUT_DIR"), "/Counter.ftl"));
             let mut errors = vec![];
             let bundle = BUNDLE.get_or_init(|| {
                 let mut bundle = FluentBundle::new_concurrent(vec![langid!("en-GB")]);
@@ -260,7 +266,7 @@ fn gen_bundle_function() -> TokenStream {
             });
             let message = bundle.get_message(message).expect("Message exists.");
             let pattern = message.value().expect("Value exists.");
-            bundle.format_pattern(&pattern, args, &mut errors)
+            bundle.format_pattern(pattern, args, &mut errors)
         }
     }
 }

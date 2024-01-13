@@ -6,7 +6,7 @@ use gui_core::glazier::{
 use gui_core::vello::peniko::Color;
 use gui_core::vello::util::{RenderContext, RenderSurface};
 use gui_core::vello::{RenderParams, Renderer, RendererOptions, Scene};
-use gui_core::{Component, FontContext, SceneBuilder};
+use gui_core::{Component, FontContext, SceneBuilder, ToComponent};
 use std::any::Any;
 use tracing_subscriber::EnvFilter;
 
@@ -19,14 +19,17 @@ pub use unic_langid::langid;
 const WIDTH: usize = 2048;
 const HEIGHT: usize = 1536;
 
-pub fn run<C: Component + 'static>(component: C) {
+pub fn run<T: ToComponent>(component: T)
+where
+    <T as ToComponent>::Component: 'static,
+{
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .init();
     let app = Application::new().unwrap();
     let window = WindowBuilder::new(app.clone())
         .size((WIDTH as f64 / 2., HEIGHT as f64 / 2.).into())
-        .handler(Box::new(WindowState::new(component)))
+        .handler(Box::new(WindowState::new(component.to_component_holder())))
         .build()
         .unwrap();
     window.show();
