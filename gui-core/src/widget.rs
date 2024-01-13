@@ -1,5 +1,4 @@
 use crate::parse::fluent::Fluent;
-use parley::swash::text::Properties;
 use parley::FontContext;
 use proc_macro2::{Ident, TokenStream};
 use std::any::Any;
