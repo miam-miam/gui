@@ -7,14 +7,12 @@ styles:
 components:
   - name: Counter # Names for components must be unique
     variables:
-      - name: test
+      - name: name
         type: String
     child:
       name: Count
       widget: Text
       properties:
-        text:
-          variable:
-            test
-        size: 15
+        text: Hiya {$name}
+        size: 20
 #        colour: "#00ff00"

@@ -1,3 +1,4 @@
+use crate::parse::fluent::Fluent;
 use parley::FontContext;
 use proc_macro2::{Ident, TokenStream};
 use std::any::Any;
@@ -23,5 +24,14 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny {
     fn name(&self) -> &'static str;
     fn combine(&mut self, rhs: &dyn WidgetBuilder);
     fn create_widget(&self, stream: &mut TokenStream);
-    fn on_var_update(&self, widget: &Ident, var: &str, value: &Ident, stream: &mut TokenStream);
+
+    fn on_property_update(
+        &self,
+        property: &'static str,
+        widget: &Ident,
+        value: &Ident,
+        stream: &mut TokenStream,
+    );
+    fn get_fluents(&self) -> Vec<(&'static str, &Fluent)>;
+    fn get_vars(&self) -> Vec<(&'static str, &str)>;
 }
