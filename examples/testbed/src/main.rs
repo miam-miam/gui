@@ -10,7 +10,7 @@ impl Update<gen::name> for Counter {
         false
     }
     fn value(&self) -> String {
-        String::from("Miam")
+        String::from("Test")
     }
 }
 
