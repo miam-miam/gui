@@ -17,6 +17,7 @@ impl Default for ParleyBrush {
 
 impl parley::style::Brush for ParleyBrush {}
 
+// Code directly taken from https://github.com/linebender/glazier/blob/main/examples/common/text.rs
 pub fn render_text(builder: &mut SceneBuilder, transform: Affine, layout: &Layout<ParleyBrush>) {
     let mut gcx = GlyphContext::new();
     for line in layout.lines() {

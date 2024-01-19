@@ -2,7 +2,7 @@ styles:
   - widget: Text
     properties:
       colour: "#ffff00"
-      size: 12
+      size: 24
 
 components:
   - name: Counter # Names for components must be unique
@@ -11,8 +11,6 @@ components:
         type: String
     child:
       name: Count
-      widget: Text
+      widget: Button
       properties:
-        text: Hiya {$name}
-        size: 20
-#        colour: "#00ff00"
+        background_colour: "#00ff00"

@@ -20,6 +20,7 @@ edition = "2021"
 [dependencies]
 gui-core = { version = "0.1.0", path = "./gui-core" }
 gui-widget = { version = "0.1.0", path = "./gui-widget" }
+gui-derive = {version = "0.1.0", path = "./gui-derive"}
 instant = "0.1.12"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 pollster = "0.3.0"

@@ -10,4 +10,6 @@ proc-macro = true
 
 
 [dependencies]
-gui-core = { version = "0.1.0", path = "./../gui-core" }
+quote = "1.0.35"
+syn = "2.0.48"
+proc-macro2 = "1.0.76"

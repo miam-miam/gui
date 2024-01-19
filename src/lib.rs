@@ -1,3 +1,5 @@
+mod update;
+
 use gui_core::glazier::kurbo::Size;
 use gui_core::glazier::{
     Application, FileDialogToken, FileInfo, IdleToken, KeyEvent, PointerEvent, Region, Scalable,
@@ -15,6 +17,13 @@ pub type FluentBundle<R> =
 pub use fluent_bundle::{FluentArgs, FluentMessage, FluentResource};
 pub use gui_core;
 pub use unic_langid::langid;
+
+pub use gui_derive::ToComponent;
+
+pub use gui_widget;
+
+pub use gui_core::Update;
+pub use update::Updateable;
 
 const WIDTH: usize = 2048;
 const HEIGHT: usize = 1536;
@@ -76,6 +85,7 @@ impl<C: Component> WindowState<C> {
         (size.width as u32, size.height as u32)
     }
 
+    // Code mostly adapted from https://github.com/linebender/glazier/blob/main/examples/shello.rs
     fn render(&mut self) {
         let (width, height) = self.surface_size();
         if self.surface.is_none() {
@@ -101,7 +111,7 @@ impl<C: Component> WindowState<C> {
                 timestamp_period: queue.get_timestamp_period(),
             };
             let render_params = RenderParams {
-                base_color: Color::BLACK,
+                base_color: Color::WHITE,
                 width,
                 height,
             };

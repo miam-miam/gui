@@ -6,7 +6,7 @@ pub mod fluent;
 use crate::widget::WidgetBuilder;
 use serde::Deserialize;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetDeclaration {
     pub name: Option<String>,
@@ -15,7 +15,7 @@ pub struct WidgetDeclaration {
     pub layout_properties: Option<LayoutDeclaration>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone, Copy)]
 pub struct LayoutDeclaration {
     pub padding: u32,
 }
@@ -45,6 +45,16 @@ pub enum VariableDeclaration {
     Normal(NormalVariableDeclaration),
     Component(ComponentVariableDeclaration),
     Components(ComponentsVariableDeclaration),
+}
+
+impl VariableDeclaration {
+    pub fn get_name(&self) -> &String {
+        match self {
+            VariableDeclaration::Normal(v) => &v.name,
+            VariableDeclaration::Component(c) => &c.name,
+            VariableDeclaration::Components(c) => &c.name,
+        }
+    }
 }
 
 #[derive(Deserialize, Debug)]

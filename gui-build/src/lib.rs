@@ -3,6 +3,7 @@ mod component;
 use anyhow::{anyhow, bail};
 use gui_core::parse::{ComponentDeclaration, GUIDeclaration};
 use gui_core::widget::AsAny;
+use itertools::Itertools;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::fs::File;
@@ -25,6 +26,8 @@ fn build_path(path: &Path) -> anyhow::Result<()> {
     let mut ser: GUIDeclaration = serde_yaml::from_reader(file)?;
 
     combine_styles(&mut ser)?;
+
+    add_info_to_env(&ser);
 
     for component in ser.components.iter_mut() {
         let bundle = create_bundle(component)?;
@@ -79,6 +82,18 @@ fn combine_styles(static_gui: &mut GUIDeclaration) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn add_info_to_env(static_gui: &GUIDeclaration) {
+    let components = static_gui.components.iter().map(|c| &c.name).format(",");
+    println!("cargo:rustc-env=GUI_COMPONENTS={components}");
+    for component in &static_gui.components {
+        let variables = component.variables.iter().map(|v| v.get_name()).format(",");
+        println!(
+            "cargo:rustc-env=GUI_COMPONENT_{}={variables}",
+            component.name
+        );
+    }
 }
 
 #[cfg(test)]

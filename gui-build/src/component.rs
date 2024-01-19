@@ -107,6 +107,9 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let component_holder = Ident::new(&format!("{}Holder", component.name), Span::call_site());
 
     let rs_path = Path::new(&out_dir).join(format!("{}.rs", component.name));
+    
+    let mut widget_type = TokenStream::new();
+    component.child.widget.widget_type(&mut widget_type);
 
     let gen_module = quote! {
         #[allow(clippy::suspicious_else_formatting)]
@@ -124,7 +127,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             #[allow(non_snake_case)]
             pub struct #component_holder {
                 comp_struct: CompStruct,
-                widget: ::gui_widget::Text,
+                widget: #widget_type,
                 #( #fluent_arg_idents: FluentArgs<'static> ),*
             }
 

@@ -63,7 +63,7 @@ impl Widget for Text {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct TextBuilder {
     pub text: Option<Fluent>,
@@ -73,6 +73,10 @@ pub struct TextBuilder {
 
 #[typetag::deserialize(name = "Text")]
 impl WidgetBuilder for TextBuilder {
+    fn widget_type(&self, stream: &mut TokenStream) {
+        stream.extend(quote!(::gui::gui_widget::Text));
+    }
+
     fn name(&self) -> &'static str {
         "Text"
     }
@@ -101,7 +105,7 @@ impl WidgetBuilder for TextBuilder {
         };
 
         stream.extend(quote! {
-            ::gui_widget::Text::new(String::new(), #colour, #size)
+            ::gui::gui_widget::Text::new(String::new(), #colour, #size)
         });
     }
 
