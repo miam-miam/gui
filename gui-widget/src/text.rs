@@ -6,7 +6,7 @@ use gui_core::parley::{layout, LayoutContext};
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::Affine;
-use gui_core::vello::peniko::Brush;
+use gui_core::vello::peniko::{Brush, Color};
 use gui_core::widget::{Widget, WidgetBuilder};
 use gui_core::{Colour, FontContext, SceneBuilder, Var};
 use proc_macro2::{Ident, TokenStream};
@@ -104,11 +104,11 @@ impl WidgetBuilder for TextBuilder {
     fn create_widget(&self, _widget: Option<&TokenStream>, stream: &mut TokenStream) {
         let colour = match &self.colour {
             Some(Var::Value(v)) => v.to_token_stream(),
-            _ => Colour::default().to_token_stream(),
+            _ => Colour(Color::rgb8(33, 37, 41)).to_token_stream(),
         };
         let size = match &self.size {
             Some(Var::Value(v)) => v.to_token_stream(),
-            _ => (12.0f32).to_token_stream(),
+            _ => 14.0f32.to_token_stream(),
         };
 
         stream.extend(quote! {

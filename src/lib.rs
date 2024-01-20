@@ -110,7 +110,7 @@ impl<C: Component> WindowState<C> {
                 timestamp_period: queue.get_timestamp_period(),
             };
             let render_params = RenderParams {
-                base_color: Color::rgb8(245, 246, 250),
+                base_color: Color::WHITE,
                 width,
                 height,
             };
@@ -166,17 +166,18 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
         println!("wheel {event:?}");
     }
 
-    fn pointer_move(&mut self, _event: &PointerEvent) {
-        // self.handle.set_cursor(&Cursor::Arrow);
-        // println!("pointer_move {event:?}");
+    fn pointer_move(&mut self, event: &PointerEvent) {
+        self.component.pointer_move(event, &self.handle);
+        self.component.update_vars(false);
     }
 
     fn pointer_down(&mut self, event: &PointerEvent) {
-        println!("pointer_down {event:?}");
+        self.component.pointer_down(event, &self.handle);
+        self.component.update_vars(false);
     }
 
     fn pointer_up(&mut self, event: &PointerEvent) {
-        self.component.pointer_up(event);
+        self.component.pointer_up(event, &self.handle);
         self.component.update_vars(false);
     }
 

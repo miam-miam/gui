@@ -23,3 +23,6 @@ To install them on Debian or Ubuntu, run
 sudo apt-get install pkg-config clang libwayland-dev libxkbcommon-x11-dev libvulkan-dev
 ```
 
+## Styling
+
+Default styles are currently adapted from https://github.com/mantinedev/mantine.

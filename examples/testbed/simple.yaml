@@ -1,7 +1,6 @@
 styles:
   - widget: Text
     properties:
-      colour: "#ffff00"
       size: 24
 
 components:
@@ -13,7 +12,6 @@ components:
       name: Count
       widget: Button
       properties:
-        background_colour: "#487eb0"
         child:
           widget: Text
           properties:
@@ -23,5 +21,4 @@ components:
                   [1] one apple
                  *[other] {$count} apples
               }
-            colour: "#ffff00"
             size: 24

@@ -6,7 +6,7 @@ pub use parse::colour::Colour;
 pub use parse::var::Var;
 
 pub use glazier;
-use glazier::PointerEvent;
+use glazier::{PointerEvent, WindowHandle};
 pub use parley;
 pub use vello;
 
@@ -21,7 +21,9 @@ struct TestBoxable {
 pub trait Component {
     fn render(&mut self, scene: SceneBuilder, fcx: &mut FontContext);
     fn update_vars(&mut self, force_update: bool);
-    fn pointer_up(&mut self, event: &PointerEvent);
+    fn pointer_down(&mut self, event: &PointerEvent, window: &WindowHandle);
+    fn pointer_up(&mut self, event: &PointerEvent, window: &WindowHandle);
+    fn pointer_move(&mut self, event: &PointerEvent, window: &WindowHandle);
 }
 
 pub trait ToComponent {

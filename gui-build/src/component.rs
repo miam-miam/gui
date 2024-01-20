@@ -106,7 +106,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         #[allow(clippy::suspicious_else_formatting)]
         mod gen {
             use super::__private_CompStruct as CompStruct;
-            use gui::gui_core::glazier::PointerEvent;
+            use gui::gui_core::glazier::{PointerEvent, WindowHandle};
             use gui::gui_core::parley::font::FontContext;
             use gui::gui_core::vello::SceneBuilder;
             use gui::gui_core::widget::Widget;
@@ -150,8 +150,17 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     #prop_update
                 }
 
-                fn pointer_up(&mut self, _: &PointerEvent) {
-                    self.widget.on_press(&mut self.comp_struct);
+
+                fn pointer_down(&mut self, event: &PointerEvent, window: &WindowHandle) {
+                    self.widget.pointer_down(event, window, &mut self.comp_struct);
+                }
+
+                fn pointer_up(&mut self, event: &PointerEvent, window: &WindowHandle) {
+                    self.widget.pointer_up(event, window, &mut self.comp_struct);
+                }
+
+                fn pointer_move(&mut self, event: &PointerEvent, window: &WindowHandle) {
+                    self.widget.pointer_move(event, window, &mut self.comp_struct);
                 }
             }
         }
