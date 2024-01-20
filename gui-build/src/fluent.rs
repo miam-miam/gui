@@ -73,6 +73,7 @@ pub fn gen_var_update(
 
             quote! {
                 if force_update || <CompStruct as Update<#var_name>>::is_updated(&self.comp_struct) {
+                    <CompStruct as Update<#var_name>>::reset(&mut self.comp_struct);
                     let #value_ident = <CompStruct as Update<#var_name>>::value(&self.comp_struct);
                     let #widget_ident = &mut self.widget;
                     #update_var_props

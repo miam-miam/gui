@@ -113,7 +113,8 @@ impl<'a> Widget<'a> {
         let value = Ident::new("value", Span::call_site());
 
         for fluent in &self.fluents {
-            let property_ident = &fluent.property_ident;
+            let property_ident = (!fluent.fluent.vars.is_empty()).then_some(&fluent.property_ident);
+            let property_iter = property_ident.iter();
             let fluent_name = &fluent.name;
             let fluent_arg = &fluent.ident;
             let mut on_property_update = TokenStream::new();
@@ -130,7 +131,7 @@ impl<'a> Widget<'a> {
                 &mut on_property_update,
             );
             stream.extend(quote! {
-                if force_update || #property_ident {
+                if force_update #(|| #property_iter)* {
                     let value = get_bundle_message(#fluent_name, #arg);
                     let #widget = #widget_stmt;
                     #on_property_update

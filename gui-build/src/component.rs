@@ -63,10 +63,15 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let if_update: TokenStream =
         fluent::gen_var_update(component, &normal_variables[..], var_to_fluent, widget_vars);
 
-    let fluent_arg_idents: Vec<&Ident> = fluents.iter().map(|fluent| &fluent.ident).collect();
+    let fluent_arg_idents: Vec<&Ident> = fluents
+        .iter()
+        .filter(|f| !f.fluent.vars.is_empty())
+        .map(|fluent| &fluent.ident)
+        .collect();
 
     let fluent_properties: Vec<&Ident> = fluents
         .iter()
+        .filter(|f| !f.fluent.vars.is_empty())
         .map(|fluent| &fluent.property_ident)
         .collect();
 

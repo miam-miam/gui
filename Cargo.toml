@@ -24,6 +24,6 @@ gui-derive = {version = "0.1.0", path = "./gui-derive"}
 instant = "0.1.12"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 pollster = "0.3.0"
-fluent-bundle = "0.15.2"
+fluent-bundle = { version = "0.15.2", git = "https://github.com/projectfluent/fluent-rs.git", rev = "a2cef6bff4885623f638a6968e034ce1a296ba01" }
 unic-langid = { version = "0.9.4", features = ["unic-langid-macros"] }
 intl-memoizer = "0.5.1"

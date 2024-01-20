@@ -40,6 +40,7 @@ pub trait ToHandler {
 pub trait Update<T: Variable> {
     fn is_updated(&self) -> bool;
     fn value(&self) -> T::VarType;
+    fn reset(&mut self) {}
 }
 
 pub fn add(left: usize, right: usize) -> usize {

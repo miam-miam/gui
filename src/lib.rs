@@ -12,8 +12,7 @@ use gui_core::{Component, FontContext, SceneBuilder, ToComponent};
 use std::any::Any;
 use tracing_subscriber::EnvFilter;
 
-pub type FluentBundle<R> =
-    fluent_bundle::bundle::FluentBundle<R, intl_memoizer::concurrent::IntlLangMemoizer>;
+pub use fluent_bundle::concurrent::FluentBundle;
 pub use fluent_bundle::{FluentArgs, FluentMessage, FluentResource};
 pub use gui_core;
 pub use unic_langid::langid;
@@ -178,6 +177,7 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
 
     fn pointer_up(&mut self, event: &PointerEvent) {
         self.component.pointer_up(event);
+        self.component.update_vars(false);
     }
 
     fn timer(&mut self, id: TimerToken) {

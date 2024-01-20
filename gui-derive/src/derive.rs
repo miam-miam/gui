@@ -83,6 +83,9 @@ impl ToTokens for Derive {
                     fn value(&self) -> <gen::#var_ident as ::gui::gui_core::Variable>::VarType {
                         self.#ident.value()
                     }
+                    fn reset(&mut self) {
+                        self.#ident.reset();
+                    }
                 }
             }
         });

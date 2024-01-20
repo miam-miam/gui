@@ -2,28 +2,37 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 #[derive(Debug, Default)]
 pub struct Updateable<T> {
-    updated: AtomicBool,
+    updated: bool,
     value: T,
 }
 
 impl<T> Updateable<T> {
     pub fn new(value: T) -> Self {
         Updateable {
-            updated: AtomicBool::new(false),
+            updated: false,
             value,
         }
     }
     pub fn is_updated(&self) -> bool {
-        self.updated.swap(false, Ordering::AcqRel)
+        self.updated
     }
 
     pub fn set_value(&mut self, val: T) {
         self.value = val;
-        self.updated.store(true, Ordering::Release);
+        self.updated = true;
+    }
+
+    pub fn invalidate(&mut self) -> &mut T {
+        self.updated = true;
+        &mut self.value
     }
 
     pub fn get_value(&self) -> &T {
         &self.value
+    }
+
+    pub fn reset(&mut self) {
+        self.updated = false;
     }
 }
 

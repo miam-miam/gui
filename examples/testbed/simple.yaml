@@ -7,8 +7,8 @@ styles:
 components:
   - name: Counter # Names for components must be unique
     variables:
-      - name: name
-        type: String
+      - name: count
+        type: u32
     child:
       name: Count
       widget: Button
@@ -17,6 +17,11 @@ components:
         child:
           widget: Text
           properties:
-            text: "Hiya"
+            text: |
+              {$count ->
+                  [0] no apples
+                  [1] one apple
+                 *[other] {$count} apples
+              }
             colour: "#ffff00"
             size: 24

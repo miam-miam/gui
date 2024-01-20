@@ -12,10 +12,10 @@ use std::marker::PhantomData;
 
 pub trait ButtonHandler<T: ToHandler<BaseHandler = Self>> {
     // Does not need to be overridden
-    fn get(base: &T::BaseHandler) -> &Self {
+    fn get(base: &mut T::BaseHandler) -> &mut Self {
         base
     }
-    fn on_press(&self) {}
+    fn on_press(&mut self) {}
 }
 
 pub struct Button<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> {
@@ -44,7 +44,7 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Button<T,
             // clicked_colour,
             // hover_colour,
             disabled,
-            size: Some(Rect::new(0.0, 0.0, 100.0, 40.0)),
+            size: Some(Rect::new(0.0, 0.0, 150.0, 40.0)),
             child,
             phantom: PhantomData,
         }
@@ -57,7 +57,7 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Button<T,
     pub fn set_background_colour(&mut self, colour: Colour) {
         self.background_colour = colour;
     }
-    
+
     pub fn get_widget(&mut self) -> &mut W {
         &mut self.child
     }
