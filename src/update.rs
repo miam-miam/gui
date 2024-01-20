@@ -1,5 +1,3 @@
-use std::sync::atomic::{AtomicBool, Ordering};
-
 #[derive(Debug, Default)]
 pub struct Updateable<T> {
     updated: bool,

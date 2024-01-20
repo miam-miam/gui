@@ -3,14 +3,14 @@ mod fluent;
 mod widget;
 
 use anyhow::{anyhow, bail};
-use gui_core::parse::{ComponentDeclaration, GUIDeclaration};
+use gui_core::parse::GUIDeclaration;
 use gui_core::widget::AsAny;
 use itertools::Itertools;
 use std::any::TypeId;
 use std::collections::HashMap;
+use std::env;
 use std::fs::File;
 use std::path::Path;
-use std::{env, fs};
 
 extern crate gui_widget;
 
