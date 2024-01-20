@@ -13,4 +13,4 @@ components:
       name: Count
       widget: Button
       properties:
-        background_colour: "#00ff00"
+        background_colour: "#487eb0"

@@ -1,29 +1,46 @@
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
-use gui_core::vello::kurbo::{Affine, Rect};
+use gui_core::vello::kurbo::{Affine, Rect, Vec2};
 use gui_core::vello::peniko::{Brush, Color, Fill, Stroke};
+use gui_core::vello::SceneFragment;
 use gui_core::widget::{Widget, WidgetBuilder};
 use gui_core::{Colour, FontContext, SceneBuilder, Var};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
+use std::marker::PhantomData;
 
-pub struct Button {
+pub trait ToHandler {
+    type BaseHandler;
+}
+
+pub trait ButtonHandler<T: ToHandler<BaseHandler = Self>> {
+    // Does not need to be overridden
+    fn get(base: &T::BaseHandler) -> &Self {
+        base
+    }
+    fn on_press(&self) {}
+}
+
+pub struct Button<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> {
     background_colour: Colour,
     // disabled_colour: Colour,
     // clicked_colour: Colour,
     // hover_colour: Colour,
     disabled: bool,
     size: Option<Rect>,
+    child: W,
+    phantom: PhantomData<(T, H)>,
 }
 
-impl Button {
+impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Button<T, H, W> {
     pub fn new(
         background_colour: Colour,
         // disabled_colour: Colour,
         // clicked_colour: Colour,
         // hover_colour: Colour,
         disabled: bool,
+        child: W,
     ) -> Self {
         Button {
             background_colour,
@@ -32,6 +49,8 @@ impl Button {
             // hover_colour,
             disabled,
             size: Some(Rect::new(0.0, 0.0, 100.0, 40.0)),
+            child,
+            phantom: PhantomData,
         }
     }
 
@@ -44,10 +63,13 @@ impl Button {
     }
 }
 
-impl Widget for Button {
+impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
+    for Button<T, H, W>
+{
     fn render(&mut self, mut scene: SceneBuilder, fcx: &mut FontContext) {
         if let Some(size) = self.size {
-            let rect = size.inset(-1.0).to_rounded_rect(4.5);
+            let stroke_width = 2.0_f32;
+            let rect = size.inset(-0.5 * stroke_width as f64).to_rounded_rect(4.5);
             scene.fill(
                 Fill::NonZero,
                 Affine::IDENTITY,
@@ -55,14 +77,29 @@ impl Widget for Button {
                 None,
                 &rect,
             );
+            let mut fragment = SceneFragment::new();
+            self.child
+                .render(SceneBuilder::for_fragment(&mut fragment), fcx);
+            scene.append(
+                &fragment,
+                Some(Affine::translate(Vec2::new(
+                    stroke_width as f64,
+                    stroke_width as f64,
+                ))),
+            );
             scene.stroke(
-                &Stroke::new(2.0),
+                &Stroke::new(stroke_width),
                 Affine::IDENTITY,
                 &Brush::Solid(Color::BLACK),
                 None,
                 &size.to_rounded_rect(4.5),
             );
         }
+    }
+
+    fn on_press(&mut self, handler: &mut H) {
+        H::get(handler).on_press();
+        self.child.on_press(handler);
     }
 }
 

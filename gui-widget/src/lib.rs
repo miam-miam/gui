@@ -1,4 +1,4 @@
-mod button;
+pub mod button;
 mod text;
 
 pub use button::Button;

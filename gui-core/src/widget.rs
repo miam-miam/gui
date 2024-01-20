@@ -5,8 +5,9 @@ use proc_macro2::{Ident, TokenStream};
 use std::any::Any;
 use vello::SceneBuilder;
 
-pub trait Widget {
+pub trait Widget<H> {
     fn render(&mut self, scene: SceneBuilder, fcx: &mut FontContext);
+    fn on_press(&mut self, handler: &mut H) {}
 }
 
 /// Helper trait to enable trait upcasting, since upcasting is not stable.
@@ -22,7 +23,7 @@ impl<T: Any> AsAny for T {
 
 #[typetag::deserialize(tag = "widget", content = "properties")]
 pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
-    fn widget_type(&self, stream: &mut TokenStream); 
+    fn widget_type(&self, stream: &mut TokenStream);
     fn name(&self) -> &'static str;
     fn combine(&mut self, rhs: &dyn WidgetBuilder);
     fn create_widget(&self, stream: &mut TokenStream);

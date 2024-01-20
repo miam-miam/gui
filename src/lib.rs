@@ -111,7 +111,7 @@ impl<C: Component> WindowState<C> {
                 timestamp_period: queue.get_timestamp_period(),
             };
             let render_params = RenderParams {
-                base_color: Color::WHITE,
+                base_color: Color::rgb8(245, 246, 250),
                 width,
                 height,
             };
@@ -177,7 +177,7 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
     }
 
     fn pointer_up(&mut self, event: &PointerEvent) {
-        println!("pointer_up {event:?}");
+        self.component.pointer_up(event);
     }
 
     fn timer(&mut self, id: TimerToken) {
