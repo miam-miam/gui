@@ -1,5 +1,5 @@
-use proc_macro2::{Ident, Span, TokenStream};
-use quote::{quote, IdentFragment, ToTokens};
+use proc_macro2::{Ident, TokenStream};
+use quote::{quote, ToTokens};
 use std::collections::HashSet;
 use std::env;
 use syn::parse::{Parse, ParseStream};
@@ -40,7 +40,7 @@ impl Parse for Derive {
                         .iter()
                         .filter_map(|f| f.ident.as_ref())
                         .map(|i| (format!("{i}"), i.clone()))
-                        .filter(|(s, i)| component_vars.contains(s.as_str()))
+                        .filter(|(s, _i)| component_vars.contains(s.as_str()))
                         .collect();
 
                     Ok(Self {
@@ -74,7 +74,7 @@ impl ToTokens for Derive {
         let component_ident = &self.component_ident;
 
         let gen_vars = self.vars_to_gen.iter().map(|(v_name, ident)| {
-            let var_ident = Ident::new(&v_name, ident.span());
+            let var_ident = Ident::new(v_name, ident.span());
             quote! {
                 impl ::gui::Update<gen::#var_ident> for Counter {
                     fn is_updated(&self) -> bool {

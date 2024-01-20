@@ -4,15 +4,11 @@ use gui_core::vello::kurbo::{Affine, Rect, Vec2};
 use gui_core::vello::peniko::{Brush, Color, Fill, Stroke};
 use gui_core::vello::SceneFragment;
 use gui_core::widget::{Widget, WidgetBuilder};
-use gui_core::{Colour, FontContext, SceneBuilder, Var};
+use gui_core::{Colour, FontContext, SceneBuilder, ToHandler, Var};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
 use std::marker::PhantomData;
-
-pub trait ToHandler {
-    type BaseHandler;
-}
 
 pub trait ButtonHandler<T: ToHandler<BaseHandler = Self>> {
     // Does not need to be overridden
@@ -60,6 +56,10 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Button<T,
 
     pub fn set_background_colour(&mut self, colour: Colour) {
         self.background_colour = colour;
+    }
+    
+    pub fn get_widget(&mut self) -> &mut W {
+        &mut self.child
     }
 }
 
@@ -113,8 +113,14 @@ pub struct ButtonBuilder {
 
 #[typetag::deserialize(name = "Button")]
 impl WidgetBuilder for ButtonBuilder {
-    fn widget_type(&self, stream: &mut TokenStream) {
-        stream.extend(quote!(::gui::gui_widget::Button));
+    fn widget_type(
+        &self,
+        handler: Option<&Ident>,
+        comp_struct: &Ident,
+        widget: Option<&TokenStream>,
+        stream: &mut TokenStream,
+    ) {
+        stream.extend(quote!(::gui::gui_widget::Button<#handler, #comp_struct, #widget>));
     }
 
     fn name(&self) -> &'static str {
@@ -131,7 +137,7 @@ impl WidgetBuilder for ButtonBuilder {
         }
     }
 
-    fn create_widget(&self, stream: &mut TokenStream) {
+    fn create_widget(&self, widget: Option<&TokenStream>, stream: &mut TokenStream) {
         let disabled = match &self.disabled {
             Some(Var::Value(v)) => v.to_token_stream(),
             _ => false.to_token_stream(),
@@ -143,7 +149,7 @@ impl WidgetBuilder for ButtonBuilder {
         };
 
         stream.extend(quote! {
-            ::gui::gui_widget::Button::new(#background_colour, #disabled)
+            ::gui::gui_widget::Button::new(#background_colour, #disabled, #widget)
         });
     }
 
@@ -174,5 +180,13 @@ impl WidgetBuilder for ButtonBuilder {
             array.push(("background_colour", v.as_str()));
         }
         array
+    }
+
+    fn has_handler(&self) -> bool {
+        true
+    }
+
+    fn get_widgets(&self) -> Vec<&Option<WidgetDeclaration>> {
+        vec![&self.child]
     }
 }

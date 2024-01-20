@@ -14,3 +14,9 @@ components:
       widget: Button
       properties:
         background_colour: "#487eb0"
+        child:
+          widget: Text
+          properties:
+            text: "Hiya"
+            colour: "#ffff00"
+            size: 24

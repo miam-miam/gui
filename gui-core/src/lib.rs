@@ -33,6 +33,10 @@ pub trait Variable {
     type VarType;
 }
 
+pub trait ToHandler {
+    type BaseHandler;
+}
+
 pub trait Update<T: Variable> {
     fn is_updated(&self) -> bool;
     fn value(&self) -> T::VarType;

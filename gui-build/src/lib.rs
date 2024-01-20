@@ -1,4 +1,6 @@
 mod component;
+mod fluent;
+mod widget;
 
 use anyhow::{anyhow, bail};
 use gui_core::parse::{ComponentDeclaration, GUIDeclaration};
@@ -30,31 +32,10 @@ fn build_path(path: &Path) -> anyhow::Result<()> {
     add_info_to_env(&ser);
 
     for component in ser.components.iter_mut() {
-        let bundle = create_bundle(component)?;
-        let ftl_path = path.join(format!("{}.ftl", component.name));
-        fs::write(ftl_path, bundle)?;
         component::create_component(path, component)?;
     }
 
     Ok(())
-}
-
-fn create_bundle(component: &ComponentDeclaration) -> anyhow::Result<String> {
-    let mut bundle = String::new();
-    for (property_name, fluent) in component.child.widget.get_fluents() {
-        let fluent_name = format!(
-            "{}-{}-{}",
-            component.name,
-            component
-                .child
-                .name
-                .as_ref()
-                .map_or_else(|| component.child.widget.name(), |s| s.as_str()),
-            property_name
-        );
-        bundle = bundle + &format!("{fluent_name} = {}", fluent.text);
-    }
-    Ok(bundle)
 }
 
 fn combine_styles(static_gui: &mut GUIDeclaration) -> anyhow::Result<()> {

@@ -4,6 +4,7 @@ use gui_core::parley::layout::Layout;
 use gui_core::parley::style::StyleProperty;
 use gui_core::parley::{layout, LayoutContext};
 use gui_core::parse::fluent::Fluent;
+use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::Affine;
 use gui_core::vello::peniko::Brush;
 use gui_core::widget::{Widget, WidgetBuilder};
@@ -73,7 +74,13 @@ pub struct TextBuilder {
 
 #[typetag::deserialize(name = "Text")]
 impl WidgetBuilder for TextBuilder {
-    fn widget_type(&self, stream: &mut TokenStream) {
+    fn widget_type(
+        &self,
+        _handler: Option<&Ident>,
+        _comp_struct: &Ident,
+        _widget: Option<&TokenStream>,
+        stream: &mut TokenStream,
+    ) {
         stream.extend(quote!(::gui::gui_widget::Text));
     }
 
@@ -94,7 +101,7 @@ impl WidgetBuilder for TextBuilder {
         }
     }
 
-    fn create_widget(&self, stream: &mut TokenStream) {
+    fn create_widget(&self, _widget: Option<&TokenStream>, stream: &mut TokenStream) {
         let colour = match &self.colour {
             Some(Var::Value(v)) => v.to_token_stream(),
             _ => Colour::default().to_token_stream(),
@@ -137,5 +144,13 @@ impl WidgetBuilder for TextBuilder {
             array.push(("size", v.as_str()));
         }
         array
+    }
+
+    fn has_handler(&self) -> bool {
+        false
+    }
+
+    fn get_widgets(&self) -> Vec<&Option<WidgetDeclaration>> {
+        vec![]
     }
 }
