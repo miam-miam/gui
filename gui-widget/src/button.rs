@@ -129,10 +129,6 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
         );
     }
 
-    fn pointer_move(&mut self, event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {
-        self.hovered = self.size.to_rounded_rect(4.0).contains(event.pos);
-    }
-
     fn pointer_down(&mut self, event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {
         self.clicking = self.size.to_rounded_rect(4.0).contains(event.pos);
     }
@@ -142,6 +138,10 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
         if self.hovered {
             handler.on_press();
         }
+    }
+
+    fn pointer_move(&mut self, event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {
+        self.hovered = self.size.to_rounded_rect(4.0).contains(event.pos);
     }
 }
 
