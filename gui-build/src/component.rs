@@ -87,7 +87,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             use gui::gui_core::parley::font::FontContext;
             use gui::gui_core::vello::SceneBuilder;
             use gui::gui_core::widget::Widget;
-            use gui::gui_core::{Component, ToComponent, ToHandler, Update, Variable};
+            use gui::gui_core::{Component, LayoutConstraints, Size, ToComponent, ToHandler, Update, Variable};
 
             #bundle_func
 
@@ -128,6 +128,10 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     #( <CompStruct as Update<#var_names>>::reset(&mut self.comp_struct); )*
                 }
 
+                fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size{
+                    self.widget.resize(constraints, fcx)
+                }
+
                 fn pointer_down(&mut self, event: &PointerEvent, window: &WindowHandle) {
                     self.widget.pointer_down(event, window, &mut self.comp_struct);
                 }
@@ -143,8 +147,19 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         }
     };
 
-    fs::write(rs_path, format!("{}", gen_module))?;
+    write_file(&rs_path, gen_module)
+}
 
+#[cfg(not(feature = "pretty"))]
+fn write_file(path: &Path, stream: TokenStream) -> anyhow::Result<()> {
+    fs::write(path, format!("{}", stream))?;
+    Ok(())
+}
+#[cfg(feature = "pretty")]
+fn write_file(path: &Path, stream: TokenStream) -> anyhow::Result<()> {
+    let file = syn::parse2::<syn::File>(stream)?;
+
+    fs::write(path, prettyplease::unparse(&file))?;
     Ok(())
 }
 

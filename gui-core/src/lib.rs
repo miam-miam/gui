@@ -2,8 +2,12 @@ pub mod common;
 pub mod parse;
 pub mod widget;
 
+pub mod layout;
+
+pub use layout::LayoutConstraints;
 pub use parse::colour::Colour;
 pub use parse::var::Var;
+pub use vello::kurbo::Size;
 
 pub use glazier;
 use glazier::{PointerEvent, WindowHandle};
@@ -21,6 +25,7 @@ struct TestBoxable {
 pub trait Component {
     fn render(&mut self, scene: SceneBuilder, fcx: &mut FontContext);
     fn update_vars(&mut self, force_update: bool);
+    fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size;
     fn pointer_down(&mut self, event: &PointerEvent, window: &WindowHandle);
     fn pointer_up(&mut self, event: &PointerEvent, window: &WindowHandle);
     fn pointer_move(&mut self, event: &PointerEvent, window: &WindowHandle);

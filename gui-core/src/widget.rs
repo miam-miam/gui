@@ -1,3 +1,4 @@
+use crate::layout::LayoutConstraints;
 use crate::parse::fluent::Fluent;
 use crate::parse::WidgetDeclaration;
 use dyn_clone::DynClone;
@@ -5,10 +6,12 @@ use glazier::{PointerEvent, WindowHandle};
 use parley::FontContext;
 use proc_macro2::{Ident, TokenStream};
 use std::any::Any;
+use vello::kurbo::Size;
 use vello::SceneBuilder;
 
 pub trait Widget<H> {
     fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext);
+    fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size;
     fn pointer_down(&mut self, _event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {}
     fn pointer_up(&mut self, _event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {}
     fn pointer_move(&mut self, _event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {}

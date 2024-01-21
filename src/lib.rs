@@ -1,13 +1,13 @@
 mod update;
 
-use gui_core::glazier::kurbo::Size;
+use gui_core::glazier::kurbo::{Affine, Size};
 use gui_core::glazier::{
     Application, FileDialogToken, FileInfo, IdleToken, KeyEvent, PointerEvent, Region, Scalable,
     TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
 use gui_core::vello::peniko::Color;
 use gui_core::vello::util::{RenderContext, RenderSurface};
-use gui_core::vello::{RenderParams, Renderer, RendererOptions, Scene};
+use gui_core::vello::{RenderParams, Renderer, RendererOptions, Scene, SceneFragment};
 use gui_core::{Component, FontContext, SceneBuilder, ToComponent};
 use std::any::Any;
 use tracing_subscriber::EnvFilter;
@@ -15,12 +15,14 @@ use tracing_subscriber::EnvFilter;
 pub use fluent_bundle::concurrent::FluentBundle;
 pub use fluent_bundle::{FluentArgs, FluentMessage, FluentResource};
 pub use gui_core;
+use gui_core::layout::LayoutConstraints;
 pub use unic_langid::langid;
 
 pub use gui_derive::ToComponent;
 
 pub use gui_widget;
 
+use gui_core::vello::kurbo::Vec2;
 pub use gui_core::Update;
 pub use update::Updateable;
 
@@ -51,6 +53,7 @@ struct WindowState<C: Component + 'static> {
     surface: Option<RenderSurface>,
     scene: Scene,
     size: Size,
+    transform: Vec2,
     font_context: FontContext,
     component: C,
 }
@@ -67,11 +70,24 @@ impl<C: Component> WindowState<C> {
             font_context: FontContext::new(),
             component,
             size: Size::new(800.0, 600.0),
+            transform: Vec2::default(),
         }
     }
 
     fn schedule_render(&self) {
         self.handle.invalidate();
+    }
+
+    fn resize(&mut self) {
+        let (max_width, max_height) = self.surface_size();
+        let size = self.component.resize(
+            LayoutConstraints::new_max(Size::new(max_width as f64, max_height as f64)),
+            &mut self.font_context,
+        );
+        self.transform = Vec2::new(
+            (max_width as f64 - size.width) / 2.0,
+            (max_height as f64 - size.height) / 2.0,
+        );
     }
 
     fn surface_size(&self) -> (u32, u32) {
@@ -94,9 +110,6 @@ impl<C: Component> WindowState<C> {
             );
         }
 
-        let sb = SceneBuilder::for_scene(&mut self.scene);
-        self.component.render(sb, &mut self.font_context);
-
         if let Some(surface) = self.surface.as_mut() {
             if surface.config.width != width || surface.config.height != height {
                 self.render.resize_surface(surface, width, height);
@@ -114,6 +127,13 @@ impl<C: Component> WindowState<C> {
                 width,
                 height,
             };
+
+            let mut sb = SceneBuilder::for_scene(&mut self.scene);
+            let mut fragment = SceneFragment::new();
+            let component = SceneBuilder::for_fragment(&mut fragment);
+            self.component.render(component, &mut self.font_context);
+            sb.append(&fragment, Some(Affine::translate(self.transform)));
+
             self.renderer
                 .get_or_insert_with(|| Renderer::new(device, &renderer_options).unwrap())
                 .render_to_surface(device, queue, &self.scene, &surface_texture, &render_params)
@@ -127,7 +147,8 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
     fn connect(&mut self, handle: &WindowHandle) {
         self.handle = handle.clone();
         self.component.update_vars(true);
-        self.schedule_render();
+        self.resize();
+        self.render();
     }
 
     fn size(&mut self, size: Size) {
@@ -136,6 +157,7 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
 
     fn prepare_paint(&mut self) {
         self.component.update_vars(false);
+        self.resize();
     }
 
     fn paint(&mut self, _: &Region) {
