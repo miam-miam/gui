@@ -1,4 +1,3 @@
-use crate::gen::count;
 use gui::gui_widget::button::ButtonHandler;
 use gui::{ToComponent, Updateable};
 

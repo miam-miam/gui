@@ -8,7 +8,7 @@ use gui_core::glazier::{
 use gui_core::vello::peniko::Color;
 use gui_core::vello::util::{RenderContext, RenderSurface};
 use gui_core::vello::{RenderParams, Renderer, RendererOptions, Scene, SceneFragment};
-use gui_core::{Component, FontContext, SceneBuilder, ToComponent};
+use gui_core::{Component, FontContext, Point, SceneBuilder, ToComponent};
 use std::any::Any;
 use tracing_subscriber::EnvFilter;
 
@@ -88,6 +88,10 @@ impl<C: Component> WindowState<C> {
             (max_width as f64 - size.width) / 2.0,
             (max_height as f64 - size.height) / 2.0,
         );
+    }
+
+    fn get_local_point(&self, event: &PointerEvent) -> Point {
+        (event.pos.to_vec2() - self.transform).to_point()
     }
 
     fn surface_size(&self) -> (u32, u32) {
@@ -189,17 +193,20 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
     }
 
     fn pointer_move(&mut self, event: &PointerEvent) {
-        self.component.pointer_move(event, &self.handle);
+        self.component
+            .pointer_move(self.get_local_point(event), event, &self.handle);
         self.component.update_vars(false);
     }
 
     fn pointer_down(&mut self, event: &PointerEvent) {
-        self.component.pointer_down(event, &self.handle);
+        self.component
+            .pointer_down(self.get_local_point(event), event, &self.handle);
         self.component.update_vars(false);
     }
 
     fn pointer_up(&mut self, event: &PointerEvent) {
-        self.component.pointer_up(event, &self.handle);
+        self.component
+            .pointer_up(self.get_local_point(event), event, &self.handle);
         self.component.update_vars(false);
     }
 

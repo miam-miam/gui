@@ -7,7 +7,7 @@ use gui_core::vello::kurbo::{Affine, Rect, Vec2};
 use gui_core::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
 use gui_core::vello::SceneFragment;
 use gui_core::widget::{Widget, WidgetBuilder};
-use gui_core::{Colour, FontContext, SceneBuilder, ToHandler, Var};
+use gui_core::{Colour, FontContext, Point, SceneBuilder, ToHandler, Var};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
@@ -161,14 +161,26 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
         child_size
     }
 
-    fn pointer_down(&mut self, event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {
+    fn pointer_down(
+        &mut self,
+        local_pos: Point,
+        _event: &PointerEvent,
+        _window: &WindowHandle,
+        _handler: &mut H,
+    ) {
         if self.disabled {
             return;
         }
-        self.clicking = self.size.to_rounded_rect(4.0).contains(event.pos);
+        self.clicking = self.size.to_rounded_rect(4.0).contains(local_pos);
     }
 
-    fn pointer_up(&mut self, _event: &PointerEvent, _window: &WindowHandle, handler: &mut H) {
+    fn pointer_up(
+        &mut self,
+        _local_pos: Point,
+        _event: &PointerEvent,
+        _window: &WindowHandle,
+        handler: &mut H,
+    ) {
         if self.disabled {
             return;
         }
@@ -178,11 +190,17 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
         }
     }
 
-    fn pointer_move(&mut self, event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {
+    fn pointer_move(
+        &mut self,
+        local_pos: Point,
+        _event: &PointerEvent,
+        _window: &WindowHandle,
+        _handler: &mut H,
+    ) {
         if self.disabled {
             return;
         }
-        self.hovered = self.size.to_rounded_rect(4.0).contains(event.pos);
+        self.hovered = self.size.to_rounded_rect(4.0).contains(local_pos);
     }
 }
 

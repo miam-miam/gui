@@ -10,6 +10,7 @@ pub use parse::var::Var;
 pub use vello::kurbo::Size;
 
 pub use glazier;
+pub use glazier::kurbo::Point;
 use glazier::{PointerEvent, WindowHandle};
 pub use parley;
 pub use vello;
@@ -26,9 +27,9 @@ pub trait Component {
     fn render(&mut self, scene: SceneBuilder, fcx: &mut FontContext);
     fn update_vars(&mut self, force_update: bool);
     fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size;
-    fn pointer_down(&mut self, event: &PointerEvent, window: &WindowHandle);
-    fn pointer_up(&mut self, event: &PointerEvent, window: &WindowHandle);
-    fn pointer_move(&mut self, event: &PointerEvent, window: &WindowHandle);
+    fn pointer_down(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle);
+    fn pointer_up(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle);
+    fn pointer_move(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle);
 }
 
 pub trait ToComponent {

@@ -1,6 +1,7 @@
 use crate::layout::LayoutConstraints;
 use crate::parse::fluent::Fluent;
 use crate::parse::WidgetDeclaration;
+use crate::Point;
 use dyn_clone::DynClone;
 use glazier::{PointerEvent, WindowHandle};
 use parley::FontContext;
@@ -12,9 +13,30 @@ use vello::SceneBuilder;
 pub trait Widget<H> {
     fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext);
     fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size;
-    fn pointer_down(&mut self, _event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {}
-    fn pointer_up(&mut self, _event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {}
-    fn pointer_move(&mut self, _event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {}
+    fn pointer_down(
+        &mut self,
+        _local_pos: Point,
+        _event: &PointerEvent,
+        _window: &WindowHandle,
+        _handler: &mut H,
+    ) {
+    }
+    fn pointer_up(
+        &mut self,
+        _local_pos: Point,
+        _event: &PointerEvent,
+        _window: &WindowHandle,
+        _handler: &mut H,
+    ) {
+    }
+    fn pointer_move(
+        &mut self,
+        _local_pos: Point,
+        _event: &PointerEvent,
+        _window: &WindowHandle,
+        _handler: &mut H,
+    ) {
+    }
 }
 
 /// Helper trait to enable trait upcasting, since upcasting is not stable.
