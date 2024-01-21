@@ -3,7 +3,7 @@ use gui_core::glazier::{PointerEvent, WindowHandle};
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::{Affine, Rect, Vec2};
-use gui_core::vello::peniko::{Brush, Color, Fill, Stroke};
+use gui_core::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
 use gui_core::vello::SceneFragment;
 use gui_core::widget::{Widget, WidgetBuilder};
 use gui_core::{Colour, FontContext, SceneBuilder, ToHandler, Var};
@@ -85,7 +85,7 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Button<T,
 impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
     for Button<T, H, W>
 {
-    fn render(&mut self, mut scene: SceneBuilder, fcx: &mut FontContext) {
+    fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext) {
         let stroke_width = 0.58_f32;
         let affine = if self.clicking {
             Affine::translate(Vec2::new(0.0, 0.875))
@@ -113,8 +113,9 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
             &rect,
         );
         let mut fragment = SceneFragment::new();
-        self.child
-            .render(SceneBuilder::for_fragment(&mut fragment), fcx);
+        let mut builder = SceneBuilder::for_fragment(&mut fragment);
+        self.child.render(&mut builder, fcx);
+
         scene.append(
             &fragment,
             Some(Affine::translate(Vec2::new(
@@ -122,18 +123,32 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
                 stroke_width as f64 + if self.clicking { 0.875 } else { 0.0 },
             ))),
         );
-        let border_colour = if self.disabled {
-            self.disabled_colour
+        if self.disabled {
+            scene.push_layer(
+                BlendMode::new(Mix::Screen, Compose::SrcOver),
+                1.0,
+                Affine::IDENTITY,
+                &rect,
+            );
+
+            scene.fill(
+                Fill::NonZero,
+                Affine::IDENTITY,
+                &Brush::Solid(Color::GRAY),
+                None,
+                &rect,
+            );
+
+            scene.pop_layer()
         } else {
-            self.border_colour
-        };
-        scene.stroke(
-            &Stroke::new(stroke_width),
-            affine,
-            &Brush::Solid(border_colour.0),
-            None,
-            &self.size.to_rounded_rect(4.5),
-        );
+            scene.stroke(
+                &Stroke::new(stroke_width),
+                affine,
+                &Brush::Solid(self.border_colour.0),
+                None,
+                &self.size.to_rounded_rect(4.5),
+            );
+        }
     }
 
     fn pointer_down(&mut self, event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {

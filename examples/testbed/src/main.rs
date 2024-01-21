@@ -12,7 +12,7 @@ impl Update<gen::disabled> for Counter {
     }
 
     fn value(&self) -> bool {
-        self.count.value() > 15.0
+        self.count.value() > 0.0
     }
 }
 

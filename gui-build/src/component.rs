@@ -131,8 +131,8 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
 
             #[automatically_derived]
             impl Component for #component_holder {
-                fn render(&mut self, scene: SceneBuilder, fcx: &mut FontContext) {
-                    self.widget.render(scene, fcx);
+                fn render(&mut self, mut scene: SceneBuilder, fcx: &mut FontContext) {
+                    self.widget.render(&mut scene, fcx);
                 }
 
                 fn update_vars(&mut self, force_update: bool) {

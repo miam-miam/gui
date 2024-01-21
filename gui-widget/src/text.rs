@@ -65,7 +65,7 @@ impl Text {
 }
 
 impl<T> Widget<T> for Text {
-    fn render(&mut self, mut scene: SceneBuilder, fcx: &mut FontContext) {
+    fn render(&mut self, mut scene: &mut SceneBuilder, fcx: &mut FontContext) {
         if self.layout.is_none() {
             if self.text.is_empty() {
                 return;

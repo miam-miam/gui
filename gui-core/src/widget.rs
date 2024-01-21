@@ -8,7 +8,7 @@ use std::any::Any;
 use vello::SceneBuilder;
 
 pub trait Widget<H> {
-    fn render(&mut self, scene: SceneBuilder, fcx: &mut FontContext);
+    fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext);
     fn pointer_down(&mut self, _event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {}
     fn pointer_up(&mut self, _event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {}
     fn pointer_move(&mut self, _event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {}

@@ -22,6 +22,6 @@ components:
             text: |
               {$count ->
                   [0] no apples
-                  [1] one apple
+                  [1] 1 apple
                  *[other] {$count} apples
               }
