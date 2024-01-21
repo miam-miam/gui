@@ -1,6 +1,6 @@
 use crate::fluent::FluentIdent;
 use anyhow::anyhow;
-use gui_core::parse::{ComponentDeclaration, WidgetDeclaration};
+use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, WidgetDeclaration};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 
@@ -12,6 +12,7 @@ pub struct Widget<'a> {
     pub child_type: Option<Ident>,
     pub handler: Option<Ident>,
     pub fluents: Vec<FluentIdent<'a>>,
+    pub variables: Vec<(&'static str, &'a str)>,
 }
 
 impl<'a> Widget<'a> {
@@ -65,6 +66,7 @@ impl<'a> Widget<'a> {
             child_type: None,
             handler,
             fluents,
+            variables: widget.get_vars(),
         })
     }
 
@@ -104,6 +106,62 @@ impl<'a> Widget<'a> {
         container.extend_from_slice(&self.fluents[..]);
         for child in self.child_widgets.iter().flatten() {
             child.push_fluents(container);
+        }
+    }
+
+    fn gen_var_update2(
+        &self,
+        var: &NormalVariableDeclaration,
+        widget_stmt: &TokenStream,
+        stream: &mut TokenStream,
+    ) {
+        let widget_ident = Ident::new("widget", Span::call_site());
+        let value_ident = Ident::new("value", Span::call_site());
+        let string_var_name = &var.name;
+
+        stream.extend(quote!(let widget = #widget_stmt;));
+
+        for (prop, _var) in self.variables.iter().filter(|(_p, v)| v == &var.name) {
+            self.widget_declaration.widget.on_property_update(
+                prop,
+                &widget_ident,
+                &value_ident,
+                stream,
+            );
+        }
+
+        for fluent in self
+            .fluents
+            .iter()
+            .filter(|f| f.fluent.vars.contains(&var.name))
+        {
+            let fluent_ident = &fluent.ident;
+            let prop = Ident::new(fluent.property, Span::call_site());
+            stream.extend(quote! {
+                #prop = true;
+                self.#fluent_ident.set(#string_var_name, #value_ident);
+            });
+        }
+
+        let mut widget_stmt = widget_stmt.clone();
+
+        widget_stmt.extend(quote!(.get_widget()));
+
+        for w in self.child_widgets.iter().filter_map(|w| w.as_ref()) {
+            w.gen_var_update2(var, &widget_stmt, stream);
+        }
+    }
+
+    pub fn gen_var_update(&self, var: &NormalVariableDeclaration) -> TokenStream {
+        let var_name = Ident::new(&var.name, Span::call_site());
+        let mut stream = TokenStream::new();
+        let widget = quote!(&mut self.widget);
+        self.gen_var_update2(var, &widget, &mut stream);
+        quote! {
+            if force_update || <CompStruct as Update<#var_name>>::is_updated(&self.comp_struct) {
+                let value = <CompStruct as Update<#var_name>>::value(&self.comp_struct);
+                #stream
+            }
         }
     }
 

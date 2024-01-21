@@ -1,7 +1,7 @@
 use gui_core::common::text;
 use gui_core::common::text::ParleyBrush;
 use gui_core::parley::layout::Layout;
-use gui_core::parley::style::StyleProperty;
+use gui_core::parley::style::{FontWeight, StyleProperty};
 use gui_core::parley::{layout, LayoutContext};
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
@@ -35,6 +35,7 @@ impl Text {
         let mut lcx = LayoutContext::new();
         let mut layout_builder = lcx.ranged_builder(fcx, &self.text, 1.0);
         layout_builder.push_default(&StyleProperty::FontSize(self.size));
+        layout_builder.push_default(&StyleProperty::FontWeight(FontWeight::SEMI_BOLD));
         layout_builder.push_default(&StyleProperty::Brush(ParleyBrush(Brush::Solid(
             self.colour.0,
         ))));
@@ -44,6 +45,20 @@ impl Text {
     pub fn set_text(&mut self, text: Cow<'_, str>) {
         if self.text != text {
             self.text = text.into_owned();
+            self.layout = None;
+        }
+    }
+
+    pub fn set_colour(&mut self, colour: Colour) {
+        if self.colour != colour {
+            self.colour = colour;
+            self.layout = None;
+        }
+    }
+
+    pub fn set_size(&mut self, size: f32) {
+        if self.size != size {
+            self.size = size;
             self.layout = None;
         }
     }
@@ -124,9 +139,9 @@ impl WidgetBuilder for TextBuilder {
         stream: &mut TokenStream,
     ) {
         match property {
-            "text" => stream.extend(quote! {#widget.set_text(#value)}),
-            "colour" => {}
-            "size" => {}
+            "text" => stream.extend(quote! {#widget.set_text(#value);}),
+            "colour" => stream.extend(quote! {#widget.set_colour(#value);}),
+            "size" => stream.extend(quote! {#widget.set_size(#value);}),
             _ => {}
         }
     }

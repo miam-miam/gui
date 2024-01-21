@@ -3,10 +3,8 @@ use crate::fluent::FluentIdent;
 use crate::widget::Widget;
 use anyhow::anyhow;
 use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, VariableDeclaration};
-use itertools::Itertools;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::str::FromStr;
@@ -47,21 +45,10 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
 
     create_bundle(out_dir, &component.name, &fluents[..])?;
 
-    let var_to_fluent = fluents
+    let if_update: TokenStream = normal_variables
         .iter()
-        .flat_map(|fluent| fluent.fluent.vars.iter().map(move |v| (v.as_str(), fluent)))
-        .into_group_map();
-
-    let widget_vars: HashMap<&str, Vec<&str>> = component
-        .child
-        .widget
-        .get_vars()
-        .iter()
-        .map(|(prop, var)| (*var, *prop))
-        .into_group_map();
-
-    let if_update: TokenStream =
-        fluent::gen_var_update(component, &normal_variables[..], var_to_fluent, widget_vars);
+        .map(|n| widget_tree.gen_var_update(n))
+        .collect();
 
     let fluent_arg_idents: Vec<&Ident> = fluents
         .iter()
@@ -93,6 +80,10 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             }
         })
         .collect();
+
+    let var_names = normal_variables
+        .iter()
+        .map(|n| Ident::new(&n.name, Span::call_site()));
 
     let struct_handlers = gen_handler_structs(component)?;
 
@@ -148,8 +139,8 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     #( let mut #fluent_properties = false; )*
                     #if_update
                     #prop_update
+                    #( <CompStruct as Update<#var_names>>::reset(&mut self.comp_struct); )*
                 }
-
 
                 fn pointer_down(&mut self, event: &PointerEvent, window: &WindowHandle) {
                     self.widget.pointer_down(event, window, &mut self.comp_struct);

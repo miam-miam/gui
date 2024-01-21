@@ -92,7 +92,9 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
         } else {
             Affine::IDENTITY
         };
-        let fill_colour = if self.clicking && self.hovered {
+        let fill_colour = if self.disabled {
+            self.disabled_colour
+        } else if self.clicking && self.hovered {
             self.clicked_colour
         } else if self.hovered {
             self.hover_colour
@@ -120,20 +122,31 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
                 stroke_width as f64 + if self.clicking { 0.875 } else { 0.0 },
             ))),
         );
+        let border_colour = if self.disabled {
+            self.disabled_colour
+        } else {
+            self.border_colour
+        };
         scene.stroke(
             &Stroke::new(stroke_width),
             affine,
-            &Brush::Solid(self.border_colour.0),
+            &Brush::Solid(border_colour.0),
             None,
             &self.size.to_rounded_rect(4.5),
         );
     }
 
     fn pointer_down(&mut self, event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {
+        if self.disabled {
+            return;
+        }
         self.clicking = self.size.to_rounded_rect(4.0).contains(event.pos);
     }
 
     fn pointer_up(&mut self, _event: &PointerEvent, _window: &WindowHandle, handler: &mut H) {
+        if self.disabled {
+            return;
+        }
         self.clicking = false;
         if self.hovered {
             handler.on_press();
@@ -141,6 +154,9 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
     }
 
     fn pointer_move(&mut self, event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {
+        if self.disabled {
+            return;
+        }
         self.hovered = self.size.to_rounded_rect(4.0).contains(event.pos);
     }
 }
@@ -234,12 +250,12 @@ impl WidgetBuilder for ButtonBuilder {
         stream: &mut TokenStream,
     ) {
         match property {
-            "disabled" => stream.extend(quote! {#widget.set_disabled(#value)}),
-            "background_colour" => stream.extend(quote! {#widget.set_background_colour(#value)}),
-            "disabled_colour" => stream.extend(quote! {#widget.set_disabled_colour(#value)}),
-            "clicked_colour" => stream.extend(quote! {#widget.set_clicked_colour(#value)}),
-            "hover_colour" => stream.extend(quote! {#widget.set_hover_colour(#value)}),
-            "border_colour" => stream.extend(quote! {#widget.set_border_colour(#value)}),
+            "disabled" => stream.extend(quote! {#widget.set_disabled(#value);}),
+            "background_colour" => stream.extend(quote! {#widget.set_background_colour(#value);}),
+            "disabled_colour" => stream.extend(quote! {#widget.set_disabled_colour(#value);}),
+            "clicked_colour" => stream.extend(quote! {#widget.set_clicked_colour(#value);}),
+            "hover_colour" => stream.extend(quote! {#widget.set_hover_colour(#value);}),
+            "border_colour" => stream.extend(quote! {#widget.set_border_colour(#value);}),
             _ => {}
         }
     }

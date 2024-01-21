@@ -7,7 +7,8 @@ members = [
     "gui-build",
 #    "examples/**",
 #    "examples/shello",
-    "examples/testbed"
+    "examples/testbed",
+    "examples/testbuild"
 ]
 
 [package]

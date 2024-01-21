@@ -1,8 +1,6 @@
 use gui_core::parse::fluent::Fluent;
-use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
-use std::collections::HashMap;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FluentIdent<'a> {
@@ -30,58 +28,6 @@ impl<'a> FluentIdent<'a> {
             property_ident: Ident::new(property, Span::call_site()),
         }
     }
-}
-
-pub fn gen_var_update(
-    component: &ComponentDeclaration,
-    normal_variables: &[&NormalVariableDeclaration],
-    var_to_fluent: HashMap<&str, Vec<&FluentIdent>>,
-    widget_vars: HashMap<&str, Vec<&'static str>>,
-) -> TokenStream {
-    normal_variables
-        .iter()
-        .map(|v| {
-            let var_name = Ident::new(&v.name, Span::call_site());
-            let widget_ident = Ident::new("widget", Span::call_site());
-            let value_ident = Ident::new("value", Span::call_site());
-            let string_var_name = &v.name;
-            let mut update_var_props = TokenStream::new();
-
-            for prop in widget_vars
-                .get(v.name.as_str())
-                .into_iter()
-                .flat_map(|props| props.iter())
-            {
-                component
-                    .child
-                    .widget
-                    .on_property_update(prop, &widget_ident, &value_ident, &mut update_var_props);
-            }
-
-            let update_fluent_args = var_to_fluent
-                .get(v.name.as_str())
-                .into_iter()
-                .flat_map(|fluents| fluents.iter())
-                .map(|fluent| {
-                    let fluent_ident = &fluent.ident;
-                    let prop = Ident::new(fluent.property, Span::call_site());
-                    quote! {
-                        #prop = true;
-                        self.#fluent_ident.set(#string_var_name, #value_ident);
-                    }
-                });
-
-            quote! {
-                if force_update || <CompStruct as Update<#var_name>>::is_updated(&self.comp_struct) {
-                    <CompStruct as Update<#var_name>>::reset(&mut self.comp_struct);
-                    let #value_ident = <CompStruct as Update<#var_name>>::value(&self.comp_struct);
-                    let #widget_ident = &mut self.widget;
-                    #update_var_props
-                    #( #update_fluent_args )*
-                }
-            }
-        })
-        .collect()
 }
 
 pub fn gen_bundle_function() -> TokenStream {
