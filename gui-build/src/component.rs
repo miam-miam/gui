@@ -10,21 +10,6 @@ use std::path::Path;
 use std::str::FromStr;
 
 pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> anyhow::Result<()> {
-    let mut widget_init = TokenStream::new();
-    let child_init = match &component.child.widget.get_widgets()[..] {
-        &[Some(child)] => {
-            let mut stream = TokenStream::new();
-            child.widget.create_widget(None, &mut stream);
-            Some(stream)
-        }
-        _ => None,
-    };
-
-    component
-        .child
-        .widget
-        .create_widget(child_init.as_ref(), &mut widget_init);
-
     let normal_variables: Vec<&NormalVariableDeclaration> = component
         .variables
         .iter()
@@ -92,6 +77,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let rs_path = Path::new(&out_dir).join(format!("{}.rs", component.name));
 
     let widget_type = widget_tree.gen_widget_type();
+    let widget_init = widget_tree.gen_widget_init();
 
     let gen_module = quote! {
         #[allow(clippy::suspicious_else_formatting)]

@@ -3,8 +3,8 @@ mod fluent;
 mod widget;
 
 use anyhow::{anyhow, bail};
-use gui_core::parse::GUIDeclaration;
-use gui_core::widget::AsAny;
+use gui_core::parse::{GUIDeclaration, WidgetDeclaration};
+use gui_core::widget::{AsAny, WidgetBuilder};
 use itertools::Itertools;
 use std::any::TypeId;
 use std::collections::HashMap;
@@ -56,13 +56,24 @@ fn combine_styles(static_gui: &mut GUIDeclaration) -> anyhow::Result<()> {
     }
 
     for c in &mut static_gui.components {
-        let widget = &c.child.widget;
-        if let Some(i) = styles.get(&(widget.as_any().type_id())) {
-            c.child.widget.combine(static_gui.styles[*i].as_ref())
-        }
+        combine_style(&mut c.child, &styles, &static_gui.styles[..])
     }
 
     Ok(())
+}
+
+fn combine_style(
+    widget: &mut WidgetDeclaration,
+    style_map: &HashMap<TypeId, usize>,
+    styles: &[Box<dyn WidgetBuilder>],
+) {
+    if let Some(i) = style_map.get(&(widget.widget.as_any().type_id())) {
+        widget.widget.combine(styles[*i].as_ref())
+    }
+
+    for child in widget.widget.get_widgets().into_iter().flatten() {
+        combine_style(child, style_map, styles);
+    }
 }
 
 fn add_info_to_env(static_gui: &GUIDeclaration) {

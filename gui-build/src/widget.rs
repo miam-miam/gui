@@ -54,7 +54,7 @@ impl<'a> Widget<'a> {
             widget_type_name,
             widget_declaration,
             child_widgets: widget
-                .get_widgets()
+                .widgets()
                 .iter()
                 .map(|w| {
                     Ok(match w {
@@ -202,5 +202,25 @@ impl<'a> Widget<'a> {
         for w in self.child_widgets.iter().filter_map(|w| w.as_ref()) {
             w.gen_fluent_update(Some(&widget_stmt), stream)
         }
+    }
+
+    pub fn gen_widget_init(&self) -> TokenStream {
+        let mut stream = TokenStream::new();
+        let child_init = match &self.child_widgets[..] {
+            [Some(child)] => {
+                let mut stream = TokenStream::new();
+                child
+                    .widget_declaration
+                    .widget
+                    .create_widget(None, &mut stream);
+                Some(stream)
+            }
+            _ => None,
+        };
+
+        self.widget_declaration
+            .widget
+            .create_widget(child_init.as_ref(), &mut stream);
+        stream
     }
 }

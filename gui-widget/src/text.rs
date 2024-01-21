@@ -65,7 +65,7 @@ impl Text {
 }
 
 impl<T> Widget<T> for Text {
-    fn render(&mut self, mut scene: &mut SceneBuilder, fcx: &mut FontContext) {
+    fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext) {
         if self.layout.is_none() {
             if self.text.is_empty() {
                 return;
@@ -75,7 +75,7 @@ impl<T> Widget<T> for Text {
 
         let layout = self.layout.as_mut().unwrap();
         layout.break_all_lines(None, layout::Alignment::Start);
-        text::render_text(&mut scene, Affine::translate((0.0, 0.0)), layout);
+        text::render_text(scene, Affine::translate((0.0, 0.0)), layout);
     }
 }
 
@@ -165,7 +165,11 @@ impl WidgetBuilder for TextBuilder {
         false
     }
 
-    fn get_widgets(&self) -> Vec<&Option<WidgetDeclaration>> {
+    fn get_widgets(&mut self) -> Vec<&mut Option<WidgetDeclaration>> {
+        vec![]
+    }
+
+    fn widgets(&self) -> Vec<&Option<WidgetDeclaration>> {
         vec![]
     }
 }

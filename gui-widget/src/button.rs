@@ -306,7 +306,11 @@ impl WidgetBuilder for ButtonBuilder {
         true
     }
 
-    fn get_widgets(&self) -> Vec<&Option<WidgetDeclaration>> {
+    fn get_widgets(&mut self) -> Vec<&mut Option<WidgetDeclaration>> {
+        vec![&mut self.child]
+    }
+
+    fn widgets(&self) -> Vec<&Option<WidgetDeclaration>> {
         vec![&self.child]
     }
 }

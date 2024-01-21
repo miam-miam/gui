@@ -48,7 +48,8 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
     fn get_fluents(&self) -> Vec<(&'static str, &Fluent)>;
     fn get_vars(&self) -> Vec<(&'static str, &str)>;
     fn has_handler(&self) -> bool;
-    fn get_widgets(&self) -> Vec<&Option<WidgetDeclaration>>;
+    fn get_widgets(&mut self) -> Vec<&mut Option<WidgetDeclaration>>;
+    fn widgets(&self) -> Vec<&Option<WidgetDeclaration>>;
 }
 
 dyn_clone::clone_trait_object!(WidgetBuilder);
