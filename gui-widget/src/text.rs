@@ -1,11 +1,12 @@
 use gui_core::common::text;
 use gui_core::common::text::ParleyBrush;
 use gui_core::parley::layout::Layout;
-use gui_core::parley::style::StyleProperty;
+use gui_core::parley::style::{FontWeight, StyleProperty};
 use gui_core::parley::{layout, LayoutContext};
 use gui_core::parse::fluent::Fluent;
+use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::Affine;
-use gui_core::vello::peniko::Brush;
+use gui_core::vello::peniko::{Brush, Color};
 use gui_core::widget::{Widget, WidgetBuilder};
 use gui_core::{Colour, FontContext, SceneBuilder, Var};
 use proc_macro2::{Ident, TokenStream};
@@ -34,6 +35,7 @@ impl Text {
         let mut lcx = LayoutContext::new();
         let mut layout_builder = lcx.ranged_builder(fcx, &self.text, 1.0);
         layout_builder.push_default(&StyleProperty::FontSize(self.size));
+        layout_builder.push_default(&StyleProperty::FontWeight(FontWeight::SEMI_BOLD));
         layout_builder.push_default(&StyleProperty::Brush(ParleyBrush(Brush::Solid(
             self.colour.0,
         ))));
@@ -46,10 +48,24 @@ impl Text {
             self.layout = None;
         }
     }
+
+    pub fn set_colour(&mut self, colour: Colour) {
+        if self.colour != colour {
+            self.colour = colour;
+            self.layout = None;
+        }
+    }
+
+    pub fn set_size(&mut self, size: f32) {
+        if self.size != size {
+            self.size = size;
+            self.layout = None;
+        }
+    }
 }
 
-impl Widget for Text {
-    fn render(&mut self, mut scene: SceneBuilder, fcx: &mut FontContext) {
+impl<T> Widget<T> for Text {
+    fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext) {
         if self.layout.is_none() {
             if self.text.is_empty() {
                 return;
@@ -59,11 +75,11 @@ impl Widget for Text {
 
         let layout = self.layout.as_mut().unwrap();
         layout.break_all_lines(None, layout::Alignment::Start);
-        text::render_text(&mut scene, Affine::translate((0.0, 0.0)), layout);
+        text::render_text(scene, Affine::translate((0.0, 0.0)), layout);
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct TextBuilder {
     pub text: Option<Fluent>,
@@ -73,6 +89,16 @@ pub struct TextBuilder {
 
 #[typetag::deserialize(name = "Text")]
 impl WidgetBuilder for TextBuilder {
+    fn widget_type(
+        &self,
+        _handler: Option<&Ident>,
+        _comp_struct: &Ident,
+        _widget: Option<&TokenStream>,
+        stream: &mut TokenStream,
+    ) {
+        stream.extend(quote!(::gui::gui_widget::Text));
+    }
+
     fn name(&self) -> &'static str {
         "Text"
     }
@@ -90,18 +116,18 @@ impl WidgetBuilder for TextBuilder {
         }
     }
 
-    fn create_widget(&self, stream: &mut TokenStream) {
+    fn create_widget(&self, _widget: Option<&TokenStream>, stream: &mut TokenStream) {
         let colour = match &self.colour {
             Some(Var::Value(v)) => v.to_token_stream(),
-            _ => Colour::default().to_token_stream(),
+            _ => Colour(Color::rgb8(33, 37, 41)).to_token_stream(),
         };
         let size = match &self.size {
             Some(Var::Value(v)) => v.to_token_stream(),
-            _ => (12.0f32).to_token_stream(),
+            _ => 14.0f32.to_token_stream(),
         };
 
         stream.extend(quote! {
-            ::gui_widget::Text::new(String::new(), #colour, #size)
+            ::gui::gui_widget::Text::new(String::new(), #colour, #size)
         });
     }
 
@@ -113,9 +139,9 @@ impl WidgetBuilder for TextBuilder {
         stream: &mut TokenStream,
     ) {
         match property {
-            "text" => stream.extend(quote! {#widget.set_text(#value)}),
-            "colour" => {}
-            "size" => {}
+            "text" => stream.extend(quote! {#widget.set_text(#value);}),
+            "colour" => stream.extend(quote! {#widget.set_colour(#value);}),
+            "size" => stream.extend(quote! {#widget.set_size(#value);}),
             _ => {}
         }
     }
@@ -133,5 +159,17 @@ impl WidgetBuilder for TextBuilder {
             array.push(("size", v.as_str()));
         }
         array
+    }
+
+    fn has_handler(&self) -> bool {
+        false
+    }
+
+    fn get_widgets(&mut self) -> Vec<&mut Option<WidgetDeclaration>> {
+        vec![]
+    }
+
+    fn widgets(&self) -> Vec<&Option<WidgetDeclaration>> {
+        vec![]
     }
 }

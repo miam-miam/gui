@@ -1,3 +1,5 @@
+mod update;
+
 use gui_core::glazier::kurbo::Size;
 use gui_core::glazier::{
     Application, FileDialogToken, FileInfo, IdleToken, KeyEvent, PointerEvent, Region, Scalable,
@@ -10,11 +12,17 @@ use gui_core::{Component, FontContext, SceneBuilder, ToComponent};
 use std::any::Any;
 use tracing_subscriber::EnvFilter;
 
-pub type FluentBundle<R> =
-    fluent_bundle::bundle::FluentBundle<R, intl_memoizer::concurrent::IntlLangMemoizer>;
+pub use fluent_bundle::concurrent::FluentBundle;
 pub use fluent_bundle::{FluentArgs, FluentMessage, FluentResource};
 pub use gui_core;
 pub use unic_langid::langid;
+
+pub use gui_derive::ToComponent;
+
+pub use gui_widget;
+
+pub use gui_core::Update;
+pub use update::Updateable;
 
 const WIDTH: usize = 2048;
 const HEIGHT: usize = 1536;
@@ -76,6 +84,7 @@ impl<C: Component> WindowState<C> {
         (size.width as u32, size.height as u32)
     }
 
+    // Code mostly adapted from https://github.com/linebender/glazier/blob/main/examples/shello.rs
     fn render(&mut self) {
         let (width, height) = self.surface_size();
         if self.surface.is_none() {
@@ -101,7 +110,7 @@ impl<C: Component> WindowState<C> {
                 timestamp_period: queue.get_timestamp_period(),
             };
             let render_params = RenderParams {
-                base_color: Color::BLACK,
+                base_color: Color::WHITE,
                 width,
                 height,
             };
@@ -157,17 +166,19 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
         println!("wheel {event:?}");
     }
 
-    fn pointer_move(&mut self, _event: &PointerEvent) {
-        // self.handle.set_cursor(&Cursor::Arrow);
-        // println!("pointer_move {event:?}");
+    fn pointer_move(&mut self, event: &PointerEvent) {
+        self.component.pointer_move(event, &self.handle);
+        self.component.update_vars(false);
     }
 
     fn pointer_down(&mut self, event: &PointerEvent) {
-        println!("pointer_down {event:?}");
+        self.component.pointer_down(event, &self.handle);
+        self.component.update_vars(false);
     }
 
     fn pointer_up(&mut self, event: &PointerEvent) {
-        println!("pointer_up {event:?}");
+        self.component.pointer_up(event, &self.handle);
+        self.component.update_vars(false);
     }
 
     fn timer(&mut self, id: TimerToken) {

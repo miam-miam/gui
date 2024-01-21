@@ -1,18 +1,26 @@
-use gui::gui_core::Update;
+use gui::gui_widget::button::ButtonHandler;
+use gui::{ToComponent, Update, Updateable};
 
-struct Counter;
-use Counter as __private_CompStruct;
-include!(concat!(env!("OUT_DIR"), "/Counter.rs"));
+#[derive(ToComponent, Default)]
+struct Counter {
+    count: Updateable<f32>,
+}
 
-impl Update<gen::name> for Counter {
+impl Update<gen::disabled> for Counter {
     fn is_updated(&self) -> bool {
-        false
+        self.count.is_updated()
     }
-    fn value(&self) -> String {
-        String::from("World")
+
+    fn value(&self) -> bool {
+        self.count.value() > 0.0
     }
 }
 
+impl ButtonHandler<gen::Count> for Counter {
+    fn on_press(&mut self) {
+        *self.count.invalidate() += 1.0;
+    }
+}
 fn main() {
-    gui::run(Counter)
+    gui::run(Counter::default())
 }

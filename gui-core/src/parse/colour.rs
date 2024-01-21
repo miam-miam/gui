@@ -4,7 +4,7 @@ use serde::de::{Error, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::fmt::Formatter;
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Hash)]
 pub struct Colour(pub vello::peniko::Color);
 
 impl ToTokens for Colour {

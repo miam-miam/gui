@@ -1,13 +1,16 @@
 mod component;
+mod fluent;
+mod widget;
 
 use anyhow::{anyhow, bail};
-use gui_core::parse::{ComponentDeclaration, GUIDeclaration};
-use gui_core::widget::AsAny;
+use gui_core::parse::{GUIDeclaration, WidgetDeclaration};
+use gui_core::widget::{AsAny, WidgetBuilder};
+use itertools::Itertools;
 use std::any::TypeId;
 use std::collections::HashMap;
+use std::env;
 use std::fs::File;
 use std::path::Path;
-use std::{env, fs};
 
 extern crate gui_widget;
 
@@ -26,32 +29,13 @@ fn build_path(path: &Path) -> anyhow::Result<()> {
 
     combine_styles(&mut ser)?;
 
+    add_info_to_env(&ser);
+
     for component in ser.components.iter_mut() {
-        let bundle = create_bundle(component)?;
-        let ftl_path = path.join(format!("{}.ftl", component.name));
-        fs::write(ftl_path, bundle)?;
         component::create_component(path, component)?;
     }
 
     Ok(())
-}
-
-fn create_bundle(component: &ComponentDeclaration) -> anyhow::Result<String> {
-    let mut bundle = String::new();
-    for (property_name, fluent) in component.child.widget.get_fluents() {
-        let fluent_name = format!(
-            "{}-{}-{}",
-            component.name,
-            component
-                .child
-                .name
-                .as_ref()
-                .map_or_else(|| component.child.widget.name(), |s| s.as_str()),
-            property_name
-        );
-        bundle = bundle + &format!("{fluent_name} = {}", fluent.text);
-    }
-    Ok(bundle)
 }
 
 fn combine_styles(static_gui: &mut GUIDeclaration) -> anyhow::Result<()> {
@@ -72,13 +56,36 @@ fn combine_styles(static_gui: &mut GUIDeclaration) -> anyhow::Result<()> {
     }
 
     for c in &mut static_gui.components {
-        let widget = &c.child.widget;
-        if let Some(i) = styles.get(&(widget.as_any().type_id())) {
-            c.child.widget.combine(static_gui.styles[*i].as_ref())
-        }
+        combine_style(&mut c.child, &styles, &static_gui.styles[..])
     }
 
     Ok(())
+}
+
+fn combine_style(
+    widget: &mut WidgetDeclaration,
+    style_map: &HashMap<TypeId, usize>,
+    styles: &[Box<dyn WidgetBuilder>],
+) {
+    if let Some(i) = style_map.get(&(widget.widget.as_any().type_id())) {
+        widget.widget.combine(styles[*i].as_ref())
+    }
+
+    for child in widget.widget.get_widgets().into_iter().flatten() {
+        combine_style(child, style_map, styles);
+    }
+}
+
+fn add_info_to_env(static_gui: &GUIDeclaration) {
+    let components = static_gui.components.iter().map(|c| &c.name).format(",");
+    println!("cargo:rustc-env=GUI_COMPONENTS={components}");
+    for component in &static_gui.components {
+        let variables = component.variables.iter().map(|v| v.get_name()).format(",");
+        println!(
+            "cargo:rustc-env=GUI_COMPONENT_{}={variables}",
+            component.name
+        );
+    }
 }
 
 #[cfg(test)]
