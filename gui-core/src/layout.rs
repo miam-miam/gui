@@ -60,11 +60,14 @@ impl LayoutConstraints {
     pub fn min_clamp(&self, min: Size) -> LayoutConstraints {
         LayoutConstraints::new(
             self.min.clamp(min, Size::new(f64::INFINITY, f64::INFINITY)),
-            self.max,
+            self.max.clamp(min, Size::new(f64::INFINITY, f64::INFINITY)),
         )
     }
 
     pub fn max_clamp(&self, max: Size) -> LayoutConstraints {
-        LayoutConstraints::new(self.min, self.max.clamp(Size::new(0.0, 0.0), max))
+        LayoutConstraints::new(
+            self.min.clamp(Size::new(0.0, 0.0), max),
+            self.max.clamp(Size::new(0.0, 0.0), max),
+        )
     }
 }

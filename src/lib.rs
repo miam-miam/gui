@@ -143,6 +143,7 @@ impl<C: Component> WindowState<C> {
                 .render_to_surface(device, queue, &self.scene, &surface_texture, &render_params)
                 .unwrap();
             surface_texture.present();
+            device.poll(wgpu_types::Maintain::Wait);
         }
     }
 }
