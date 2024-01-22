@@ -16,7 +16,7 @@ impl Default for Counter {
 
 impl ButtonHandler<gen::Count> for Counter {
     fn on_press(&mut self) {
-        *self.count.invalidate() += 5.0;
+        *self.count.invalidate() += 1.0;
     }
 }
 fn main() {
