@@ -8,14 +8,10 @@ components:
     variables:
       - name: count
         type: f32
-      - name: disabled
-        type: bool
     child:
       name: Count
       widget: Button
       properties:
-        disabled:
-          variable: disabled
         child:
           widget: Text
           properties:
@@ -25,3 +21,5 @@ components:
                   [1] 1 apple
                  *[other] {$count} apples
               }
+            size:
+              variable: count

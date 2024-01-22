@@ -1,18 +1,16 @@
 use gui::gui_widget::button::ButtonHandler;
-use gui::{ToComponent, Update, Updateable};
+use gui::{ToComponent, Updateable};
 
-#[derive(ToComponent, Default)]
+#[derive(ToComponent)]
 struct Counter {
     count: Updateable<f32>,
 }
 
-impl Update<gen::disabled> for Counter {
-    fn is_updated(&self) -> bool {
-        self.count.is_updated()
-    }
-
-    fn value(&self) -> bool {
-        self.count.value() > 0.0
+impl Default for Counter {
+    fn default() -> Self {
+        Self {
+            count: Updateable::new(12.0),
+        }
     }
 }
 

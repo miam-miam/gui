@@ -1,8 +1,10 @@
 use gui_core::common::text;
 use gui_core::common::text::ParleyBrush;
-use gui_core::parley::layout::Layout;
+use gui_core::glazier::kurbo::Size;
+use gui_core::layout::LayoutConstraints;
+use gui_core::parley::layout::{Alignment, Layout};
 use gui_core::parley::style::{FontWeight, StyleProperty};
-use gui_core::parley::{layout, LayoutContext};
+use gui_core::parley::LayoutContext;
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::Affine;
@@ -74,8 +76,19 @@ impl<T> Widget<T> for Text {
         }
 
         let layout = self.layout.as_mut().unwrap();
-        layout.break_all_lines(None, layout::Alignment::Start);
         text::render_text(scene, Affine::translate((0.0, 0.0)), layout);
+    }
+
+    fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size {
+        if self.layout.is_none() {
+            if self.text.is_empty() {
+                return Size::ZERO;
+            }
+            self.build(fcx);
+        }
+        let layout = self.layout.as_mut().unwrap();
+        layout.break_all_lines(constraints.max_advance(), Alignment::Start);
+        Size::new(layout.width() as f64, layout.height() as f64)
     }
 }
 

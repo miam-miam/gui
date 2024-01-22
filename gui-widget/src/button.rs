@@ -1,12 +1,13 @@
-use gui_core::glazier::kurbo::Shape;
+use gui_core::glazier::kurbo::{Shape, Size};
 use gui_core::glazier::{PointerEvent, WindowHandle};
+use gui_core::layout::LayoutConstraints;
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::{Affine, Rect, Vec2};
 use gui_core::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
 use gui_core::vello::SceneFragment;
 use gui_core::widget::{Widget, WidgetBuilder};
-use gui_core::{Colour, FontContext, SceneBuilder, ToHandler, Var};
+use gui_core::{Colour, FontContext, Point, SceneBuilder, ToHandler, Var};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
@@ -51,7 +52,7 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Button<T,
             hover_colour,
             border_colour,
             disabled,
-            size: Rect::new(0.0, 0.0, 150.0, 40.0),
+            size: Rect::new(0.0, 0.0, 0.0, 0.0),
             hovered: false,
             clicking: false,
             child,
@@ -82,11 +83,12 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Button<T,
     }
 }
 
+const STOKE_WIDTH: f64 = 0.58;
+
 impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
     for Button<T, H, W>
 {
     fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext) {
-        let stroke_width = 0.58_f32;
         let affine = if self.clicking {
             Affine::translate(Vec2::new(0.0, 0.875))
         } else {
@@ -101,10 +103,7 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
         } else {
             self.background_colour
         };
-        let rect = self
-            .size
-            .inset(-0.5 * stroke_width as f64)
-            .to_rounded_rect(4.0);
+        let rect = self.size.inset(-0.5 * STOKE_WIDTH).to_rounded_rect(4.0);
         scene.fill(
             Fill::NonZero,
             affine,
@@ -119,8 +118,8 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
         scene.append(
             &fragment,
             Some(Affine::translate(Vec2::new(
-                stroke_width as f64 + 18.0,
-                stroke_width as f64 + if self.clicking { 0.875 } else { 0.0 },
+                STOKE_WIDTH + 18.0,
+                STOKE_WIDTH + if self.clicking { 0.875 } else { 0.0 },
             ))),
         );
         if self.disabled {
@@ -142,7 +141,7 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
             scene.pop_layer()
         } else {
             scene.stroke(
-                &Stroke::new(stroke_width),
+                &Stroke::new(STOKE_WIDTH as f32),
                 affine,
                 &Brush::Solid(self.border_colour.0),
                 None,
@@ -151,14 +150,37 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
         }
     }
 
-    fn pointer_down(&mut self, event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {
+    fn resize(&mut self, mut constraints: LayoutConstraints, fcx: &mut FontContext) -> Size {
+        let padding = Size::new(STOKE_WIDTH + 18.0, STOKE_WIDTH);
+        constraints = constraints.deset(padding);
+        let mut child_size = self
+            .child
+            .resize(constraints.min_clamp(Size::new(0.0, 18.0)), fcx);
+        child_size += padding * 2.0;
+        self.size = child_size.to_rect();
+        child_size
+    }
+
+    fn pointer_down(
+        &mut self,
+        local_pos: Point,
+        _event: &PointerEvent,
+        _window: &WindowHandle,
+        _handler: &mut H,
+    ) {
         if self.disabled {
             return;
         }
-        self.clicking = self.size.to_rounded_rect(4.0).contains(event.pos);
+        self.clicking = self.size.to_rounded_rect(4.0).contains(local_pos);
     }
 
-    fn pointer_up(&mut self, _event: &PointerEvent, _window: &WindowHandle, handler: &mut H) {
+    fn pointer_up(
+        &mut self,
+        _local_pos: Point,
+        _event: &PointerEvent,
+        _window: &WindowHandle,
+        handler: &mut H,
+    ) {
         if self.disabled {
             return;
         }
@@ -168,11 +190,17 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
         }
     }
 
-    fn pointer_move(&mut self, event: &PointerEvent, _window: &WindowHandle, _handler: &mut H) {
+    fn pointer_move(
+        &mut self,
+        local_pos: Point,
+        _event: &PointerEvent,
+        _window: &WindowHandle,
+        _handler: &mut H,
+    ) {
         if self.disabled {
             return;
         }
-        self.hovered = self.size.to_rounded_rect(4.0).contains(event.pos);
+        self.hovered = self.size.to_rounded_rect(4.0).contains(local_pos);
     }
 }
 
