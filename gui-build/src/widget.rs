@@ -2,13 +2,95 @@ use crate::fluent::FluentIdent;
 use anyhow::anyhow;
 use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, WidgetDeclaration};
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::quote;
+use quote::{format_ident, quote};
+use std::sync::atomic::{AtomicU32, Ordering};
+
+#[derive(Clone, Debug)]
+pub struct WidgetSet<'a> {
+    pub widgets: Vec<(TokenStream, Widget<'a>)>,
+    pub count: Option<u32>,
+}
+
+impl<'a> WidgetSet<'a> {
+    pub fn new(
+        component_name: &str,
+        widgets: Vec<(TokenStream, &'a WidgetDeclaration)>,
+    ) -> anyhow::Result<Self> {
+        static COUNTER: AtomicU32 = AtomicU32::new(0);
+
+        let widgets = widgets
+            .into_iter()
+            .map(|(s, w)| Ok((s, Widget::new_inner(component_name, w)?)))
+            .collect::<anyhow::Result<Vec<_>>>()?;
+
+        Ok(Self {
+            count: (widgets.len() > 1).then(|| COUNTER.fetch_add(1, Ordering::Relaxed)),
+            widgets,
+        })
+    }
+
+    pub fn gen_widget_type(&self) -> TokenStream {
+        let comp_struct = Ident::new("CompStruct", Span::call_site());
+        match &self.widgets[..] {
+            [(_, child)] => {
+                let mut stream = TokenStream::new();
+                child
+                    .widget_declaration
+                    .widget
+                    .widget_type(None, &comp_struct, None, &mut stream);
+                stream
+            }
+            [] => quote!(()),
+            _ => {
+                let count = self.count.expect("widget set should be created.");
+                let ident = format_ident!("WidgetSet_{count}");
+                quote!(#ident)
+            }
+        }
+    }
+
+    pub fn gen_widget_init(&self) -> TokenStream {
+        match &self.widgets[..] {
+            [(_, child)] => {
+                let mut stream = TokenStream::new();
+                child
+                    .widget_declaration
+                    .widget
+                    .create_widget(None, &mut stream);
+                stream
+            }
+            [] => quote!(()),
+            _ => {
+                let count = self.count.expect("widget set should be created.");
+                let widget_set = format_ident!("WidgetSet_{count}");
+
+                let inits = self.widgets.iter().map(|(_, child)| {
+                    let mut stream = TokenStream::new();
+                    child
+                        .widget_declaration
+                        .widget
+                        .create_widget(None, &mut stream);
+                    stream
+                });
+
+                let variants = self.widgets.iter().enumerate().map(|(i, _)| {
+                    let ident = format_ident!("{i}");
+                    quote!(#widget_set::#ident)
+                });
+
+                quote! {
+                    #(#variants(#inits)),*
+                }
+            }
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Widget<'a> {
     pub widget_type_name: &'static str,
     pub widget_declaration: &'a WidgetDeclaration,
-    pub child_widgets: Vec<Option<Widget<'a>>>,
+    pub child_widgets: Option<WidgetSet<'a>>,
     pub child_type: Option<Ident>,
     pub handler: Option<Ident>,
     pub fluents: Vec<FluentIdent<'a>>,
@@ -54,15 +136,9 @@ impl<'a> Widget<'a> {
             widget_type_name,
             widget_declaration,
             child_widgets: widget
-                .widgets()
-                .iter()
-                .map(|w| {
-                    Ok(match w {
-                        Some(d) => Some(Self::new_inner(component_name, d)?),
-                        None => None,
-                    })
-                })
-                .collect::<anyhow::Result<Vec<_>>>()?,
+                .widgets(&Ident::new("widget", Span::call_site()))
+                .map(|ws| WidgetSet::new(component_name, ws))
+                .transpose()?,
             child_type: None,
             handler,
             fluents,
@@ -73,17 +149,7 @@ impl<'a> Widget<'a> {
     pub fn gen_widget_type(&self) -> TokenStream {
         let mut stream = TokenStream::new();
         let comp_struct = Ident::new("CompStruct", Span::call_site());
-        let child_type = match &self.child_widgets[..] {
-            [Some(child)] => {
-                let mut stream = TokenStream::new();
-                child
-                    .widget_declaration
-                    .widget
-                    .widget_type(None, &comp_struct, None, &mut stream);
-                Some(stream)
-            }
-            _ => None,
-        };
+        let child_type = self.child_widgets.as_ref().map(WidgetSet::gen_widget_type);
         self.widget_declaration.widget.widget_type(
             self.handler.as_ref(),
             &comp_struct,
@@ -97,14 +163,13 @@ impl<'a> Widget<'a> {
         !self.fluents.is_empty()
             || self
                 .child_widgets
-                .iter()
-                .filter_map(|w| w.as_ref())
-                .any(|w| w.contains_fluents())
+                .as_ref()
+                .is_some_and(|s| s.widgets.iter().any(|(_, w)| w.contains_fluents()))
     }
 
     pub fn push_fluents(&'a self, container: &mut Vec<FluentIdent<'a>>) {
         container.extend_from_slice(&self.fluents[..]);
-        for child in self.child_widgets.iter().flatten() {
+        for (_, child) in self.child_widgets.iter().flat_map(|s| &s.widgets) {
             child.push_fluents(container);
         }
     }
@@ -147,7 +212,7 @@ impl<'a> Widget<'a> {
 
         widget_stmt.extend(quote!(.get_widget()));
 
-        for w in self.child_widgets.iter().filter_map(|w| w.as_ref()) {
+        for (_, w) in self.child_widgets.iter().flat_map(|s| &s.widgets) {
             w.gen_var_update2(var, &widget_stmt, stream);
         }
     }
@@ -199,24 +264,14 @@ impl<'a> Widget<'a> {
 
         widget_stmt.extend(quote!(.get_widget()));
 
-        for w in self.child_widgets.iter().filter_map(|w| w.as_ref()) {
+        for (_, w) in self.child_widgets.iter().flat_map(|s| &s.widgets) {
             w.gen_fluent_update(Some(&widget_stmt), stream)
         }
     }
 
     pub fn gen_widget_init(&self) -> TokenStream {
         let mut stream = TokenStream::new();
-        let child_init = match &self.child_widgets[..] {
-            [Some(child)] => {
-                let mut stream = TokenStream::new();
-                child
-                    .widget_declaration
-                    .widget
-                    .create_widget(None, &mut stream);
-                Some(stream)
-            }
-            _ => None,
-        };
+        let child_init = self.child_widgets.as_ref().map(WidgetSet::gen_widget_init);
 
         self.widget_declaration
             .widget
