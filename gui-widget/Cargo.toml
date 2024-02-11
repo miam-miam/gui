@@ -12,3 +12,4 @@ typetag = "0.2.15"
 serde = { version = "1.0.195", features = ["derive"] }
 proc-macro2 = { version = "1.0.76", features = [] }
 quote = "1.0.35"
+itertools = "0.12.0"

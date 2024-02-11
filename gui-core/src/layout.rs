@@ -70,4 +70,11 @@ impl LayoutConstraints {
             self.max.clamp(Size::new(0.0, 0.0), max),
         )
     }
+
+    pub fn map<F>(&self, f: F) -> LayoutConstraints
+    where
+        F: Fn(Size) -> Size,
+    {
+        LayoutConstraints::new(f(self.min), f(self.max))
+    }
 }
