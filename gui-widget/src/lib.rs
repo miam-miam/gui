@@ -6,6 +6,8 @@ pub use button::Button;
 
 pub use text::Text;
 
+pub use hbox::HBox;
+
 #[cfg(test)]
 mod tests {
     #[test]

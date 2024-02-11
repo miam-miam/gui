@@ -1,6 +1,7 @@
 mod component;
 mod fluent;
 mod widget;
+mod widget_set;
 
 use anyhow::{anyhow, bail};
 use gui_core::parse::{GUIDeclaration, WidgetDeclaration};

@@ -5,21 +5,20 @@ styles:
 
 components:
   - name: Counter # Names for components must be unique
-    variables:
-      - name: count
-        type: f32
     child:
-      name: Count
-      widget: Button
+      widget: HBox
       properties:
-        child:
-          widget: Text
-          properties:
-            text: |
-              {$count ->
-                  [0] no apples
-                  [1] 1 apple
-                 *[other] {$count} apples
-              }
-            size:
-              variable: count
+        children:
+          - widget: Text
+            name: Other
+            properties:
+              text: Hiya
+          - name: Count
+            widget: Button
+            properties:
+              disabled:
+                variable: disabled
+              child:
+                widget: Text
+                properties:
+                  text: Testsfa

@@ -182,7 +182,7 @@ impl WidgetBuilder for TextBuilder {
         None
     }
 
-    fn widgets(&self, _widget: &Ident) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
+    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
         None
     }
 }

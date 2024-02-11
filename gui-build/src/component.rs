@@ -1,7 +1,6 @@
 use crate::fluent;
 use crate::fluent::FluentIdent;
 use crate::widget::Widget;
-use anyhow::anyhow;
 use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, VariableDeclaration};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
@@ -20,6 +19,9 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         .collect();
 
     let widget_tree = Widget::new(component)?;
+
+    let mut widget_set = TokenStream::new();
+    widget_tree.gen_widget_set(&mut widget_set);
 
     let bundle_func = widget_tree
         .contains_fluents()
@@ -70,7 +72,8 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         .iter()
         .map(|n| Ident::new(&n.name, Span::call_site()));
 
-    let struct_handlers = gen_handler_structs(component)?;
+    let mut struct_handlers = TokenStream::new();
+    widget_tree.gen_handler_structs(&mut struct_handlers)?;
 
     let component_holder = Ident::new(&format!("{}Holder", component.name), Span::call_site());
 
@@ -88,6 +91,8 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             use gui::gui_core::vello::SceneBuilder;
             use gui::gui_core::widget::Widget;
             use gui::gui_core::{Component, LayoutConstraints, Size, Point, ToComponent, ToHandler, Update, Variable};
+
+            #widget_set
 
             #bundle_func
 
@@ -157,32 +162,12 @@ fn write_file(path: &Path, stream: TokenStream) -> anyhow::Result<()> {
 }
 #[cfg(feature = "pretty")]
 fn write_file(path: &Path, stream: TokenStream) -> anyhow::Result<()> {
-    let file = syn::parse2::<syn::File>(stream)?;
+    let file = syn::parse2::<syn::File>(stream.clone()).inspect_err(|_| {
+        let _ = fs::write(path, stream.to_string());
+    })?;
 
     fs::write(path, prettyplease::unparse(&file))?;
     Ok(())
-}
-
-fn gen_handler_structs(component: &ComponentDeclaration) -> anyhow::Result<TokenStream> {
-    Ok(if component.child.widget.has_handler() {
-        let name = Ident::new(
-            component
-                .child
-                .name
-                .as_ref()
-                .ok_or_else(|| anyhow!("Widgets with handlers must be named."))?,
-            Span::call_site(),
-        );
-        quote! {
-            pub(crate) struct #name;
-
-            impl ToHandler for #name {
-                type BaseHandler = CompStruct;
-            }
-        }
-    } else {
-        quote!()
-    })
 }
 
 fn create_bundle(
@@ -193,7 +178,7 @@ fn create_bundle(
     let ftl_path = out_dir.join(format!("{component_name}.ftl"));
     let mut bundle = String::new();
     for fluent in fluents {
-        bundle = bundle + &format!("{} = {}", fluent.name, fluent.fluent.text);
+        bundle = bundle + &format!("{} = {}\n", fluent.name, fluent.fluent.text);
     }
     fs::write(ftl_path, bundle)?;
     Ok(())

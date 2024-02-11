@@ -338,11 +338,11 @@ impl WidgetBuilder for ButtonBuilder {
         Some(self.child.iter_mut().collect())
     }
 
-    fn widgets(&self, widget: &Ident) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
+    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
         Some(
             self.child
                 .iter()
-                .map(|c| (quote!(#widget.get_widget()), c))
+                .map(|c| (quote!(.get_widget()), c))
                 .collect(),
         )
     }

@@ -1,7 +1,7 @@
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::widget::{Widget, WidgetBuilder};
-use gui_core::Var;
+use gui_core::{FontContext, LayoutConstraints, SceneBuilder, Size, Var};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
@@ -26,12 +26,18 @@ impl<C, W: Widget<C>> HBox<C, W> {
         self.spacing = spacing;
     }
 
-    pub fn get_widgets(&mut self, i: usize) -> &mut W {
+    pub fn widgets(&mut self, i: usize) -> &mut W {
         self.children.get_mut(i).unwrap()
     }
+}
 
-    pub fn widgets(&self, i: usize) -> &W {
-        self.children.get(i).unwrap()
+impl<C, W: Widget<C>> Widget<C> for HBox<C, W> {
+    fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext) {
+        todo!()
+    }
+
+    fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size {
+        todo!()
     }
 }
 
@@ -110,12 +116,12 @@ impl WidgetBuilder for HBoxBuilder {
         Some(self.children.iter_mut().collect())
     }
 
-    fn widgets(&self, widget: &Ident) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
+    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
         Some(
             self.children
                 .iter()
                 .enumerate()
-                .map(|(i, c)| (quote!(#widget.widgets(#i)), c))
+                .map(|(i, c)| (quote!(.widgets(#i)), c))
                 .collect(),
         )
     }

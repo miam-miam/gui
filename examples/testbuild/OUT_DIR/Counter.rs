@@ -9,6 +9,138 @@ mod gen {
         Component, LayoutConstraints, Size, Point, ToComponent, ToHandler, Update,
         Variable,
     };
+    enum WidgetSet0 {
+        W0(::gui::gui_widget::Text),
+        W1(::gui::gui_widget::Button<Count, CompStruct, ::gui::gui_widget::Text>),
+    }
+    impl WidgetSet0 {
+        pub fn w0(&mut self) -> &mut ::gui::gui_widget::Text {
+            if let WidgetSet0::W0(val) = self {
+                val
+            } else {
+                panic!("Incorrect wrapped type.")
+            }
+        }
+        pub fn w1(
+            &mut self,
+        ) -> &mut ::gui::gui_widget::Button<Count, CompStruct, ::gui::gui_widget::Text> {
+            if let WidgetSet0::W1(val) = self {
+                val
+            } else {
+                panic!("Incorrect wrapped type.")
+            }
+        }
+    }
+    impl Widget<CompStruct> for WidgetSet0 {
+        fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext) {
+            match self {
+                WidgetSet0::W0(w) => {
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::render(w, scene, fcx)
+                }
+                WidgetSet0::W1(w) => {
+                    <::gui::gui_widget::Button<
+                        Count,
+                        CompStruct,
+                        ::gui::gui_widget::Text,
+                    > as Widget<CompStruct>>::render(w, scene, fcx)
+                }
+            }
+        }
+        fn resize(
+            &mut self,
+            constraints: LayoutConstraints,
+            fcx: &mut FontContext,
+        ) -> Size {
+            match self {
+                WidgetSet0::W0(w) => {
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::resize(w, constraints, fcx)
+                }
+                WidgetSet0::W1(w) => {
+                    <::gui::gui_widget::Button<
+                        Count,
+                        CompStruct,
+                        ::gui::gui_widget::Text,
+                    > as Widget<CompStruct>>::resize(w, constraints, fcx)
+                }
+            }
+        }
+        fn pointer_down(
+            &mut self,
+            local_pos: Point,
+            event: &PointerEvent,
+            window: &WindowHandle,
+            handler: &mut CompStruct,
+        ) {
+            match self {
+                WidgetSet0::W0(w) => {
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::pointer_down(w, local_pos, event, window, handler)
+                }
+                WidgetSet0::W1(w) => {
+                    <::gui::gui_widget::Button<
+                        Count,
+                        CompStruct,
+                        ::gui::gui_widget::Text,
+                    > as Widget<
+                        CompStruct,
+                    >>::pointer_down(w, local_pos, event, window, handler)
+                }
+            }
+        }
+        fn pointer_up(
+            &mut self,
+            local_pos: Point,
+            event: &PointerEvent,
+            window: &WindowHandle,
+            handler: &mut CompStruct,
+        ) {
+            match self {
+                WidgetSet0::W0(w) => {
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::pointer_up(w, local_pos, event, window, handler)
+                }
+                WidgetSet0::W1(w) => {
+                    <::gui::gui_widget::Button<
+                        Count,
+                        CompStruct,
+                        ::gui::gui_widget::Text,
+                    > as Widget<
+                        CompStruct,
+                    >>::pointer_up(w, local_pos, event, window, handler)
+                }
+            }
+        }
+        fn pointer_move(
+            &mut self,
+            local_pos: Point,
+            event: &PointerEvent,
+            window: &WindowHandle,
+            handler: &mut CompStruct,
+        ) {
+            match self {
+                WidgetSet0::W0(w) => {
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::pointer_move(w, local_pos, event, window, handler)
+                }
+                WidgetSet0::W1(w) => {
+                    <::gui::gui_widget::Button<
+                        Count,
+                        CompStruct,
+                        ::gui::gui_widget::Text,
+                    > as Widget<
+                        CompStruct,
+                    >>::pointer_move(w, local_pos, event, window, handler)
+                }
+            }
+        }
+    }
     use gui::{FluentBundle, FluentArgs, FluentResource};
     use std::borrow::Cow;
     fn get_bundle_message<'a>(
@@ -32,16 +164,6 @@ mod gen {
         let pattern = message.value().expect("Value exists.");
         bundle.format_pattern(pattern, args, &mut errors)
     }
-    #[allow(non_camel_case_types)]
-    pub(crate) struct count;
-    impl Variable for count {
-        type VarType = f32;
-    }
-    #[allow(non_camel_case_types)]
-    pub(crate) struct disabled;
-    impl Variable for disabled {
-        type VarType = bool;
-    }
     pub(crate) struct Count;
     impl ToHandler for Count {
         type BaseHandler = CompStruct;
@@ -49,29 +171,29 @@ mod gen {
     #[allow(non_snake_case)]
     pub struct CounterHolder {
         comp_struct: CompStruct,
-        widget: ::gui::gui_widget::Button<Count, CompStruct, ::gui::gui_widget::Text>,
-        Counter_Text_text: FluentArgs<'static>,
+        widget: ::gui::gui_widget::HBox<CompStruct, WidgetSet0>,
     }
     #[automatically_derived]
     impl ToComponent for CompStruct {
         type Component = CounterHolder;
         fn to_component_holder(self) -> Self::Component {
             CounterHolder {
-                widget: ::gui::gui_widget::Button::new(
-                    ::gui::gui_core::Colour::rgba8(255u8, 255u8, 255u8, 255u8),
-                    ::gui::gui_core::Colour::rgba8(241u8, 243u8, 245u8, 255u8),
-                    ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8, 255u8),
-                    ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8, 255u8),
-                    ::gui::gui_core::Colour::rgba8(206u8, 212u8, 218u8, 255u8),
-                    false,
-                    ::gui::gui_widget::Text::new(
-                        String::new(),
-                        ::gui::gui_core::Colour::rgba8(33u8, 37u8, 41u8, 255u8),
-                        24f32,
-                    ),
+                widget: ::gui::gui_widget::HBox::new(
+                    10f32,
+                    vec![
+                        WidgetSet0::W0(::gui::gui_widget::Text::new(String::new(),
+                        ::gui::gui_core::Colour::rgba8(33u8, 37u8, 41u8, 255u8), 24f32)),
+                        WidgetSet0::W1(::gui::gui_widget::Button::new(::gui::gui_core::Colour::rgba8(255u8,
+                        255u8, 255u8, 255u8), ::gui::gui_core::Colour::rgba8(241u8,
+                        243u8, 245u8, 255u8), ::gui::gui_core::Colour::rgba8(248u8,
+                        249u8, 250u8, 255u8), ::gui::gui_core::Colour::rgba8(248u8,
+                        249u8, 250u8, 255u8), ::gui::gui_core::Colour::rgba8(206u8,
+                        212u8, 218u8, 255u8), false,
+                        ::gui::gui_widget::Text::new(String::new(),
+                        ::gui::gui_core::Colour::rgba8(33u8, 37u8, 41u8, 255u8), 24f32)))
+                    ],
                 ),
                 comp_struct: self,
-                Counter_Text_text: FluentArgs::new(),
             }
         }
     }
@@ -81,34 +203,16 @@ mod gen {
             self.widget.render(&mut scene, fcx);
         }
         fn update_vars(&mut self, force_update: bool) {
-            let mut text = false;
-            if force_update
-                || <CompStruct as Update<count>>::is_updated(&self.comp_struct)
-            {
-                let value = <CompStruct as Update<count>>::value(&self.comp_struct);
-                let widget = &mut self.widget;
-                let widget = &mut self.widget.get_widget();
-                text = true;
-                self.Counter_Text_text.set("count", value);
-            }
-            if force_update
-                || <CompStruct as Update<disabled>>::is_updated(&self.comp_struct)
-            {
-                let value = <CompStruct as Update<disabled>>::value(&self.comp_struct);
-                let widget = &mut self.widget;
-                widget.set_disabled(value);
-                let widget = &mut self.widget.get_widget();
-            }
-            if force_update || text {
-                let value = get_bundle_message(
-                    "Counter-Text-text",
-                    Some(&self.Counter_Text_text),
-                );
-                let widget = &mut self.widget.get_widget();
+            if force_update {
+                let value = get_bundle_message("Counter-Other-text", None);
+                let widget = &mut self.widget.widgets(0usize).w0();
                 widget.set_text(value);
             }
-            <CompStruct as Update<count>>::reset(&mut self.comp_struct);
-            <CompStruct as Update<disabled>>::reset(&mut self.comp_struct);
+            if force_update {
+                let value = get_bundle_message("Counter-Text-text", None);
+                let widget = &mut self.widget.widgets(1usize).w1().get_widget();
+                widget.set_text(value);
+            }
         }
         fn resize(
             &mut self,
