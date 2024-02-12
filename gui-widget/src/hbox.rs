@@ -62,16 +62,17 @@ impl<C, W: Widget<C>> Widget<C> for HBox<C, W> {
     fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size {
         let child_length = self.children.len();
         let total_spacing = self.spacing as f64 * (child_length - 1) as f64;
-        let mut remaining = constraints.map(|s| s - Size::new(total_spacing, total_spacing));
+        let mut remaining = constraints.map(|s| s - Size::new(0.0, total_spacing));
 
         let layouts = self
             .children
             .iter_mut()
             .enumerate()
             .map(|(i, child)| {
-                let allocated_space = remaining.map(|s| s / (child_length - i) as f64);
+                let allocated_space =
+                    remaining.map(|s| Size::new(s.width, s.height / (child_length - i) as f64));
                 let size = child.resize(allocated_space, fcx);
-                remaining = remaining.map(|s| s - size);
+                remaining = remaining.map(|s| s - Size::new(0.0, size.height));
                 size
             })
             .collect_vec();
@@ -92,7 +93,10 @@ impl<C, W: Widget<C>> Widget<C> for HBox<C, W> {
             })
             .collect_vec();
 
-        Size::new(max_width, height)
+        Size::new(
+            max_width,
+            Itertools::intersperse(layouts.iter().map(|s| s.height), self.spacing as f64).sum(),
+        )
     }
 
     fn pointer_down(
