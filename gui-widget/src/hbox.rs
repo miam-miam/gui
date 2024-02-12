@@ -185,6 +185,7 @@ impl WidgetBuilder for HBoxBuilder {
         value: &Ident,
         stream: &mut TokenStream,
     ) {
+        #[allow(clippy::single_match)]
         match property {
             "spacing" => stream.extend(quote! {#widget.set_disabled(#value);}),
             _ => {}
