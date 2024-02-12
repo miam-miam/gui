@@ -1,12 +1,12 @@
 pub mod button;
-mod hbox;
+mod hvstack;
 mod text;
 
 pub use button::Button;
 
 pub use text::Text;
 
-pub use hbox::HBox;
+pub use hvstack::HVStack;
 
 #[cfg(test)]
 mod tests {

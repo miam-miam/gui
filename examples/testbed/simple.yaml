@@ -7,8 +7,7 @@ components:
       - name: disabled_decrement
         type: bool
     child:
-      name: HBox  # Widget/Component names must be unique for this component
-      widget: HBox
+      widget: VStack
       layoutProperties: # Under the hood these settings create a layout widget
         # so that custom widgets do not need to deal with layout.
         padding: 10
