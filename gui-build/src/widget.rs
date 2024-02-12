@@ -1,4 +1,5 @@
 use crate::fluent::FluentIdent;
+use crate::widget_set::WidgetSet;
 use anyhow::anyhow;
 use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, WidgetDeclaration};
 use proc_macro2::{Ident, Span, TokenStream};
@@ -8,7 +9,7 @@ use quote::quote;
 pub struct Widget<'a> {
     pub widget_type_name: &'static str,
     pub widget_declaration: &'a WidgetDeclaration,
-    pub child_widgets: Vec<Option<Widget<'a>>>,
+    pub child_widgets: Option<WidgetSet<'a>>,
     pub child_type: Option<Ident>,
     pub handler: Option<Ident>,
     pub fluents: Vec<FluentIdent<'a>>,
@@ -20,7 +21,7 @@ impl<'a> Widget<'a> {
         Self::new_inner(component.name.as_str(), &component.child)
     }
 
-    fn new_inner(
+    pub fn new_inner(
         component_name: &str,
         widget_declaration: &'a WidgetDeclaration,
     ) -> anyhow::Result<Self> {
@@ -55,14 +56,8 @@ impl<'a> Widget<'a> {
             widget_declaration,
             child_widgets: widget
                 .widgets()
-                .iter()
-                .map(|w| {
-                    Ok(match w {
-                        Some(d) => Some(Self::new_inner(component_name, d)?),
-                        None => None,
-                    })
-                })
-                .collect::<anyhow::Result<Vec<_>>>()?,
+                .map(|ws| WidgetSet::new(component_name, ws))
+                .transpose()?,
             child_type: None,
             handler,
             fluents,
@@ -73,17 +68,7 @@ impl<'a> Widget<'a> {
     pub fn gen_widget_type(&self) -> TokenStream {
         let mut stream = TokenStream::new();
         let comp_struct = Ident::new("CompStruct", Span::call_site());
-        let child_type = match &self.child_widgets[..] {
-            [Some(child)] => {
-                let mut stream = TokenStream::new();
-                child
-                    .widget_declaration
-                    .widget
-                    .widget_type(None, &comp_struct, None, &mut stream);
-                Some(stream)
-            }
-            _ => None,
-        };
+        let child_type = self.child_widgets.as_ref().map(WidgetSet::gen_widget_type);
         self.widget_declaration.widget.widget_type(
             self.handler.as_ref(),
             &comp_struct,
@@ -97,14 +82,13 @@ impl<'a> Widget<'a> {
         !self.fluents.is_empty()
             || self
                 .child_widgets
-                .iter()
-                .filter_map(|w| w.as_ref())
-                .any(|w| w.contains_fluents())
+                .as_ref()
+                .is_some_and(|s| s.widgets.iter().any(|(_, w)| w.contains_fluents()))
     }
 
     pub fn push_fluents(&'a self, container: &mut Vec<FluentIdent<'a>>) {
         container.extend_from_slice(&self.fluents[..]);
-        for child in self.child_widgets.iter().flatten() {
+        for (_, child) in self.child_widgets.iter().flat_map(|s| &s.widgets) {
             child.push_fluents(container);
         }
     }
@@ -143,12 +127,10 @@ impl<'a> Widget<'a> {
             });
         }
 
-        let mut widget_stmt = widget_stmt.clone();
-
-        widget_stmt.extend(quote!(.get_widget()));
-
-        for w in self.child_widgets.iter().filter_map(|w| w.as_ref()) {
-            w.gen_var_update2(var, &widget_stmt, stream);
+        if let Some(ws) = &self.child_widgets {
+            for (get_stmt, w) in ws.gen_widget_gets(widget_stmt) {
+                w.gen_var_update2(var, &get_stmt, stream);
+            }
         }
     }
 
@@ -166,7 +148,7 @@ impl<'a> Widget<'a> {
     }
 
     pub fn gen_fluent_update(&self, widget_stmt: Option<&TokenStream>, stream: &mut TokenStream) {
-        let mut widget_stmt = widget_stmt.map_or_else(|| quote! {&mut self.widget}, Clone::clone);
+        let widget_stmt = widget_stmt.map_or_else(|| quote! {&mut self.widget}, Clone::clone);
         let widget = Ident::new("widget", Span::call_site());
         let value = Ident::new("value", Span::call_site());
 
@@ -197,30 +179,49 @@ impl<'a> Widget<'a> {
             });
         }
 
-        widget_stmt.extend(quote!(.get_widget()));
+        dbg!(&widget_stmt.to_string());
 
-        for w in self.child_widgets.iter().filter_map(|w| w.as_ref()) {
-            w.gen_fluent_update(Some(&widget_stmt), stream)
+        if let Some(ws) = &self.child_widgets {
+            for (get_stmt, w) in ws.gen_widget_gets(&widget_stmt) {
+                dbg!(&get_stmt.to_string());
+                w.gen_fluent_update(Some(&get_stmt), stream)
+            }
         }
     }
 
     pub fn gen_widget_init(&self) -> TokenStream {
         let mut stream = TokenStream::new();
-        let child_init = match &self.child_widgets[..] {
-            [Some(child)] => {
-                let mut stream = TokenStream::new();
-                child
-                    .widget_declaration
-                    .widget
-                    .create_widget(None, &mut stream);
-                Some(stream)
-            }
-            _ => None,
-        };
+        let child_init = self.child_widgets.as_ref().map(WidgetSet::gen_widget_init);
 
         self.widget_declaration
             .widget
             .create_widget(child_init.as_ref(), &mut stream);
         stream
+    }
+
+    pub fn gen_widget_set(&self, stream: &mut TokenStream) {
+        if let Some(set) = &self.child_widgets {
+            set.gen_widget_set(stream)
+        }
+    }
+
+    pub fn gen_handler_structs(&self, stream: &mut TokenStream) -> anyhow::Result<()> {
+        if let Some(name) = &self.handler {
+            stream.extend(quote! {
+                pub(crate) struct #name;
+
+                impl ToHandler for #name {
+                    type BaseHandler = CompStruct;
+                }
+            });
+        }
+
+        if let Some(ws) = &self.child_widgets {
+            for (_, w) in &ws.widgets {
+                w.gen_handler_structs(stream)?;
+            }
+        }
+
+        Ok(())
     }
 }

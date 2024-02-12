@@ -334,11 +334,16 @@ impl WidgetBuilder for ButtonBuilder {
         true
     }
 
-    fn get_widgets(&mut self) -> Vec<&mut Option<WidgetDeclaration>> {
-        vec![&mut self.child]
+    fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
+        Some(self.child.iter_mut().collect())
     }
 
-    fn widgets(&self) -> Vec<&Option<WidgetDeclaration>> {
-        vec![&self.child]
+    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
+        Some(
+            self.child
+                .iter()
+                .map(|c| (quote!(.get_widget()), c))
+                .collect(),
+        )
     }
 }

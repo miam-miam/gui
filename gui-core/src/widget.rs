@@ -39,6 +39,14 @@ pub trait Widget<H> {
     }
 }
 
+impl<H> Widget<H> for () {
+    fn render(&mut self, _scene: &mut SceneBuilder, _fcx: &mut FontContext) {}
+
+    fn resize(&mut self, constraints: LayoutConstraints, _fcx: &mut FontContext) -> Size {
+        constraints.get_min()
+    }
+}
+
 /// Helper trait to enable trait upcasting, since upcasting is not stable.
 pub trait AsAny: Any {
     fn as_any(&self) -> &dyn Any;
@@ -73,8 +81,8 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
     fn get_fluents(&self) -> Vec<(&'static str, &Fluent)>;
     fn get_vars(&self) -> Vec<(&'static str, &str)>;
     fn has_handler(&self) -> bool;
-    fn get_widgets(&mut self) -> Vec<&mut Option<WidgetDeclaration>>;
-    fn widgets(&self) -> Vec<&Option<WidgetDeclaration>>;
+    fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>>;
+    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>>;
 }
 
 dyn_clone::clone_trait_object!(WidgetBuilder);

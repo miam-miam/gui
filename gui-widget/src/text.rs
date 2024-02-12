@@ -178,11 +178,11 @@ impl WidgetBuilder for TextBuilder {
         false
     }
 
-    fn get_widgets(&mut self) -> Vec<&mut Option<WidgetDeclaration>> {
-        vec![]
+    fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
+        None
     }
 
-    fn widgets(&self) -> Vec<&Option<WidgetDeclaration>> {
-        vec![]
+    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
+        None
     }
 }

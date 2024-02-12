@@ -1,0 +1,165 @@
+use crate::widget::Widget;
+use gui_core::parse::WidgetDeclaration;
+use itertools::Itertools;
+use proc_macro2::TokenStream;
+use quote::{format_ident, quote};
+use std::sync::atomic::{AtomicU32, Ordering};
+
+#[derive(Clone, Debug)]
+pub struct WidgetSet<'a> {
+    pub widgets: Vec<(TokenStream, Widget<'a>)>,
+    count: Option<u32>,
+}
+
+impl<'a> WidgetSet<'a> {
+    pub fn new(
+        component_name: &str,
+        widgets: Vec<(TokenStream, &'a WidgetDeclaration)>,
+    ) -> anyhow::Result<Self> {
+        static COUNTER: AtomicU32 = AtomicU32::new(0);
+
+        let widgets = widgets
+            .into_iter()
+            .map(|(s, w)| Ok((s, Widget::new_inner(component_name, w)?)))
+            .collect::<anyhow::Result<Vec<_>>>()?;
+
+        Ok(Self {
+            count: (widgets.len() > 1).then(|| COUNTER.fetch_add(1, Ordering::Relaxed)),
+            widgets,
+        })
+    }
+
+    pub fn gen_widget_type(&self) -> TokenStream {
+        match &self.widgets[..] {
+            [(_, child)] => child.gen_widget_type(),
+            [] => quote!(()),
+            _ => {
+                let count = self.count.expect("widget set should be created.");
+                let ident = format_ident!("WidgetSet{count}");
+                quote!(#ident)
+            }
+        }
+    }
+
+    pub fn gen_widget_init(&self) -> TokenStream {
+        match &self.widgets[..] {
+            [(_, child)] => child.gen_widget_init(),
+            [] => quote!(()),
+            _ => {
+                let count = self.count.expect("widget set should be created.");
+                let widget_set = format_ident!("WidgetSet{count}");
+
+                let inits = self
+                    .widgets
+                    .iter()
+                    .map(|(_, child)| child.gen_widget_init());
+
+                let variants = self.widgets.iter().enumerate().map(|(i, _)| {
+                    let ident = format_ident!("W{i}");
+                    quote!(#widget_set::#ident)
+                });
+
+                quote! {
+                    #(#variants(#inits)),*
+                }
+            }
+        }
+    }
+
+    pub fn gen_widget_set(&self, stream: &mut TokenStream) {
+        if let Some(count) = self.count {
+            let widget_set = format_ident!("WidgetSet{count}");
+
+            let variants = self
+                .widgets
+                .iter()
+                .enumerate()
+                .map(|(i, _)| format_ident!("W{i}"))
+                .collect_vec();
+
+            let func_names = self
+                .widgets
+                .iter()
+                .enumerate()
+                .map(|(i, _)| format_ident!("w{i}"));
+
+            let types = self
+                .widgets
+                .iter()
+                .map(|(_, w)| w.gen_widget_type())
+                .collect_vec();
+
+            stream.extend(quote! {
+                enum #widget_set {
+                    #( #variants(#types) ),*
+                }
+
+                impl #widget_set {
+                    #(
+                        pub fn #func_names(&mut self) -> &mut #types {
+                            if let #widget_set::#variants(val) = self {
+                                val
+                            } else {
+                                panic!("Incorrect wrapped type.")
+                            }
+                        }
+                    )*
+                }
+
+                impl Widget<CompStruct> for #widget_set {
+                    fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext) {
+                        match self {
+                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::render(w, scene, fcx) ),*
+                        }
+                    }
+
+                    fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size {
+                        match self {
+                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::resize(w, constraints, fcx) ),*
+                        }
+                    }
+
+                    fn pointer_down(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle, handler: &mut CompStruct) {
+                        match self {
+                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::pointer_down(w, local_pos, event, window, handler) ),*
+                        }
+                    }
+
+                    fn pointer_up(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle, handler: &mut CompStruct) {
+                        match self {
+                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::pointer_up(w, local_pos, event, window, handler) ),*
+                        }
+                    }
+
+                    fn pointer_move(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle, handler: &mut CompStruct) {
+                        match self {
+                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::pointer_move(w, local_pos, event, window, handler) ),*
+                        }
+                    }
+                }
+            });
+        }
+
+        for (_, w) in &self.widgets {
+            w.gen_widget_set(stream)
+        }
+    }
+
+    pub fn gen_widget_gets<'b>(
+        &'b self,
+        stream: &'b TokenStream,
+    ) -> impl Iterator<Item = (TokenStream, &Widget)> + '_ {
+        self.widgets
+            .iter()
+            .enumerate()
+            .map(move |(i, (get_widget, w))| {
+                let mut s = stream.clone();
+                s.extend(get_widget.clone());
+                if self.count.is_some() {
+                    let func = format_ident!("w{i}");
+                    s.extend(quote!( .#func() ));
+                }
+                (s, w)
+            })
+    }
+}
