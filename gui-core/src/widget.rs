@@ -1,4 +1,4 @@
-pub use crate::handles::{EventHandle, Handle, RenderHandle, ResizeHandle};
+pub use crate::handles::{EventHandle, Handle, RenderHandle, ResizeHandle, UpdateHandle};
 use crate::layout::LayoutConstraints;
 use crate::parse::fluent::Fluent;
 use crate::parse::WidgetDeclaration;
@@ -109,6 +109,7 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
         property: &'static str,
         widget: &Ident,
         value: &Ident,
+        handle: &Ident,
         stream: &mut TokenStream,
     );
     fn get_fluents(&self) -> Vec<(&'static str, &Fluent)>;

@@ -35,7 +35,12 @@ pub trait Component {
         active_widget: &'a mut Option<WidgetID>,
         hovered_widgets: &'a [WidgetID],
     ) -> bool;
-    fn update_vars(&mut self, force_update: bool);
+    fn update_vars<'a>(
+        &mut self,
+        force_update: bool,
+        handle: &'a mut Handle,
+        global_positions: &'a [Rect],
+    ) -> bool;
     fn resize<'a>(
         &mut self,
         constraints: LayoutConstraints,

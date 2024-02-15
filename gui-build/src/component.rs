@@ -109,7 +109,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             use super::__private_CompStruct as CompStruct;
             use gui::gui_core::vello::SceneBuilder;
             use gui::gui_core::glazier::kurbo::Rect;
-            use gui::gui_core::widget::{Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, WidgetEvent, Handle};
+            use gui::gui_core::widget::{Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle, WidgetEvent, Handle};
             use gui::gui_core::{Component, LayoutConstraints, Size, ToComponent, ToHandler, Update, Variable};
 
             #widget_set
@@ -166,11 +166,19 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     render_handle.unwrap()
                 }
 
-                fn update_vars(&mut self, force_update: bool) {
+                fn update_vars<'a>(
+                    &mut self,
+                    force_update: bool,
+                    handle: &'a mut Handle,
+                    global_positions: &'a [Rect],
+                ) -> bool {
+                    let mut update_handle = UpdateHandle::new(handle, global_positions);
+                    let handle_ref = &mut update_handle;
                     #( let mut #fluent_properties = false; )*
                     #if_update
                     #prop_update
                     #( <CompStruct as Update<#var_names>>::reset(&mut self.comp_struct); )*
+                    update_handle.unwrap()
                 }
 
                 fn resize<'a>(

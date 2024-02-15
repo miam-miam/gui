@@ -1,9 +1,7 @@
 use gui_core::glazier::kurbo::Rect;
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
-use gui_core::widget::{
-    EventHandle, RenderHandle, ResizeHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID,
-};
+use gui_core::widget::{EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID};
 use gui_core::{LayoutConstraints, Point, SceneBuilder, Size, ToComponent, Var};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
@@ -68,8 +66,9 @@ impl<C: ToComponent, W: Widget<C>> HVStack<C, W> {
         }
     }
 
-    pub fn set_spacing(&mut self, spacing: f32) {
+    pub fn set_spacing(&mut self, spacing: f32, handle: &mut UpdateHandle) {
         self.spacing = spacing;
+        handle.invalidate_id(self.id);
     }
 
     pub fn widgets(&mut self, i: usize) -> &mut W {
@@ -193,11 +192,12 @@ impl WidgetBuilder for HStackBuilder {
         property: &'static str,
         widget: &Ident,
         value: &Ident,
+        handle: &Ident,
         stream: &mut TokenStream,
     ) {
         #[allow(clippy::single_match)]
         match property {
-            "spacing" => stream.extend(quote! {#widget.set_disabled(#value);}),
+            "spacing" => stream.extend(quote! {#widget.set_spacing(#value, #handle);}),
             _ => {}
         }
     }
@@ -280,11 +280,12 @@ impl WidgetBuilder for VStackBuilder {
         property: &'static str,
         widget: &Ident,
         value: &Ident,
+        handle: &Ident,
         stream: &mut TokenStream,
     ) {
         #[allow(clippy::single_match)]
         match property {
-            "spacing" => stream.extend(quote! {#widget.set_disabled(#value);}),
+            "spacing" => stream.extend(quote! {#widget.set_spacing(#value, #handle);}),
             _ => {}
         }
     }

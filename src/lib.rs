@@ -175,18 +175,26 @@ impl<C: Component> WindowState<C> {
 impl<C: Component + 'static> WinHandler for WindowState<C> {
     fn connect(&mut self, handle: &WindowHandle) {
         self.handle.window = handle.clone();
-        self.component.update_vars(true);
+        self.component
+            .update_vars(true, &mut self.handle, &self.global_positions[..]);
         self.resize();
         self.render();
     }
 
     fn size(&mut self, size: Size) {
-        self.size = size;
-        self.resize();
+        if self.size != size {
+            self.size = size;
+            self.resize();
+        }
     }
 
     fn prepare_paint(&mut self) {
-        self.component.update_vars(false);
+        if self
+            .component
+            .update_vars(false, &mut self.handle, &self.global_positions[..])
+        {
+            self.resize();
+        }
     }
 
     fn paint(&mut self, _: &Region) {
@@ -246,46 +254,52 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
             }
         }
 
-        if self.component.propagate_event(
+        let event_resize = self.component.propagate_event(
             WidgetEvent::PointerMove(event),
             &mut self.handle,
             &self.global_positions[..],
             &mut self.active_widget,
             &mut self.hovered_widgets,
-        ) || resize
-        {
+        );
+        let var_resize =
+            self.component
+                .update_vars(false, &mut self.handle, &self.global_positions[..]);
+
+        if event_resize || var_resize || resize {
             self.resize();
         }
-
-        self.component.update_vars(false);
     }
 
     fn pointer_down(&mut self, event: &PointerEvent) {
-        if self.component.propagate_event(
+        let event_resize = self.component.propagate_event(
             WidgetEvent::PointerDown(event),
             &mut self.handle,
             &self.global_positions[..],
             &mut self.active_widget,
             &mut self.hovered_widgets,
-        ) {
+        );
+        let var_resize =
+            self.component
+                .update_vars(false, &mut self.handle, &self.global_positions[..]);
+        if event_resize || var_resize {
             self.resize();
         }
-
-        self.component.update_vars(false);
     }
 
     fn pointer_up(&mut self, event: &PointerEvent) {
-        if self.component.propagate_event(
+        let event_resize = self.component.propagate_event(
             WidgetEvent::PointerUp(event),
             &mut self.handle,
             &self.global_positions[..],
             &mut self.active_widget,
             &mut self.hovered_widgets,
-        ) {
+        );
+        let var_resize =
+            self.component
+                .update_vars(false, &mut self.handle, &self.global_positions[..]);
+        if event_resize || var_resize {
             self.resize();
         }
-
-        self.component.update_vars(false);
     }
 
     fn timer(&mut self, id: TimerToken) {

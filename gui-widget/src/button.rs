@@ -5,7 +5,9 @@ use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::{Affine, Vec2};
 use gui_core::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
 use gui_core::vello::SceneFragment;
-use gui_core::widget::{RenderHandle, ResizeHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID};
+use gui_core::widget::{
+    RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID,
+};
 use gui_core::{widget, Colour, SceneBuilder, ToComponent, ToHandler, Var};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
@@ -54,23 +56,29 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> Button<T, C, W
         }
     }
 
-    pub fn set_disabled(&mut self, disabled: bool) {
+    pub fn set_disabled(&mut self, disabled: bool, handle: &mut UpdateHandle) {
         self.disabled = disabled;
+        handle.invalidate_id(self.id)
     }
-    pub fn set_background_colour(&mut self, colour: Colour) {
+    pub fn set_background_colour(&mut self, colour: Colour, handle: &mut UpdateHandle) {
         self.background_colour = colour;
+        handle.invalidate_id(self.id)
     }
-    pub fn set_disabled_colour(&mut self, colour: Colour) {
+    pub fn set_disabled_colour(&mut self, colour: Colour, handle: &mut UpdateHandle) {
         self.disabled_colour = colour;
+        handle.invalidate_id(self.id)
     }
-    pub fn set_clicked_colour(&mut self, colour: Colour) {
+    pub fn set_clicked_colour(&mut self, colour: Colour, handle: &mut UpdateHandle) {
         self.clicked_colour = colour;
+        handle.invalidate_id(self.id)
     }
-    pub fn set_hover_colour(&mut self, colour: Colour) {
+    pub fn set_hover_colour(&mut self, colour: Colour, handle: &mut UpdateHandle) {
         self.hover_colour = colour;
+        handle.invalidate_id(self.id)
     }
-    pub fn set_border_colour(&mut self, colour: Colour) {
+    pub fn set_border_colour(&mut self, colour: Colour, handle: &mut UpdateHandle) {
         self.border_colour = colour;
+        handle.invalidate_id(self.id)
     }
     pub fn get_widget(&mut self) -> &mut W {
         &mut self.child
@@ -284,15 +292,22 @@ impl WidgetBuilder for ButtonBuilder {
         property: &'static str,
         widget: &Ident,
         value: &Ident,
+        handle: &Ident,
         stream: &mut TokenStream,
     ) {
         match property {
-            "disabled" => stream.extend(quote! {#widget.set_disabled(#value);}),
-            "background_colour" => stream.extend(quote! {#widget.set_background_colour(#value);}),
-            "disabled_colour" => stream.extend(quote! {#widget.set_disabled_colour(#value);}),
-            "clicked_colour" => stream.extend(quote! {#widget.set_clicked_colour(#value);}),
-            "hover_colour" => stream.extend(quote! {#widget.set_hover_colour(#value);}),
-            "border_colour" => stream.extend(quote! {#widget.set_border_colour(#value);}),
+            "disabled" => stream.extend(quote! {#widget.set_disabled(#value, #handle);}),
+            "background_colour" => {
+                stream.extend(quote! {#widget.set_background_colour(#value, #handle);})
+            }
+            "disabled_colour" => {
+                stream.extend(quote! {#widget.set_disabled_colour(#value, #handle);})
+            }
+            "clicked_colour" => {
+                stream.extend(quote! {#widget.set_clicked_colour(#value, #handle);})
+            }
+            "hover_colour" => stream.extend(quote! {#widget.set_hover_colour(#value, #handle);}),
+            "border_colour" => stream.extend(quote! {#widget.set_border_colour(#value, #handle);}),
             _ => {}
         }
     }

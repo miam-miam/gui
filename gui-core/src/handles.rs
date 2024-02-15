@@ -20,6 +20,41 @@ impl Default for Handle {
     }
 }
 
+pub struct UpdateHandle<'a> {
+    handle: &'a mut Handle,
+    global_positions: &'a [Rect],
+    resize: bool,
+}
+
+impl<'a> UpdateHandle<'a> {
+    pub fn new(handle: &'a mut Handle, global_positions: &'a [Rect]) -> Self {
+        Self {
+            handle,
+            global_positions,
+            resize: false,
+        }
+    }
+    pub fn get_fcx(&mut self) -> &mut FontContext {
+        &mut self.handle.fcx
+    }
+    pub fn resize(&mut self) {
+        self.resize = true;
+    }
+    pub fn unwrap(self) -> bool {
+        self.resize
+    }
+    pub fn invalidate_id(&mut self, id: WidgetID) {
+        let rect = self.global_positions[id.widget_id() as usize];
+        self.handle.window.invalidate_rect(rect);
+    }
+    pub fn invalidate_rect(&mut self, id: WidgetID, local_rect: Rect) {
+        let global_rect = self.global_positions[id.widget_id() as usize];
+        self.handle
+            .window
+            .invalidate_rect(local_rect + global_rect.origin().to_vec2())
+    }
+}
+
 pub struct RenderHandle<'a, T> {
     handle: &'a mut Handle,
     global_positions: &'a mut [Rect],

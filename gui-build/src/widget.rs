@@ -115,6 +115,7 @@ impl<'a> Widget<'a> {
     ) {
         let widget_ident = Ident::new("widget", Span::call_site());
         let value_ident = Ident::new("value", Span::call_site());
+        let handle_ident = Ident::new("handle_ref", Span::call_site());
         let string_var_name = &var.name;
 
         let mut update_stream = TokenStream::new();
@@ -124,6 +125,7 @@ impl<'a> Widget<'a> {
                 prop,
                 &widget_ident,
                 &value_ident,
+                &handle_ident,
                 &mut update_stream,
             );
         }
@@ -169,6 +171,7 @@ impl<'a> Widget<'a> {
         let widget_stmt = widget_stmt.map_or_else(|| quote! {&mut self.widget}, Clone::clone);
         let widget = Ident::new("widget", Span::call_site());
         let value = Ident::new("value", Span::call_site());
+        let handle_ident = Ident::new("handle_ref", Span::call_site());
 
         for fluent in &self.fluents {
             let property_ident = (!fluent.fluent.vars.is_empty()).then_some(&fluent.property_ident);
@@ -186,6 +189,7 @@ impl<'a> Widget<'a> {
                 fluent.property,
                 &widget,
                 &value,
+                &handle_ident,
                 &mut on_property_update,
             );
             stream.extend(quote! {

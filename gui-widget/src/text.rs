@@ -10,7 +10,8 @@ use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::Affine;
 use gui_core::vello::peniko::{Brush, Color};
 use gui_core::widget::{
-    EventHandle, RenderHandle, ResizeHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID,
+    EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
+    WidgetID,
 };
 use gui_core::{Colour, FontContext, SceneBuilder, ToComponent, Var};
 use proc_macro2::{Ident, TokenStream};
@@ -48,24 +49,27 @@ impl Text {
         self.layout = Some(layout_builder.build());
     }
 
-    pub fn set_text(&mut self, text: Cow<'_, str>) {
+    pub fn set_text(&mut self, text: Cow<'_, str>, handle: &mut UpdateHandle) {
         if self.text != text {
             self.text = text.into_owned();
             self.layout = None;
+            handle.resize();
         }
     }
 
-    pub fn set_colour(&mut self, colour: Colour) {
+    pub fn set_colour(&mut self, colour: Colour, handle: &mut UpdateHandle) {
         if self.colour != colour {
             self.colour = colour;
             self.layout = None;
+            handle.invalidate_id(self.id);
         }
     }
 
-    pub fn set_size(&mut self, size: f32) {
+    pub fn set_size(&mut self, size: f32, handle: &mut UpdateHandle) {
         if self.size != size {
             self.size = size;
             self.layout = None;
+            handle.resize();
         }
     }
 }
@@ -90,7 +94,7 @@ impl<C: ToComponent> Widget<C> for Text {
     fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<C>) -> Size {
         if self.layout.is_none() {
             if self.text.is_empty() {
-                return Size::ZERO;
+                return constraints.get_min();
             }
             self.build(handle.get_fcx());
         }
@@ -159,12 +163,13 @@ impl WidgetBuilder for TextBuilder {
         property: &'static str,
         widget: &Ident,
         value: &Ident,
+        handle: &Ident,
         stream: &mut TokenStream,
     ) {
         match property {
-            "text" => stream.extend(quote! {#widget.set_text(#value);}),
-            "colour" => stream.extend(quote! {#widget.set_colour(#value);}),
-            "size" => stream.extend(quote! {#widget.set_size(#value);}),
+            "text" => stream.extend(quote! {#widget.set_text(#value, #handle);}),
+            "colour" => stream.extend(quote! {#widget.set_colour(#value, #handle);}),
+            "size" => stream.extend(quote! {#widget.set_size(#value, #handle);}),
             _ => {}
         }
     }
