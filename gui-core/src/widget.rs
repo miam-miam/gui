@@ -58,7 +58,7 @@ pub trait Widget<C: Component> {
     fn id(&self) -> WidgetID;
     fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<C>);
     fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<C>) -> Size;
-    fn event(&self, event: WidgetEvent, handle: &mut EventHandle<C>);
+    fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<C>);
 }
 
 impl<C: Component> Widget<C> for WidgetID {
@@ -69,7 +69,7 @@ impl<C: Component> Widget<C> for WidgetID {
     fn resize(&mut self, constraints: LayoutConstraints, _handle: &mut ResizeHandle<C>) -> Size {
         constraints.get_min()
     }
-    fn event(&self, _event: WidgetEvent, _handle: &mut EventHandle<C>) {}
+    fn event(&mut self, _event: WidgetEvent, _handle: &mut EventHandle<C>) {}
 }
 
 /// Helper trait to enable trait upcasting, since upcasting is not stable.

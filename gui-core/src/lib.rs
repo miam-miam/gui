@@ -16,7 +16,6 @@ use glazier::{PointerEvent, WindowHandle};
 pub use parley;
 pub use vello;
 
-use crate::handles::Handle;
 use crate::widget::{WidgetEvent, WidgetID};
 pub use parley::font::FontContext;
 pub use vello::SceneBuilder;

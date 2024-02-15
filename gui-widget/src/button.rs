@@ -77,6 +77,8 @@ const STOKE_WIDTH: f64 = 0.58;
 
 impl<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widget<C>> Widget<C>
     for Button<T, C, W>
+where
+    C::Handler: ButtonHandler<T>,
 {
     fn id(&self) -> WidgetID {
         todo!()
@@ -113,7 +115,7 @@ impl<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widget<C>> Widget<
 
         let mut fragment = SceneFragment::new();
         let mut builder = SceneBuilder::for_fragment(&mut fragment);
-        handle.render_widgets(&mut builder, [&self.child]);
+        handle.render_widgets(&mut builder, [&mut self.child].into_iter());
 
         scene.append(
             &fragment,
@@ -160,11 +162,11 @@ impl<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widget<C>> Widget<
         child_size
     }
 
-    fn event(&self, event: WidgetEvent, handle: &mut EventHandle<C>) {
+    fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<C>) {
         if self.disabled {
             return;
         }
-        let hit = event.get_point().map_or_else(false, |pos| {
+        let hit = event.get_point().map_or(false, |pos| {
             handle
                 .get_global_rect(self.id())
                 .to_rounded_rect(4.0)

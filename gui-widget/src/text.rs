@@ -9,8 +9,10 @@ use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::Affine;
 use gui_core::vello::peniko::{Brush, Color};
-use gui_core::widget::{Widget, WidgetBuilder};
-use gui_core::{Colour, FontContext, SceneBuilder, Var};
+use gui_core::widget::{
+    EventHandle, RenderHandle, ResizeHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID,
+};
+use gui_core::{Colour, Component, FontContext, SceneBuilder, Var};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
@@ -66,30 +68,36 @@ impl Text {
     }
 }
 
-impl<T> Widget<T> for Text {
-    fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext) {
+impl<C: Component> Widget<C> for Text {
+    fn id(&self) -> WidgetID {
+        todo!()
+    }
+
+    fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<C>) {
         if self.layout.is_none() {
             if self.text.is_empty() {
                 return;
             }
-            self.build(fcx);
+            self.build(handle.get_fcx());
         }
 
         let layout = self.layout.as_mut().unwrap();
         text::render_text(scene, Affine::translate((0.0, 0.0)), layout);
     }
 
-    fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size {
+    fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<C>) -> Size {
         if self.layout.is_none() {
             if self.text.is_empty() {
                 return Size::ZERO;
             }
-            self.build(fcx);
+            self.build(handle.get_fcx());
         }
         let layout = self.layout.as_mut().unwrap();
         layout.break_all_lines(constraints.max_advance(), Alignment::Start);
         Size::new(layout.width() as f64, layout.height() as f64)
     }
+
+    fn event(&mut self, _event: WidgetEvent, _handle: &mut EventHandle<C>) {}
 }
 
 #[derive(Deserialize, Debug, Clone)]
