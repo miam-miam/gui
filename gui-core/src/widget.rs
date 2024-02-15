@@ -1,8 +1,8 @@
-pub use crate::handles::{EventHandle, RenderHandle, ResizeHandle, Handle};
+pub use crate::handles::{EventHandle, Handle, RenderHandle, ResizeHandle};
 use crate::layout::LayoutConstraints;
 use crate::parse::fluent::Fluent;
 use crate::parse::WidgetDeclaration;
-use crate::Component;
+use crate::ToComponent;
 use dyn_clone::DynClone;
 use glazier::kurbo::Point;
 use glazier::PointerEvent;
@@ -63,22 +63,22 @@ impl<'a> WidgetEvent<'a> {
     }
 }
 
-pub trait Widget<C: Component> {
+pub trait Widget<T: ToComponent> {
     fn id(&self) -> WidgetID;
-    fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<C>);
-    fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<C>) -> Size;
-    fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<C>);
+    fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<T>);
+    fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<T>) -> Size;
+    fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<T>);
 }
 
-impl<C: Component> Widget<C> for WidgetID {
+impl<T: ToComponent> Widget<T> for WidgetID {
     fn id(&self) -> WidgetID {
         *self
     }
-    fn render(&mut self, _scene: &mut SceneBuilder, _handle: &mut RenderHandle<C>) {}
-    fn resize(&mut self, constraints: LayoutConstraints, _handle: &mut ResizeHandle<C>) -> Size {
+    fn render(&mut self, _scene: &mut SceneBuilder, _handle: &mut RenderHandle<T>) {}
+    fn resize(&mut self, constraints: LayoutConstraints, _handle: &mut ResizeHandle<T>) -> Size {
         constraints.get_min()
     }
-    fn event(&mut self, _event: WidgetEvent, _handle: &mut EventHandle<C>) {}
+    fn event(&mut self, _event: WidgetEvent, _handle: &mut EventHandle<T>) {}
 }
 
 /// Helper trait to enable trait upcasting, since upcasting is not stable.

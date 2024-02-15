@@ -12,7 +12,7 @@ use gui_core::vello::peniko::{Brush, Color};
 use gui_core::widget::{
     EventHandle, RenderHandle, ResizeHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID,
 };
-use gui_core::{Colour, Component, FontContext, SceneBuilder, Var};
+use gui_core::{Colour, FontContext, SceneBuilder, ToComponent, Var};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
@@ -70,7 +70,7 @@ impl Text {
     }
 }
 
-impl<C: Component> Widget<C> for Text {
+impl<C: ToComponent> Widget<C> for Text {
     fn id(&self) -> WidgetID {
         self.id
     }

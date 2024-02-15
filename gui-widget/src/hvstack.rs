@@ -4,7 +4,7 @@ use gui_core::parse::WidgetDeclaration;
 use gui_core::widget::{
     EventHandle, RenderHandle, ResizeHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID,
 };
-use gui_core::{Component, LayoutConstraints, Point, SceneBuilder, Size, Var};
+use gui_core::{LayoutConstraints, Point, SceneBuilder, Size, ToComponent, Var};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
@@ -39,7 +39,7 @@ impl Axis {
     }
 }
 
-pub struct HVStack<C: Component, W: Widget<C>> {
+pub struct HVStack<C: ToComponent, W: Widget<C>> {
     id: WidgetID,
     axis: Axis,
     spacing: f32,
@@ -47,7 +47,7 @@ pub struct HVStack<C: Component, W: Widget<C>> {
     phantom: PhantomData<C>,
 }
 
-impl<C: Component, W: Widget<C>> HVStack<C, W> {
+impl<C: ToComponent, W: Widget<C>> HVStack<C, W> {
     pub fn new_horizontal(id: WidgetID, spacing: f32, children: Vec<W>) -> Self {
         Self {
             id,
@@ -77,7 +77,7 @@ impl<C: Component, W: Widget<C>> HVStack<C, W> {
     }
 }
 
-impl<C: Component, W: Widget<C>> Widget<C> for HVStack<C, W> {
+impl<C: ToComponent, W: Widget<C>> Widget<C> for HVStack<C, W> {
     fn id(&self) -> WidgetID {
         self.id
     }

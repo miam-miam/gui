@@ -23,7 +23,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let widget_tree = Widget::new(component)?;
 
     let mut widget_set = TokenStream::new();
-    widget_tree.gen_widget_set(&component_holder, &mut widget_set);
+    widget_tree.gen_widget_set(&mut widget_set);
 
     let bundle_func = widget_tree
         .contains_fluents()
@@ -79,7 +79,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
 
     let rs_path = Path::new(&out_dir).join(format!("{}.rs", component.name));
 
-    let widget_type = widget_tree.gen_widget_type(&component_holder);
+    let widget_type = widget_tree.gen_widget_type();
     let widget_init = widget_tree.gen_widget_init();
 
     let largest_id = widget_tree.get_largest_id();
@@ -89,7 +89,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let event_match_arms = id_to_widgets.iter().map(|(id, widget_get)| {
         let component = id.component_id();
         let widget = id.widget_id();
-        quote!((#component, #widget) => {#widget_get.event(event, handle);})
+        quote!((#component, #widget) => {#widget_get.event(event, handle_ref);})
     });
 
     let mut parent_ids = vec![];
@@ -138,12 +138,22 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                         #( #fluent_arg_idents: FluentArgs::new() ),*
                     }
                 }
+
+                fn largest_id(&self) -> WidgetID {
+                    // TODO largest id is wrong
+                    #largest_id
+                }
+
+                fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
+                    match (id.component_id(), id.widget_id()) {
+                        #(#parent_match_arms)*
+                        _ => None,
+                    }
+                }
             }
 
             #[automatically_derived]
             impl Component for #component_holder {
-                type Handler = CompStruct;
-
                 fn render<'a>(
                     &mut self,
                     mut scene: SceneBuilder,
@@ -152,7 +162,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     active_widget: &'a mut Option<WidgetID>,
                     hovered_widgets: &'a [WidgetID],
                 ) -> bool {
-                    let mut render_handle = RenderHandle::new(handle, global_positions, active_widget, hovered_widgets, self);
+                    let mut render_handle = RenderHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct);
                     self.widget.render(&mut scene, &mut render_handle);
                     render_handle.unwrap()
                 }
@@ -170,7 +180,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     handle: &'a mut Handle,
                     local_positions: &'a mut [Rect],
                 ) -> Size {
-                    let mut resize_handle = ResizeHandle::new(handle, local_positions, self);
+                    let mut resize_handle = ResizeHandle::new(handle, local_positions, &mut self.comp_struct);
                     self.widget.resize(constraints, &mut resize_handle)
                 }
 
@@ -182,21 +192,23 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     active_widget: &'a mut Option<WidgetID>,
                     hovered_widgets: &'a mut Vec<WidgetID>,
                 ) -> bool {
-                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, self);
+                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct);
                     self.widget.event(event, &mut event_handle);
-                    event_handle.unwrap()
+                    let (mut resize, events) = event_handle.unwrap();
+                    for (id, e) in events {
+                        if self.event(id, e, handle, global_positions, active_widget, hovered_widgets) {
+                            resize = true;
+                        }
+                    }
+                    resize
                 }
 
                 fn largest_id(&self) -> WidgetID {
-                    // TODO largest id is wrong
-                    #largest_id
+                    self.comp_struct.largest_id()
                 }
 
                 fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
-                    match (id.component_id(), id.widget_id()) {
-                        #(#parent_match_arms)*
-                        _ => None,
-                    }
+                    self.comp_struct.get_parent(id)
                 }
 
                 fn event<'a>(
@@ -208,17 +220,19 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     active_widget: &'a mut Option<WidgetID>,
                     hovered_widgets: &'a mut Vec<WidgetID>,
                 ) -> bool {
-                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, self);
-                    let handle = &mut event_handle;
+                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct);
+                    let handle_ref = &mut event_handle;
                     match (id.component_id(), id.widget_id()) {
                         #(#event_match_arms)*
                         _ => {},
                     }
-                    event_handle.unwrap()
-                }
-
-                fn get_handler(&mut self) -> &mut Self::Handler {
-                    &mut self.comp_struct
+                    let (mut resize, events) = event_handle.unwrap();
+                    for (id, e) in events {
+                        if self.event(id, e, handle, global_positions, active_widget, hovered_widgets) {
+                            resize = true;
+                        }
+                    }
+                    resize
                 }
             }
         }

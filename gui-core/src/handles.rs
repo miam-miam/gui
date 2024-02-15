@@ -1,5 +1,5 @@
 use crate::widget::{Widget, WidgetEvent, WidgetID};
-use crate::{Component, LayoutConstraints, Point, Size};
+use crate::{LayoutConstraints, Point, Size, ToComponent};
 use glazier::kurbo::{Affine, Rect};
 use glazier::WindowHandle;
 use parley::FontContext;
@@ -20,22 +20,22 @@ impl Default for Handle {
     }
 }
 
-pub struct RenderHandle<'a, C> {
+pub struct RenderHandle<'a, T> {
     handle: &'a mut Handle,
     global_positions: &'a mut [Rect],
     resize: bool,
     active_widget: &'a mut Option<WidgetID>,
     hovered_widgets: &'a [WidgetID],
-    component: &'a mut C,
+    comp_struct: &'a mut T,
 }
 
-impl<'a, C: Component> RenderHandle<'a, C> {
+impl<'a, T: ToComponent> RenderHandle<'a, T> {
     pub fn new(
         handle: &'a mut Handle,
         global_positions: &'a mut [Rect],
         active_widget: &'a mut Option<WidgetID>,
         hovered_widgets: &'a [WidgetID],
-        component: &'a mut C,
+        comp_struct: &'a mut T,
     ) -> Self {
         Self {
             handle,
@@ -43,7 +43,7 @@ impl<'a, C: Component> RenderHandle<'a, C> {
             active_widget,
             hovered_widgets,
             resize: false,
-            component,
+            comp_struct,
         }
     }
 
@@ -59,7 +59,7 @@ impl<'a, C: Component> RenderHandle<'a, C> {
         self.resize
     }
 
-    pub fn render_widgets<'b, W: Widget<C> + 'b>(
+    pub fn render_widgets<'b, W: Widget<T> + 'b>(
         &mut self,
         scene: &mut SceneBuilder,
         iter: impl Iterator<Item = &'b mut W>,
@@ -69,7 +69,7 @@ impl<'a, C: Component> RenderHandle<'a, C> {
             let id = w.id();
             let child_pos = self.global_positions[id.widget_id() as usize];
             let parent_origin = *parent_origin.get_or_insert_with(|| {
-                self.component
+                self.comp_struct
                     .get_parent(id)
                     .map_or_else(Point::default, |parent_id| {
                         self.global_positions[parent_id.widget_id() as usize].origin()
@@ -100,7 +100,7 @@ impl<'a, C: Component> RenderHandle<'a, C> {
     pub fn get_local_rect(&self, id: WidgetID) -> Rect {
         let global = self.get_global_rect(id);
         let parent_pos = self
-            .component
+            .comp_struct
             .get_parent(id)
             .map_or_else(Point::default, |id| {
                 self.global_positions[id.widget_id() as usize].origin()
@@ -110,21 +110,21 @@ impl<'a, C: Component> RenderHandle<'a, C> {
     }
 }
 
-pub struct ResizeHandle<'a, C> {
+pub struct ResizeHandle<'a, T> {
     handle: &'a mut Handle,
     local_positions: &'a mut [Rect],
-    _component: &'a mut C,
+    comp_struct: &'a mut T,
 }
 
-impl<'a, C: Component> ResizeHandle<'a, C> {
+impl<'a, T: ToComponent> ResizeHandle<'a, T> {
     pub fn new(
         handle: &'a mut Handle,
         local_positions: &'a mut [Rect],
-        component: &'a mut C,
+        comp_struct: &'a mut T,
     ) -> Self {
         Self {
             handle,
-            _component: component,
+            comp_struct,
             local_positions,
         }
     }
@@ -136,7 +136,7 @@ impl<'a, C: Component> ResizeHandle<'a, C> {
         self.local_positions[child_id.widget_id() as usize] = rect;
     }
 
-    pub fn layout_widget<W: Widget<C>>(
+    pub fn layout_widget<W: Widget<T>>(
         &mut self,
         origin: Point,
         child: &mut W,
@@ -146,24 +146,29 @@ impl<'a, C: Component> ResizeHandle<'a, C> {
         self.position_widget(Rect::from_origin_size(origin, s), child.id());
         s
     }
+
+    pub fn get_handler(&mut self) -> &mut T {
+        self.comp_struct
+    }
 }
 
-pub struct EventHandle<'a, C> {
+pub struct EventHandle<'a, T> {
     handle: &'a mut Handle,
     global_positions: &'a [Rect],
     resize: bool,
     active_widget: &'a mut Option<WidgetID>,
     hovered_widgets: &'a mut Vec<WidgetID>,
-    component: &'a mut C,
+    events_to_propagate: Vec<(WidgetID, WidgetEvent<'static>)>,
+    comp_struct: &'a mut T,
 }
 
-impl<'a, C: Component> EventHandle<'a, C> {
+impl<'a, T: ToComponent> EventHandle<'a, T> {
     pub fn new(
         handle: &'a mut Handle,
         global_positions: &'a [Rect],
         active_widget: &'a mut Option<WidgetID>,
         hovered_widgets: &'a mut Vec<WidgetID>,
-        component: &'a mut C,
+        comp_struct: &'a mut T,
     ) -> Self {
         Self {
             handle,
@@ -171,7 +176,8 @@ impl<'a, C: Component> EventHandle<'a, C> {
             global_positions,
             active_widget,
             hovered_widgets,
-            component,
+            events_to_propagate: vec![],
+            comp_struct,
         }
     }
     pub fn get_fcx(&mut self) -> &mut FontContext {
@@ -206,7 +212,7 @@ impl<'a, C: Component> EventHandle<'a, C> {
     pub fn get_local_rect(&self, id: WidgetID) -> Rect {
         let global = self.get_global_rect(id);
         let parent_pos = self
-            .component
+            .comp_struct
             .get_parent(id)
             .map_or_else(Point::default, |id| {
                 self.global_positions[id.widget_id() as usize].origin()
@@ -215,7 +221,7 @@ impl<'a, C: Component> EventHandle<'a, C> {
         global.with_origin(vector.to_point())
     }
 
-    pub fn propagate_event<'b, W: Widget<C> + 'b>(
+    pub fn propagate_event<'b, W: Widget<T> + 'b>(
         &mut self,
         event: WidgetEvent,
         iter: impl Iterator<Item = &'b mut W>,
@@ -235,8 +241,8 @@ impl<'a, C: Component> EventHandle<'a, C> {
         }
     }
 
-    pub fn unwrap(self) -> bool {
-        self.resize
+    pub fn unwrap(self) -> (bool, Vec<(WidgetID, WidgetEvent<'static>)>) {
+        (self.resize, self.events_to_propagate)
     }
 
     pub fn set_active(&mut self, id: WidgetID, active: bool) {
@@ -245,17 +251,8 @@ impl<'a, C: Component> EventHandle<'a, C> {
                 return;
             }
             if !(active && old_id == id) {
-                let resize = self.component.event(
-                    old_id,
-                    WidgetEvent::ActiveChange,
-                    self.handle,
-                    self.global_positions,
-                    self.active_widget,
-                    self.hovered_widgets,
-                );
-                if resize {
-                    self.resize = true;
-                }
+                self.events_to_propagate
+                    .push((old_id, WidgetEvent::ActiveChange));
             }
         }
         *self.active_widget = active.then_some(id);
@@ -277,8 +274,7 @@ impl<'a, C: Component> EventHandle<'a, C> {
     pub fn is_hovered(&self, id: WidgetID) -> bool {
         self.hovered_widgets.contains(&id)
     }
-
-    pub fn get_handler(&mut self) -> &mut C::Handler {
-        self.component.get_handler()
+    pub fn get_handler(&mut self) -> &mut T {
+        self.comp_struct
     }
 }

@@ -5,7 +5,7 @@ use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, WidgetDec
 use gui_core::widget::WidgetID;
 use itertools::Itertools;
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::quote;
+use quote::{format_ident, quote};
 use std::cmp::max_by_key;
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -80,15 +80,12 @@ impl<'a> Widget<'a> {
         })
     }
 
-    pub fn gen_widget_type(&self, comp_holder: &Ident) -> TokenStream {
+    pub fn gen_widget_type(&self) -> TokenStream {
         let mut stream = TokenStream::new();
-        let child_type = self
-            .child_widgets
-            .as_ref()
-            .map(|s| s.gen_widget_type(comp_holder));
+        let child_type = self.child_widgets.as_ref().map(|s| s.gen_widget_type());
         self.widget_declaration.widget.widget_type(
             self.handler.as_ref(),
-            &comp_holder,
+            &format_ident!("CompStruct"),
             child_type.as_ref(),
             &mut stream,
         );
@@ -217,9 +214,9 @@ impl<'a> Widget<'a> {
         stream
     }
 
-    pub fn gen_widget_set(&self, comp_holder: &Ident, stream: &mut TokenStream) {
+    pub fn gen_widget_set(&self, stream: &mut TokenStream) {
         if let Some(set) = &self.child_widgets {
-            set.gen_widget_set(comp_holder, stream)
+            set.gen_widget_set(stream)
         }
     }
 
@@ -239,7 +236,7 @@ impl<'a> Widget<'a> {
         widget_stmt: Option<&TokenStream>,
         acc: &mut Vec<(WidgetID, TokenStream)>,
     ) {
-        let widget_stmt = widget_stmt.map_or_else(|| quote! {&mut self.widget}, Clone::clone);
+        let widget_stmt = widget_stmt.map_or_else(|| quote! {self.widget}, Clone::clone);
 
         if let Some(set) = &self.child_widgets {
             for (get_stmt, w) in set.gen_widget_gets(&widget_stmt) {

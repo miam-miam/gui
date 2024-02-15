@@ -2,7 +2,7 @@ use crate::widget::Widget;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::widget::WidgetID;
 use itertools::Itertools;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -31,9 +31,9 @@ impl<'a> WidgetSet<'a> {
         })
     }
 
-    pub fn gen_widget_type(&self, component_holder: &Ident) -> TokenStream {
+    pub fn gen_widget_type(&self) -> TokenStream {
         match &self.widgets[..] {
-            [(_, child)] => child.gen_widget_type(&component_holder),
+            [(_, child)] => child.gen_widget_type(),
             [] => quote!(()),
             _ => {
                 let count = self.count.expect("widget set should be created.");
@@ -68,7 +68,7 @@ impl<'a> WidgetSet<'a> {
         }
     }
 
-    pub fn gen_widget_set(&self, component_holder: &Ident, stream: &mut TokenStream) {
+    pub fn gen_widget_set(&self, stream: &mut TokenStream) {
         if let Some(count) = self.count {
             let widget_set = format_ident!("WidgetSet{count}");
 
@@ -88,7 +88,7 @@ impl<'a> WidgetSet<'a> {
             let types = self
                 .widgets
                 .iter()
-                .map(|(_, w)| w.gen_widget_type(component_holder))
+                .map(|(_, w)| w.gen_widget_type())
                 .collect_vec();
 
             let ids = self.widgets.iter().map(|(_, w)| w.id);
@@ -110,28 +110,28 @@ impl<'a> WidgetSet<'a> {
                     )*
                 }
 
-                impl Widget<#component_holder> for #widget_set {
+                impl Widget<CompStruct> for #widget_set {
                     fn id(&self) -> WidgetID {
                         match self {
                             #( #widget_set::#variants(_) => #ids ),*
                         }
                     }
 
-                     fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<#component_holder>) {
+                     fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<CompStruct>) {
                         match self {
-                            #( #widget_set::#variants(w) => <#types as Widget<#component_holder>>::render(w, scene, handle) ),*
+                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::render(w, scene, handle) ),*
                         }
                     }
 
-                    fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<#component_holder>) -> Size {
+                    fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<CompStruct>) -> Size {
                         match self {
-                            #( #widget_set::#variants(w) => <#types as Widget<#component_holder>>::resize(w, constraints, handle) ),*
+                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::resize(w, constraints, handle) ),*
                         }
                     }
 
-                    fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<#component_holder>) {
+                    fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<CompStruct>) {
                         match self {
-                            #( #widget_set::#variants(w) => <#types as Widget<#component_holder>>::event(w, event, handle) ),*
+                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::event(w, event, handle) ),*
                         }
                     }
 
@@ -140,7 +140,7 @@ impl<'a> WidgetSet<'a> {
         }
 
         for (_, w) in &self.widgets {
-            w.gen_widget_set(component_holder, stream)
+            w.gen_widget_set(stream)
         }
     }
 

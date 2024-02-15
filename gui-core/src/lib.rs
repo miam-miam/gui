@@ -23,11 +23,10 @@ pub use vello::SceneBuilder;
 
 #[allow(dead_code)]
 struct TestBoxable {
-    test: Box<dyn Component<Handler = ()>>,
+    test: Box<dyn Component>,
 }
 
 pub trait Component {
-    type Handler;
     fn render<'a>(
         &mut self,
         scene: SceneBuilder,
@@ -63,12 +62,13 @@ pub trait Component {
         active_widget: &'a mut Option<WidgetID>,
         hovered_widgets: &'a mut Vec<WidgetID>,
     ) -> bool;
-    fn get_handler(&mut self) -> &mut Self::Handler;
 }
 
 pub trait ToComponent {
     type Component: Component;
     fn to_component_holder(self) -> Self::Component;
+    fn largest_id(&self) -> WidgetID;
+    fn get_parent(&self, id: WidgetID) -> Option<WidgetID>;
 }
 
 pub trait Variable {

@@ -6,7 +6,7 @@ use gui_core::vello::kurbo::{Affine, Vec2};
 use gui_core::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
 use gui_core::vello::SceneFragment;
 use gui_core::widget::{RenderHandle, ResizeHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID};
-use gui_core::{widget, Colour, Component, SceneBuilder, ToHandler, Var};
+use gui_core::{widget, Colour, SceneBuilder, ToComponent, ToHandler, Var};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
@@ -17,7 +17,7 @@ pub trait ButtonHandler<T: ToHandler<BaseHandler = Self>> {
     fn on_press(&mut self) {}
 }
 
-pub struct Button<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widget<C>> {
+pub struct Button<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> {
     id: WidgetID,
     background_colour: Colour,
     disabled_colour: Colour,
@@ -29,7 +29,7 @@ pub struct Button<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widge
     phantom: PhantomData<(T, C)>,
 }
 
-impl<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widget<C>> Button<T, C, W> {
+impl<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> Button<T, C, W> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: WidgetID,
@@ -79,10 +79,8 @@ impl<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widget<C>> Button<
 
 const STOKE_WIDTH: f64 = 0.58;
 
-impl<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widget<C>> Widget<C>
+impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget<C>> Widget<C>
     for Button<T, C, W>
-where
-    C::Handler: ButtonHandler<T>,
 {
     fn id(&self) -> WidgetID {
         self.id
