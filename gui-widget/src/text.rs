@@ -84,7 +84,7 @@ impl<C: ToComponent> Widget<C> for Text {
         }
 
         let layout = self.layout.as_mut().unwrap();
-        text::render_text(scene, Affine::translate((0.0, 0.0)), layout);
+        text::render_text(scene, Affine::IDENTITY, layout);
     }
 
     fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<C>) -> Size {

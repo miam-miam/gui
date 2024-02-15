@@ -13,6 +13,11 @@ components:
         padding: 10
       properties:
         children:
+          - name: Count
+            widget: Text
+            properties:
+              text: "{$count}" # Can use any variable from the component
+
           - name: IncrementBtn
             widget: Button
             properties:
@@ -21,11 +26,6 @@ components:
                 widget: Text
                 properties:
                   text: Increment # Uses Fluent syntax https://projectfluent.org/
-
-          - name: Count
-            widget: Text
-            properties:
-              text: "{$count}" # Can use any variable from the component
 
           - name: DecrementBtn
             widget: Button

@@ -81,6 +81,8 @@ impl<'a, T: ToComponent> RenderHandle<'a, T> {
             let mut builder = SceneBuilder::for_fragment(&mut fragment);
             w.render(&mut builder, self);
 
+            dbg!((w.id(), vector));
+
             scene.append(&fragment, Some(Affine::translate(vector)));
         }
     }

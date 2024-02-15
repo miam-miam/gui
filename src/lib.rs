@@ -80,10 +80,6 @@ impl<C: Component> WindowState<C> {
         }
     }
 
-    fn schedule_render(&self) {
-        self.handle.window.invalidate();
-    }
-
     fn resize(&mut self) {
         let (max_width, max_height) = self.surface_size();
         let mut local_positions =
@@ -186,16 +182,15 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
 
     fn size(&mut self, size: Size) {
         self.size = size;
+        self.resize();
     }
 
     fn prepare_paint(&mut self) {
         self.component.update_vars(false);
-        self.resize();
     }
 
     fn paint(&mut self, _: &Region) {
         self.render();
-        self.schedule_render();
     }
 
     fn command(&mut self, _id: u32) {}
