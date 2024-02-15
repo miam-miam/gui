@@ -13,11 +13,10 @@ pub use vello::kurbo::Size;
 pub use glazier;
 pub use glazier::kurbo::Point;
 use glazier::kurbo::Rect;
-use glazier::{PointerEvent, WindowHandle};
 pub use parley;
 pub use vello;
 
-use crate::handles::{EventHandle, Handle};
+use crate::handles::Handle;
 use crate::widget::{WidgetEvent, WidgetID};
 pub use parley::font::FontContext;
 pub use vello::SceneBuilder;
@@ -34,9 +33,9 @@ pub trait Component {
         scene: SceneBuilder,
         handle: &'a mut Handle,
         global_positions: &'a mut [Rect],
-        active_widget: Option<WidgetID>,
+        active_widget: &'a mut Option<WidgetID>,
         hovered_widgets: &'a [WidgetID],
-    ) -> (bool, Option<WidgetID>);
+    ) -> bool;
     fn update_vars(&mut self, force_update: bool);
     fn resize<'a>(
         &mut self,
@@ -48,19 +47,22 @@ pub trait Component {
     fn propagate_event<'a>(
         &mut self,
         event: WidgetEvent,
+        handle: &'a mut Handle,
         global_positions: &'a [Rect],
+        active_widget: &'a mut Option<WidgetID>,
         hovered_widgets: &'a mut Vec<WidgetID>,
-    ) -> (bool, Option<WidgetID>);
+    ) -> bool;
     fn largest_id(&self) -> WidgetID;
     fn get_parent(&self, id: WidgetID) -> Option<WidgetID>;
     fn event<'a>(
         &mut self,
         id: WidgetID,
         event: WidgetEvent,
+        handle: &'a mut Handle,
         global_positions: &'a [Rect],
-        active_widget: Option<WidgetID>,
+        active_widget: &'a mut Option<WidgetID>,
         hovered_widgets: &'a mut Vec<WidgetID>,
-    ) -> (bool, Option<WidgetID>);
+    ) -> bool;
     fn get_handler(&mut self) -> &mut Self::Handler;
 }
 

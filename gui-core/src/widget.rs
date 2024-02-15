@@ -1,4 +1,4 @@
-pub use crate::handles::{EventHandle, RenderHandle, ResizeHandle};
+pub use crate::handles::{EventHandle, RenderHandle, ResizeHandle, Handle};
 use crate::layout::LayoutConstraints;
 use crate::parse::fluent::Fluent;
 use crate::parse::WidgetDeclaration;

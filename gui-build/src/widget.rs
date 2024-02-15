@@ -6,7 +6,7 @@ use gui_core::widget::WidgetID;
 use itertools::Itertools;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use std::cmp::{max, max_by_key};
+use std::cmp::max_by_key;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Clone, Debug)]
@@ -80,13 +80,15 @@ impl<'a> Widget<'a> {
         })
     }
 
-    pub fn gen_widget_type(&self) -> TokenStream {
+    pub fn gen_widget_type(&self, comp_holder: &Ident) -> TokenStream {
         let mut stream = TokenStream::new();
-        let comp_struct = Ident::new("CompStruct", Span::call_site());
-        let child_type = self.child_widgets.as_ref().map(WidgetSet::gen_widget_type);
+        let child_type = self
+            .child_widgets
+            .as_ref()
+            .map(|s| s.gen_widget_type(comp_holder));
         self.widget_declaration.widget.widget_type(
             self.handler.as_ref(),
-            &comp_struct,
+            &comp_holder,
             child_type.as_ref(),
             &mut stream,
         );
@@ -215,9 +217,9 @@ impl<'a> Widget<'a> {
         stream
     }
 
-    pub fn gen_widget_set(&self, stream: &mut TokenStream) {
+    pub fn gen_widget_set(&self, comp_holder: &Ident, stream: &mut TokenStream) {
         if let Some(set) = &self.child_widgets {
-            set.gen_widget_set(stream)
+            set.gen_widget_set(comp_holder, stream)
         }
     }
 
@@ -230,6 +232,22 @@ impl<'a> Widget<'a> {
                 .unwrap_or_default(),
             |i| i.widget_id(),
         )
+    }
+
+    pub fn gen_widget_id_to_widget(
+        &self,
+        widget_stmt: Option<&TokenStream>,
+        acc: &mut Vec<(WidgetID, TokenStream)>,
+    ) {
+        let widget_stmt = widget_stmt.map_or_else(|| quote! {&mut self.widget}, Clone::clone);
+
+        if let Some(set) = &self.child_widgets {
+            for (get_stmt, w) in set.gen_widget_gets(&widget_stmt) {
+                w.gen_widget_id_to_widget(Some(&get_stmt), acc);
+            }
+        }
+
+        acc.push((self.id, widget_stmt));
     }
 
     pub fn get_parent_ids(&self, acc: &mut Vec<(WidgetID, Vec<WidgetID>)>) {

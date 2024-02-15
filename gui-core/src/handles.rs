@@ -11,11 +11,20 @@ pub struct Handle {
     pub window: WindowHandle,
 }
 
+impl Default for Handle {
+    fn default() -> Self {
+        Self {
+            fcx: FontContext::new(),
+            window: WindowHandle::default(),
+        }
+    }
+}
+
 pub struct RenderHandle<'a, C> {
     handle: &'a mut Handle,
     global_positions: &'a mut [Rect],
     resize: bool,
-    active_widget: Option<WidgetID>,
+    active_widget: &'a mut Option<WidgetID>,
     hovered_widgets: &'a [WidgetID],
     component: &'a mut C,
 }
@@ -23,8 +32,8 @@ pub struct RenderHandle<'a, C> {
 impl<'a, C: Component> RenderHandle<'a, C> {
     pub fn new(
         handle: &'a mut Handle,
-        global_positions: &'a mut Vec<Rect>,
-        active_widget: Option<WidgetID>,
+        global_positions: &'a mut [Rect],
+        active_widget: &'a mut Option<WidgetID>,
         hovered_widgets: &'a [WidgetID],
         component: &'a mut C,
     ) -> Self {
@@ -46,8 +55,8 @@ impl<'a, C: Component> RenderHandle<'a, C> {
         self.resize = true;
     }
 
-    pub fn unwrap(self) -> (bool, Option<WidgetID>) {
-        (self.resize, self.active_widget)
+    pub fn unwrap(self) -> bool {
+        self.resize
     }
 
     pub fn render_widgets<'b, W: Widget<C> + 'b>(
@@ -77,7 +86,7 @@ impl<'a, C: Component> RenderHandle<'a, C> {
     }
 
     pub fn is_active(&self, id: WidgetID) -> bool {
-        self.active_widget == Some(id)
+        self.active_widget == &Some(id)
     }
 
     pub fn is_hovered(&self, id: WidgetID) -> bool {
@@ -110,7 +119,7 @@ pub struct ResizeHandle<'a, C> {
 impl<'a, C: Component> ResizeHandle<'a, C> {
     pub fn new(
         handle: &'a mut Handle,
-        local_positions: &'a mut Vec<Rect>,
+        local_positions: &'a mut [Rect],
         component: &'a mut C,
     ) -> Self {
         Self {
@@ -143,7 +152,7 @@ pub struct EventHandle<'a, C> {
     handle: &'a mut Handle,
     global_positions: &'a [Rect],
     resize: bool,
-    active_widget: Option<WidgetID>,
+    active_widget: &'a mut Option<WidgetID>,
     hovered_widgets: &'a mut Vec<WidgetID>,
     component: &'a mut C,
 }
@@ -151,8 +160,8 @@ pub struct EventHandle<'a, C> {
 impl<'a, C: Component> EventHandle<'a, C> {
     pub fn new(
         handle: &'a mut Handle,
-        global_positions: &'a mut Vec<Rect>,
-        active_widget: Option<WidgetID>,
+        global_positions: &'a [Rect],
+        active_widget: &'a mut Option<WidgetID>,
         hovered_widgets: &'a mut Vec<WidgetID>,
         component: &'a mut C,
     ) -> Self {
@@ -231,14 +240,15 @@ impl<'a, C: Component> EventHandle<'a, C> {
     }
 
     pub fn set_active(&mut self, id: WidgetID, active: bool) {
-        if let Some(old_id) = self.active_widget {
+        if let Some(old_id) = *self.active_widget {
             if !active && old_id != id {
                 return;
             }
             if !(active && old_id == id) {
-                let (resize, active) = self.component.event(
+                let resize = self.component.event(
                     old_id,
                     WidgetEvent::ActiveChange,
+                    self.handle,
                     self.global_positions,
                     self.active_widget,
                     self.hovered_widgets,
@@ -246,10 +256,9 @@ impl<'a, C: Component> EventHandle<'a, C> {
                 if resize {
                     self.resize = true;
                 }
-                self.active_widget = active;
             }
         }
-        self.active_widget = active.then_some(id);
+        *self.active_widget = active.then_some(id);
     }
 
     pub fn add_hover(&mut self, id: WidgetID) -> bool {
@@ -262,7 +271,7 @@ impl<'a, C: Component> EventHandle<'a, C> {
     }
 
     pub fn is_active(&self, id: WidgetID) -> bool {
-        self.active_widget == Some(id)
+        self.active_widget == &Some(id)
     }
 
     pub fn is_hovered(&self, id: WidgetID) -> bool {

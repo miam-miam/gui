@@ -333,6 +333,36 @@ mod gen {
                 hovered_widgets,
                 self,
             );
+            let handle = &mut event_handle;
+            match (id.component_id(), id.widget_id()) {
+                (0u32, 2u32) => {
+                    &mut self
+                        .widget
+                        .widgets(0usize)
+                        .w0()
+                        .get_widget()
+                        .event(event, handle)
+                }
+                (0u32, 1u32) => {
+                    &mut self.widget.widgets(0usize).w0().event(event, handle)
+                }
+                (0u32, 3u32) => {
+                    &mut self.widget.widgets(1usize).w1().event(event, handle)
+                }
+                (0u32, 5u32) => {
+                    &mut self
+                        .widget
+                        .widgets(2usize)
+                        .w2()
+                        .get_widget()
+                        .event(event, handle)
+                }
+                (0u32, 4u32) => {
+                    &mut self.widget.widgets(2usize).w2().event(event, handle)
+                }
+                (0u32, 0u32) => &mut self.widget.event(event, handle),
+                _ => {}
+            }
             event_handle.unwrap()
         }
         fn get_handler(&mut self) -> &mut Self::Handler {
