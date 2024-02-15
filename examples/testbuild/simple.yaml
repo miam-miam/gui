@@ -1,24 +1,39 @@
 styles:
-  - widget: Text
-    properties:
-      size: 24
-
 components:
   - name: Counter # Names for components must be unique
+    variables:
+      - name: count
+        type: u32
+      - name: disabled_decrement
+        type: bool
     child:
-      widget: HBox
+      widget: VStack
+      layoutProperties: # Under the hood these settings create a layout widget
+        # so that custom widgets do not need to deal with layout.
+        padding: 10
       properties:
         children:
-          - widget: Text
-            name: Other
+          - name: IncrementBtn
+            widget: Button
             properties:
-              text: Hiya
+              child:
+                name: IncrText
+                widget: Text
+                properties:
+                  text: Increment # Uses Fluent syntax https://projectfluent.org/
+
           - name: Count
+            widget: Text
+            properties:
+              text: "{$count}" # Can use any variable from the component
+
+          - name: DecrementBtn
             widget: Button
             properties:
               disabled:
-                variable: disabled
+                variable: disabled_decrement
               child:
+                name: DecrText
                 widget: Text
                 properties:
-                  text: Testsfa
+                  text: Decrement

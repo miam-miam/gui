@@ -24,17 +24,17 @@ impl<'a, C: Component> RenderHandle<'a, C> {
     pub fn new(
         handle: &'a mut Handle,
         global_positions: &'a mut Vec<Rect>,
-        component: &'a mut C,
         active_widget: Option<WidgetID>,
         hovered_widgets: &'a [WidgetID],
+        component: &'a mut C,
     ) -> Self {
         Self {
             handle,
-            component,
             global_positions,
             active_widget,
             hovered_widgets,
             resize: false,
+            component,
         }
     }
 
@@ -46,8 +46,8 @@ impl<'a, C: Component> RenderHandle<'a, C> {
         self.resize = true;
     }
 
-    pub fn unwrap(self) -> bool {
-        self.resize
+    pub fn unwrap(self) -> (bool, Option<WidgetID>) {
+        (self.resize, self.active_widget)
     }
 
     pub fn render_widgets<'b, W: Widget<C> + 'b>(
@@ -141,28 +141,28 @@ impl<'a, C: Component> ResizeHandle<'a, C> {
 
 pub struct EventHandle<'a, C> {
     handle: &'a mut Handle,
-    component: &'a mut C,
     global_positions: &'a [Rect],
     resize: bool,
     active_widget: Option<WidgetID>,
     hovered_widgets: &'a mut Vec<WidgetID>,
+    component: &'a mut C,
 }
 
 impl<'a, C: Component> EventHandle<'a, C> {
     pub fn new(
         handle: &'a mut Handle,
-        component: &'a mut C,
         global_positions: &'a mut Vec<Rect>,
         active_widget: Option<WidgetID>,
         hovered_widgets: &'a mut Vec<WidgetID>,
+        component: &'a mut C,
     ) -> Self {
         Self {
             handle,
-            component,
             resize: false,
             global_positions,
             active_widget,
             hovered_widgets,
+            component,
         }
     }
     pub fn get_fcx(&mut self) -> &mut FontContext {
@@ -236,7 +236,17 @@ impl<'a, C: Component> EventHandle<'a, C> {
                 return;
             }
             if !(active && old_id == id) {
-                self.component.event(old_id, WidgetEvent::ActiveChange);
+                let (resize, active) = self.component.event(
+                    old_id,
+                    WidgetEvent::ActiveChange,
+                    self.global_positions,
+                    self.active_widget,
+                    self.hovered_widgets,
+                );
+                if resize {
+                    self.resize = true;
+                }
+                self.active_widget = active;
             }
         }
         self.active_widget = active.then_some(id);

@@ -12,10 +12,12 @@ pub use vello::kurbo::Size;
 
 pub use glazier;
 pub use glazier::kurbo::Point;
+use glazier::kurbo::Rect;
 use glazier::{PointerEvent, WindowHandle};
 pub use parley;
 pub use vello;
 
+use crate::handles::{EventHandle, Handle};
 use crate::widget::{WidgetEvent, WidgetID};
 pub use parley::font::FontContext;
 pub use vello::SceneBuilder;
@@ -27,15 +29,39 @@ struct TestBoxable {
 
 pub trait Component {
     type Handler;
-    fn render(&mut self, scene: SceneBuilder, fcx: &mut FontContext);
+    fn render<'a>(
+        &mut self,
+        scene: SceneBuilder,
+        handle: &'a mut Handle,
+        global_positions: &'a mut [Rect],
+        active_widget: Option<WidgetID>,
+        hovered_widgets: &'a [WidgetID],
+    ) -> (bool, Option<WidgetID>);
     fn update_vars(&mut self, force_update: bool);
-    fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size;
+    fn resize<'a>(
+        &mut self,
+        constraints: LayoutConstraints,
+        handle: &'a mut Handle,
+        local_positions: &'a mut [Rect],
+    ) -> Size;
+
+    fn propagate_event<'a>(
+        &mut self,
+        event: WidgetEvent,
+        global_positions: &'a [Rect],
+        hovered_widgets: &'a mut Vec<WidgetID>,
+    ) -> (bool, Option<WidgetID>);
+    fn largest_id(&self) -> WidgetID;
     fn get_parent(&self, id: WidgetID) -> Option<WidgetID>;
-    fn event(&mut self, id: WidgetID, event: WidgetEvent);
+    fn event<'a>(
+        &mut self,
+        id: WidgetID,
+        event: WidgetEvent,
+        global_positions: &'a [Rect],
+        active_widget: Option<WidgetID>,
+        hovered_widgets: &'a mut Vec<WidgetID>,
+    ) -> (bool, Option<WidgetID>);
     fn get_handler(&mut self) -> &mut Self::Handler;
-    fn pointer_down(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle);
-    fn pointer_up(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle);
-    fn pointer_move(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle);
 }
 
 pub trait ToComponent {

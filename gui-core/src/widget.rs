@@ -12,7 +12,7 @@ use std::any::Any;
 use vello::kurbo::Size;
 use vello::SceneBuilder;
 
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Default)]
 pub struct WidgetID {
     component_id: u32,
     widget_id: u32,
@@ -22,12 +22,12 @@ impl ToTokens for WidgetID {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let component_id = self.component_id;
         let widget_id = self.widget_id;
-        tokens.extend(quote!(::gui::gui_core::widget::WidgetID::new(#component_id, #widget_id)))
+        tokens.extend(quote!(WidgetID::new(#component_id, #widget_id)))
     }
 }
 
 impl WidgetID {
-    pub fn new(component_id: u32, widget_id: u32) -> Self {
+    pub const fn new(component_id: u32, widget_id: u32) -> Self {
         WidgetID {
             component_id,
             widget_id,
