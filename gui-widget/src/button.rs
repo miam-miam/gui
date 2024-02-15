@@ -18,6 +18,7 @@ pub trait ButtonHandler<T: ToHandler<BaseHandler = Self>> {
 }
 
 pub struct Button<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widget<C>> {
+    id: WidgetID,
     background_colour: Colour,
     disabled_colour: Colour,
     clicked_colour: Colour,
@@ -29,7 +30,9 @@ pub struct Button<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widge
 }
 
 impl<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widget<C>> Button<T, C, W> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
+        id: WidgetID,
         background_colour: Colour,
         disabled_colour: Colour,
         clicked_colour: Colour,
@@ -39,6 +42,7 @@ impl<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widget<C>> Button<
         child: W,
     ) -> Self {
         Button {
+            id,
             background_colour,
             disabled_colour,
             clicked_colour,
@@ -81,7 +85,7 @@ where
     C::Handler: ButtonHandler<T>,
 {
     fn id(&self) -> WidgetID {
-        todo!()
+        self.id
     }
 
     fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<C>) {
@@ -246,7 +250,7 @@ impl WidgetBuilder for ButtonBuilder {
         }
     }
 
-    fn create_widget(&self, widget: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream) {
         let background_colour = match &self.background_colour {
             Some(Var::Value(v)) => v.to_token_stream(),
             _ => Colour(Color::WHITE).to_token_stream(),
@@ -273,7 +277,7 @@ impl WidgetBuilder for ButtonBuilder {
         };
 
         stream.extend(quote! {
-            ::gui::gui_widget::Button::new(#background_colour, #disabled_colour, #clicked_colour, #hover_colour, #border_colour, #disabled, #widget)
+            ::gui::gui_widget::Button::new(#id, #background_colour, #disabled_colour, #clicked_colour, #hover_colour, #border_colour, #disabled, #widget)
         });
     }
 

@@ -2,8 +2,10 @@ use crate::fluent::FluentIdent;
 use crate::widget_set::WidgetSet;
 use anyhow::anyhow;
 use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, WidgetDeclaration};
+use gui_core::widget::WidgetID;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Clone, Debug)]
 pub struct Widget<'a> {
@@ -14,16 +16,23 @@ pub struct Widget<'a> {
     pub handler: Option<Ident>,
     pub fluents: Vec<FluentIdent<'a>>,
     pub variables: Vec<(&'static str, &'a str)>,
+    pub id: WidgetID,
 }
 
 impl<'a> Widget<'a> {
     pub fn new(component: &'a ComponentDeclaration) -> anyhow::Result<Self> {
-        Self::new_inner(component.name.as_str(), &component.child)
+        static COMPONENT_COUNTER: AtomicU32 = AtomicU32::new(0);
+        Self::new_inner(
+            component.name.as_str(),
+            &component.child,
+            COMPONENT_COUNTER.fetch_add(1, Ordering::Relaxed),
+        )
     }
 
     pub fn new_inner(
         component_name: &str,
         widget_declaration: &'a WidgetDeclaration,
+        component_id: u32,
     ) -> anyhow::Result<Self> {
         let widget = widget_declaration.widget.as_ref();
         let widget_type_name = widget.name();
@@ -51,17 +60,21 @@ impl<'a> Widget<'a> {
                 )
             })
             .collect();
+
+        static WIDGET_COUNTER: AtomicU32 = AtomicU32::new(0);
+        let id = WidgetID::new(component_id, WIDGET_COUNTER.fetch_add(1, Ordering::Relaxed));
         Ok(Self {
             widget_type_name,
             widget_declaration,
             child_widgets: widget
                 .widgets()
-                .map(|ws| WidgetSet::new(component_name, ws))
+                .map(|ws| WidgetSet::new(component_name, ws, component_id))
                 .transpose()?,
             child_type: None,
             handler,
             fluents,
             variables: widget.get_vars(),
+            id,
         })
     }
 
@@ -195,7 +208,7 @@ impl<'a> Widget<'a> {
 
         self.widget_declaration
             .widget
-            .create_widget(child_init.as_ref(), &mut stream);
+            .create_widget(self.id, child_init.as_ref(), &mut stream);
         stream
     }
 

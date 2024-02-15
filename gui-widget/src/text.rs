@@ -19,6 +19,7 @@ use serde::Deserialize;
 use std::borrow::Cow;
 
 pub struct Text {
+    id: WidgetID,
     text: String,
     colour: Colour,
     size: f32,
@@ -26,9 +27,10 @@ pub struct Text {
 }
 
 impl Text {
-    pub fn new(text: String, colour: Colour, size: f32) -> Self {
+    pub fn new(id: WidgetID, colour: Colour, size: f32) -> Self {
         Text {
-            text,
+            id,
+            text: String::new(),
             colour,
             size,
             layout: None,
@@ -70,7 +72,7 @@ impl Text {
 
 impl<C: Component> Widget<C> for Text {
     fn id(&self) -> WidgetID {
-        todo!()
+        self.id
     }
 
     fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<C>) {
@@ -137,7 +139,7 @@ impl WidgetBuilder for TextBuilder {
         }
     }
 
-    fn create_widget(&self, _widget: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, _widget: Option<&TokenStream>, stream: &mut TokenStream) {
         let colour = match &self.colour {
             Some(Var::Value(v)) => v.to_token_stream(),
             _ => Colour(Color::rgb8(33, 37, 41)).to_token_stream(),
@@ -148,7 +150,7 @@ impl WidgetBuilder for TextBuilder {
         };
 
         stream.extend(quote! {
-            ::gui::gui_widget::Text::new(String::new(), #colour, #size)
+            ::gui::gui_widget::Text::new(#id, #colour, #size)
         });
     }
 

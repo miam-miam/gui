@@ -7,6 +7,7 @@ use dyn_clone::DynClone;
 use glazier::kurbo::Point;
 use glazier::PointerEvent;
 use proc_macro2::{Ident, TokenStream};
+use quote::{quote, ToTokens};
 use std::any::Any;
 use vello::kurbo::Size;
 use vello::SceneBuilder;
@@ -15,6 +16,14 @@ use vello::SceneBuilder;
 pub struct WidgetID {
     component_id: u32,
     widget_id: u32,
+}
+
+impl ToTokens for WidgetID {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let component_id = self.component_id;
+        let widget_id = self.widget_id;
+        tokens.extend(quote!(::gui::gui_core::widget::WidgetID::new(#component_id, #widget_id)))
+    }
 }
 
 impl WidgetID {
@@ -94,8 +103,7 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
     );
     fn name(&self) -> &'static str;
     fn combine(&mut self, rhs: &dyn WidgetBuilder);
-    fn create_widget(&self, widget: Option<&TokenStream>, stream: &mut TokenStream);
-
+    fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream);
     fn on_property_update(
         &self,
         property: &'static str,

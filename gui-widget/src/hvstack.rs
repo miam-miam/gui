@@ -40,6 +40,7 @@ impl Axis {
 }
 
 pub struct HVStack<C: Component, W: Widget<C>> {
+    id: WidgetID,
     axis: Axis,
     spacing: f32,
     children: Vec<W>,
@@ -47,8 +48,9 @@ pub struct HVStack<C: Component, W: Widget<C>> {
 }
 
 impl<C: Component, W: Widget<C>> HVStack<C, W> {
-    pub fn new_horizontal(spacing: f32, children: Vec<W>) -> Self {
+    pub fn new_horizontal(id: WidgetID, spacing: f32, children: Vec<W>) -> Self {
         Self {
+            id,
             axis: Axis::Horizontal,
             spacing,
             children,
@@ -56,8 +58,9 @@ impl<C: Component, W: Widget<C>> HVStack<C, W> {
         }
     }
 
-    pub fn new_vertical(spacing: f32, children: Vec<W>) -> Self {
+    pub fn new_vertical(id: WidgetID, spacing: f32, children: Vec<W>) -> Self {
         Self {
+            id,
             axis: Axis::Vertical,
             spacing,
             children,
@@ -76,7 +79,7 @@ impl<C: Component, W: Widget<C>> HVStack<C, W> {
 
 impl<C: Component, W: Widget<C>> Widget<C> for HVStack<C, W> {
     fn id(&self) -> WidgetID {
-        todo!()
+        self.id
     }
 
     fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<C>) {
@@ -174,14 +177,14 @@ impl WidgetBuilder for HStackBuilder {
         }
     }
 
-    fn create_widget(&self, widget: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream) {
         let spacing = match &self.spacing {
             Some(Var::Value(v)) => v.to_token_stream(),
             _ => 0_10f32.to_token_stream(),
         };
 
         stream.extend(quote! {
-            ::gui::gui_widget::HVStack::new_horizontal(#spacing, vec![#widget])
+            ::gui::gui_widget::HVStack::new_horizontal(#id, #spacing, vec![#widget])
         });
     }
 
@@ -261,14 +264,14 @@ impl WidgetBuilder for VStackBuilder {
         }
     }
 
-    fn create_widget(&self, widget: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream) {
         let spacing = match &self.spacing {
             Some(Var::Value(v)) => v.to_token_stream(),
             _ => 0_10f32.to_token_stream(),
         };
 
         stream.extend(quote! {
-            ::gui::gui_widget::HVStack::new_vertical(#spacing, vec![#widget])
+            ::gui::gui_widget::HVStack::new_vertical(#id, #spacing, vec![#widget])
         });
     }
 

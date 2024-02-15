@@ -15,12 +15,13 @@ impl<'a> WidgetSet<'a> {
     pub fn new(
         component_name: &str,
         widgets: Vec<(TokenStream, &'a WidgetDeclaration)>,
+        component_id: u32,
     ) -> anyhow::Result<Self> {
         static COUNTER: AtomicU32 = AtomicU32::new(0);
 
         let widgets = widgets
             .into_iter()
-            .map(|(s, w)| Ok((s, Widget::new_inner(component_name, w)?)))
+            .map(|(s, w)| Ok((s, Widget::new_inner(component_name, w, component_id)?)))
             .collect::<anyhow::Result<Vec<_>>>()?;
 
         Ok(Self {
