@@ -1,50 +1,75 @@
+pub use crate::handles::{EventHandle, RenderHandle, ResizeHandle};
 use crate::layout::LayoutConstraints;
 use crate::parse::fluent::Fluent;
 use crate::parse::WidgetDeclaration;
-use crate::Point;
+use crate::Component;
 use dyn_clone::DynClone;
-use glazier::{PointerEvent, WindowHandle};
-use parley::FontContext;
+use glazier::kurbo::Point;
+use glazier::PointerEvent;
 use proc_macro2::{Ident, TokenStream};
 use std::any::Any;
 use vello::kurbo::Size;
 use vello::SceneBuilder;
 
-pub trait Widget<H> {
-    fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext);
-    fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size;
-    fn pointer_down(
-        &mut self,
-        _local_pos: Point,
-        _event: &PointerEvent,
-        _window: &WindowHandle,
-        _handler: &mut H,
-    ) {
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+pub struct WidgetID {
+    component_id: u32,
+    widget_id: u32,
+}
+
+impl WidgetID {
+    pub fn new(component_id: u32, widget_id: u32) -> Self {
+        WidgetID {
+            component_id,
+            widget_id,
+        }
     }
-    fn pointer_up(
-        &mut self,
-        _local_pos: Point,
-        _event: &PointerEvent,
-        _window: &WindowHandle,
-        _handler: &mut H,
-    ) {
+
+    pub fn widget_id(&self) -> u32 {
+        self.widget_id
     }
-    fn pointer_move(
-        &mut self,
-        _local_pos: Point,
-        _event: &PointerEvent,
-        _window: &WindowHandle,
-        _handler: &mut H,
-    ) {
+
+    pub fn component_id(&self) -> u32 {
+        self.component_id
     }
 }
 
-impl<H> Widget<H> for () {
-    fn render(&mut self, _scene: &mut SceneBuilder, _fcx: &mut FontContext) {}
+#[derive(Clone, Debug, PartialEq)]
+pub enum WidgetEvent<'a> {
+    PointerUp(&'a PointerEvent),
+    PointerDown(&'a PointerEvent),
+    PointerMove(&'a PointerEvent),
+    HoverChange,
+    ActiveChange,
+}
 
-    fn resize(&mut self, constraints: LayoutConstraints, _fcx: &mut FontContext) -> Size {
+impl<'a> WidgetEvent<'a> {
+    pub fn get_point(&self) -> Option<Point> {
+        match self {
+            WidgetEvent::PointerUp(e)
+            | WidgetEvent::PointerDown(e)
+            | WidgetEvent::PointerMove(e) => Some(e.pos),
+            _ => None,
+        }
+    }
+}
+
+pub trait Widget<C: Component> {
+    fn id(&self) -> WidgetID;
+    fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<C>);
+    fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<C>) -> Size;
+    fn event(&self, event: WidgetEvent, handle: &mut EventHandle<C>);
+}
+
+impl<C: Component> Widget<C> for WidgetID {
+    fn id(&self) -> WidgetID {
+        *self
+    }
+    fn render(&mut self, _scene: &mut SceneBuilder, _handle: &mut RenderHandle<C>) {}
+    fn resize(&mut self, constraints: LayoutConstraints, _handle: &mut ResizeHandle<C>) -> Size {
         constraints.get_min()
     }
+    fn event(&self, _event: WidgetEvent, _handle: &mut EventHandle<C>) {}
 }
 
 /// Helper trait to enable trait upcasting, since upcasting is not stable.
@@ -63,7 +88,7 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
     fn widget_type(
         &self,
         handler: Option<&Ident>,
-        comp_struct: &Ident,
+        component: &Ident,
         widget: Option<&TokenStream>,
         stream: &mut TokenStream,
     );

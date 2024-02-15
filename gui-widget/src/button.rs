@@ -1,41 +1,34 @@
 use gui_core::glazier::kurbo::{Shape, Size};
-use gui_core::glazier::{PointerEvent, WindowHandle};
 use gui_core::layout::LayoutConstraints;
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
-use gui_core::vello::kurbo::{Affine, Rect, Vec2};
+use gui_core::vello::kurbo::{Affine, Vec2};
 use gui_core::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
 use gui_core::vello::SceneFragment;
-use gui_core::widget::{Widget, WidgetBuilder};
-use gui_core::{Colour, FontContext, Point, SceneBuilder, ToHandler, Var};
+use gui_core::widget::{RenderHandle, ResizeHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID};
+use gui_core::{widget, Colour, Component, SceneBuilder, ToHandler, Var};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
 use std::marker::PhantomData;
+use widget::EventHandle;
 
 pub trait ButtonHandler<T: ToHandler<BaseHandler = Self>> {
-    // Does not need to be overridden
-    fn get(base: &mut T::BaseHandler) -> &mut Self {
-        base
-    }
     fn on_press(&mut self) {}
 }
 
-pub struct Button<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> {
+pub struct Button<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widget<C>> {
     background_colour: Colour,
     disabled_colour: Colour,
     clicked_colour: Colour,
     hover_colour: Colour,
     border_colour: Colour,
     disabled: bool,
-    size: Rect,
-    hovered: bool,
-    clicking: bool,
     child: W,
-    phantom: PhantomData<(T, H)>,
+    phantom: PhantomData<(T, C)>,
 }
 
-impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Button<T, H, W> {
+impl<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widget<C>> Button<T, C, W> {
     pub fn new(
         background_colour: Colour,
         disabled_colour: Colour,
@@ -52,9 +45,6 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Button<T,
             hover_colour,
             border_colour,
             disabled,
-            size: Rect::new(0.0, 0.0, 0.0, 0.0),
-            hovered: false,
-            clicking: false,
             child,
             phantom: PhantomData,
         }
@@ -85,25 +75,34 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Button<T,
 
 const STOKE_WIDTH: f64 = 0.58;
 
-impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
-    for Button<T, H, W>
+impl<T: ToHandler<BaseHandler = C::Handler>, C: Component, W: Widget<C>> Widget<C>
+    for Button<T, C, W>
 {
-    fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext) {
-        let affine = if self.clicking {
+    fn id(&self) -> WidgetID {
+        todo!()
+    }
+
+    fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<C>) {
+        let clicking = handle.is_active(self.id());
+        let hovered = handle.is_hovered(self.id());
+        let affine = if handle.is_active(self.id()) {
             Affine::translate(Vec2::new(0.0, 0.875))
         } else {
             Affine::IDENTITY
         };
         let fill_colour = if self.disabled {
             self.disabled_colour
-        } else if self.clicking && self.hovered {
+        } else if clicking && hovered {
             self.clicked_colour
-        } else if self.hovered {
+        } else if hovered {
             self.hover_colour
         } else {
             self.background_colour
         };
-        let rect = self.size.inset(-0.5 * STOKE_WIDTH).to_rounded_rect(4.0);
+        let rect = handle
+            .get_local_rect(self.id())
+            .inset(-0.5 * STOKE_WIDTH)
+            .to_rounded_rect(4.0);
         scene.fill(
             Fill::NonZero,
             affine,
@@ -111,17 +110,16 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
             None,
             &rect,
         );
+
         let mut fragment = SceneFragment::new();
         let mut builder = SceneBuilder::for_fragment(&mut fragment);
-        self.child.render(&mut builder, fcx);
+        handle.render_widgets(&mut builder, [&self.child]);
 
         scene.append(
             &fragment,
-            Some(Affine::translate(Vec2::new(
-                STOKE_WIDTH + 18.0,
-                STOKE_WIDTH + if self.clicking { 0.875 } else { 0.0 },
-            ))),
+            clicking.then(|| Affine::translate(Vec2::new(0.0, 0.875))),
         );
+
         if self.disabled {
             scene.push_layer(
                 BlendMode::new(Mix::Screen, Compose::SrcOver),
@@ -145,62 +143,54 @@ impl<T: ToHandler<BaseHandler = H>, H: ButtonHandler<T>, W: Widget<H>> Widget<H>
                 affine,
                 &Brush::Solid(self.border_colour.0),
                 None,
-                &self.size.to_rounded_rect(4.5),
+                &handle.get_local_rect(self.id()).to_rounded_rect(4.5),
             );
         }
     }
 
-    fn resize(&mut self, mut constraints: LayoutConstraints, fcx: &mut FontContext) -> Size {
+    fn resize(&mut self, mut constraints: LayoutConstraints, handle: &mut ResizeHandle<C>) -> Size {
         let padding = Size::new(STOKE_WIDTH + 18.0, STOKE_WIDTH);
         constraints = constraints.deset(padding);
-        let mut child_size = self
-            .child
-            .resize(constraints.min_clamp(Size::new(0.0, 18.0)), fcx);
+        let mut child_size = handle.layout_widget(
+            padding.to_vec2().to_point(),
+            &mut self.child,
+            constraints.min_clamp(Size::new(0.0, 18.0)),
+        );
         child_size += padding * 2.0;
-        self.size = child_size.to_rect();
         child_size
     }
 
-    fn pointer_down(
-        &mut self,
-        local_pos: Point,
-        _event: &PointerEvent,
-        _window: &WindowHandle,
-        _handler: &mut H,
-    ) {
+    fn event(&self, event: WidgetEvent, handle: &mut EventHandle<C>) {
         if self.disabled {
             return;
         }
-        self.clicking = self.size.to_rounded_rect(4.0).contains(local_pos);
-    }
-
-    fn pointer_up(
-        &mut self,
-        _local_pos: Point,
-        _event: &PointerEvent,
-        _window: &WindowHandle,
-        handler: &mut H,
-    ) {
-        if self.disabled {
-            return;
+        let hit = event.get_point().map_or_else(false, |pos| {
+            handle
+                .get_global_rect(self.id())
+                .to_rounded_rect(4.0)
+                .contains(pos)
+        });
+        match event {
+            WidgetEvent::PointerUp(_) => {
+                if hit {
+                    handle.set_active(self.id(), false);
+                    handle.invalidate_id(self.id());
+                    handle.get_handler().on_press();
+                }
+            }
+            WidgetEvent::PointerDown(_) => {
+                if hit {
+                    handle.set_active(self.id(), true);
+                    handle.invalidate_id(self.id());
+                }
+            }
+            WidgetEvent::PointerMove(_) => {
+                if hit && handle.add_hover(self.id()) {
+                    handle.invalidate_id(self.id());
+                }
+            }
+            WidgetEvent::HoverChange | WidgetEvent::ActiveChange => handle.invalidate_id(self.id()),
         }
-        self.clicking = false;
-        if self.hovered {
-            handler.on_press();
-        }
-    }
-
-    fn pointer_move(
-        &mut self,
-        local_pos: Point,
-        _event: &PointerEvent,
-        _window: &WindowHandle,
-        _handler: &mut H,
-    ) {
-        if self.disabled {
-            return;
-        }
-        self.hovered = self.size.to_rounded_rect(4.0).contains(local_pos);
     }
 }
 
@@ -221,11 +211,11 @@ impl WidgetBuilder for ButtonBuilder {
     fn widget_type(
         &self,
         handler: Option<&Ident>,
-        comp_struct: &Ident,
+        component: &Ident,
         widget: Option<&TokenStream>,
         stream: &mut TokenStream,
     ) {
-        stream.extend(quote!(::gui::gui_widget::Button<#handler, #comp_struct, #widget>));
+        stream.extend(quote!(::gui::gui_widget::Button<#handler, #component, #widget>));
     }
 
     fn name(&self) -> &'static str {

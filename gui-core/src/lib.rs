@@ -2,6 +2,7 @@ pub mod common;
 pub mod parse;
 pub mod widget;
 
+mod handles;
 pub mod layout;
 
 pub use layout::LayoutConstraints;
@@ -15,18 +16,24 @@ use glazier::{PointerEvent, WindowHandle};
 pub use parley;
 pub use vello;
 
+use crate::handles::Handle;
+use crate::widget::{WidgetEvent, WidgetID};
 pub use parley::font::FontContext;
 pub use vello::SceneBuilder;
 
 #[allow(dead_code)]
 struct TestBoxable {
-    test: Box<dyn Component>,
+    test: Box<dyn Component<Handler = ()>>,
 }
 
 pub trait Component {
+    type Handler;
     fn render(&mut self, scene: SceneBuilder, fcx: &mut FontContext);
     fn update_vars(&mut self, force_update: bool);
     fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size;
+    fn get_parent(&self, id: WidgetID) -> Option<WidgetID>;
+    fn event(&mut self, id: WidgetID, event: WidgetEvent);
+    fn get_handler(&mut self) -> &mut Self::Handler;
     fn pointer_down(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle);
     fn pointer_up(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle);
     fn pointer_move(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle);
