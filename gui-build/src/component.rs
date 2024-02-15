@@ -140,7 +140,6 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                 }
 
                 fn largest_id(&self) -> WidgetID {
-                    // TODO largest id is wrong
                     #largest_id
                 }
 
