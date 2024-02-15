@@ -71,7 +71,10 @@ impl<C: Component> WindowState<C> {
             scene: Default::default(),
             active_widget: None,
             hovered_widgets: vec![],
-            global_positions: vec![Rect::default(); component.largest_id().widget_id() as usize],
+            global_positions: vec![
+                Rect::default();
+                component.largest_id().widget_id() as usize + 1
+            ],
             component,
             size: Size::new(800.0, 600.0),
         }
@@ -84,7 +87,7 @@ impl<C: Component> WindowState<C> {
     fn resize(&mut self) {
         let (max_width, max_height) = self.surface_size();
         let mut local_positions =
-            vec![Rect::default(); self.component.largest_id().widget_id() as usize];
+            vec![Rect::default(); self.component.largest_id().widget_id() as usize + 1];
         let size = self.component.resize(
             LayoutConstraints::new_max(Size::new(max_width as f64, max_height as f64)),
             &mut self.handle,

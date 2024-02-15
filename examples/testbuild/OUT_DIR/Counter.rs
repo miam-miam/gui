@@ -1,13 +1,13 @@
 #[allow(clippy::suspicious_else_formatting)]
 mod gen {
     use super::__private_CompStruct as CompStruct;
-    use gui::gui_core::glazier::{PointerEvent, WindowHandle};
-    use gui::gui_core::parley::font::FontContext;
     use gui::gui_core::vello::SceneBuilder;
-    use gui::gui_core::widget::Widget;
+    use gui::gui_core::glazier::kurbo::Rect;
+    use gui::gui_core::widget::{
+        Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, WidgetEvent, Handle,
+    };
     use gui::gui_core::{
-        Component, LayoutConstraints, Size, Point, ToComponent, ToHandler, Update,
-        Variable,
+        Component, LayoutConstraints, Size, ToComponent, ToHandler, Update, Variable,
     };
     enum WidgetSet0 {
         W0(::gui::gui_widget::Button<IncrementBtn, CompStruct, ::gui::gui_widget::Text>),
@@ -52,9 +52,9 @@ mod gen {
     impl Widget<CompStruct> for WidgetSet0 {
         fn id(&self) -> WidgetID {
             match self {
-                WidgetSet0::W0(w) => WidgetID::new(0u32, 1u32),
-                WidgetSet0::W1(w) => WidgetID::new(0u32, 3u32),
-                WidgetSet0::W2(w) => WidgetID::new(0u32, 4u32),
+                WidgetSet0::W0(_) => WidgetID::new(0u32, 1u32),
+                WidgetSet0::W1(_) => WidgetID::new(0u32, 3u32),
+                WidgetSet0::W2(_) => WidgetID::new(0u32, 4u32),
             }
         }
         fn render(
@@ -218,23 +218,36 @@ mod gen {
                 Counter_Count_text: FluentArgs::new(),
             }
         }
+        fn largest_id(&self) -> WidgetID {
+            WidgetID::new(0u32, 5u32)
+        }
+        fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
+            match (id.component_id(), id.widget_id()) {
+                (0u32, 2u32) => Some(WidgetID::new(0u32, 1u32)),
+                (0u32, 5u32) => Some(WidgetID::new(0u32, 4u32)),
+                (0u32, 1u32) | (0u32, 3u32) | (0u32, 4u32) => {
+                    Some(WidgetID::new(0u32, 0u32))
+                }
+                _ => None,
+            }
+        }
     }
     #[automatically_derived]
     impl Component for CounterHolder {
         fn render<'a>(
             &mut self,
-            scene: SceneBuilder,
+            mut scene: SceneBuilder,
             handle: &'a mut Handle,
             global_positions: &'a mut [Rect],
-            active_widget: Option<WidgetID>,
+            active_widget: &'a mut Option<WidgetID>,
             hovered_widgets: &'a [WidgetID],
-        ) -> (bool, Option<WidgetID>) {
+        ) -> bool {
             let mut render_handle = RenderHandle::new(
                 handle,
                 global_positions,
                 active_widget,
                 hovered_widgets,
-                self,
+                &mut self.comp_struct,
             );
             self.widget.render(&mut scene, &mut render_handle);
             render_handle.unwrap()
@@ -286,87 +299,114 @@ mod gen {
             handle: &'a mut Handle,
             local_positions: &'a mut [Rect],
         ) -> Size {
-            let mut resize_handle = ResizeHandle::new(handle, local_positions, self);
-            self.widget.resize(constraints, &mut resize_handle);
-            resize_handle.unwrap()
+            let mut resize_handle = ResizeHandle::new(
+                handle,
+                local_positions,
+                &mut self.comp_struct,
+            );
+            self.widget.resize(constraints, &mut resize_handle)
         }
         fn propagate_event<'a>(
             &mut self,
             event: WidgetEvent,
+            handle: &'a mut Handle,
             global_positions: &'a [Rect],
-            active_widget: Option<WidgetID>,
+            active_widget: &'a mut Option<WidgetID>,
             hovered_widgets: &'a mut Vec<WidgetID>,
-        ) -> (bool, Option<WidgetID>) {
+        ) -> bool {
             let mut event_handle = EventHandle::new(
+                handle,
                 global_positions,
                 active_widget,
                 hovered_widgets,
-                self,
+                &mut self.comp_struct,
             );
             self.widget.event(event, &mut event_handle);
-            event_handle.unwrap()
+            let (mut resize, events) = event_handle.unwrap();
+            for (id, e) in events {
+                if self
+                    .event(
+                        id,
+                        e,
+                        handle,
+                        global_positions,
+                        active_widget,
+                        hovered_widgets,
+                    )
+                {
+                    resize = true;
+                }
+            }
+            resize
         }
         fn largest_id(&self) -> WidgetID {
-            WidgetID::new(0u32, 4u32)
+            self.comp_struct.largest_id()
         }
         fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
-            match (id.component_id(), id.widget_id()) {
-                (0u32, 2u32) => Some(WidgetID::new(0u32, 1u32)),
-                (0u32, 5u32) => Some(WidgetID::new(0u32, 4u32)),
-                (0u32, 1u32) | (0u32, 3u32) | (0u32, 4u32) => {
-                    Some(WidgetID::new(0u32, 0u32))
-                }
-                _ => None,
-            }
+            self.comp_struct.get_parent(id)
         }
         fn event<'a>(
             &mut self,
             id: WidgetID,
             event: WidgetEvent,
+            handle: &'a mut Handle,
             global_positions: &'a [Rect],
-            active_widget: Option<WidgetID>,
+            active_widget: &'a mut Option<WidgetID>,
             hovered_widgets: &'a mut Vec<WidgetID>,
-        ) -> (bool, Option<WidgetID>) {
+        ) -> bool {
             let mut event_handle = EventHandle::new(
+                handle,
                 global_positions,
                 active_widget,
                 hovered_widgets,
-                self,
+                &mut self.comp_struct,
             );
-            let handle = &mut event_handle;
+            let handle_ref = &mut event_handle;
             match (id.component_id(), id.widget_id()) {
                 (0u32, 2u32) => {
-                    &mut self
-                        .widget
+                    self.widget
                         .widgets(0usize)
                         .w0()
                         .get_widget()
-                        .event(event, handle)
+                        .event(event, handle_ref);
                 }
                 (0u32, 1u32) => {
-                    &mut self.widget.widgets(0usize).w0().event(event, handle)
+                    self.widget.widgets(0usize).w0().event(event, handle_ref);
                 }
                 (0u32, 3u32) => {
-                    &mut self.widget.widgets(1usize).w1().event(event, handle)
+                    self.widget.widgets(1usize).w1().event(event, handle_ref);
                 }
                 (0u32, 5u32) => {
-                    &mut self
-                        .widget
+                    self.widget
                         .widgets(2usize)
                         .w2()
                         .get_widget()
-                        .event(event, handle)
+                        .event(event, handle_ref);
                 }
                 (0u32, 4u32) => {
-                    &mut self.widget.widgets(2usize).w2().event(event, handle)
+                    self.widget.widgets(2usize).w2().event(event, handle_ref);
                 }
-                (0u32, 0u32) => &mut self.widget.event(event, handle),
+                (0u32, 0u32) => {
+                    self.widget.event(event, handle_ref);
+                }
                 _ => {}
             }
-            event_handle.unwrap()
-        }
-        fn get_handler(&mut self) -> &mut Self::Handler {
-            &mut self.comp_struct
+            let (mut resize, events) = event_handle.unwrap();
+            for (id, e) in events {
+                if self
+                    .event(
+                        id,
+                        e,
+                        handle,
+                        global_positions,
+                        active_widget,
+                        hovered_widgets,
+                    )
+                {
+                    resize = true;
+                }
+            }
+            resize
         }
     }
 }

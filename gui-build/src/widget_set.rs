@@ -165,7 +165,7 @@ impl<'a> WidgetSet<'a> {
     pub fn largest_id(&self) -> Option<WidgetID> {
         self.widgets
             .iter()
-            .map(|(_, w)| w.id)
+            .map(|(_, w)| w.get_largest_id())
             .max_by_key(|i| i.widget_id())
     }
 }
