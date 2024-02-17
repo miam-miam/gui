@@ -11,25 +11,25 @@ mod gen {
         Component, LayoutConstraints, Size, ToComponent, ToHandler, Update, Variable,
     };
     enum WidgetSet0 {
-        W0(::gui::gui_widget::Button<IncrementBtn, CompStruct, ::gui::gui_widget::Text>),
-        W1(::gui::gui_widget::Text),
+        W0(::gui::gui_widget::Text),
+        W1(::gui::gui_widget::Button<IncrementBtn, CompStruct, ::gui::gui_widget::Text>),
         W2(::gui::gui_widget::Button<DecrementBtn, CompStruct, ::gui::gui_widget::Text>),
     }
     impl WidgetSet0 {
-        pub fn w0(
-            &mut self,
-        ) -> &mut ::gui::gui_widget::Button<
-            IncrementBtn,
-            CompStruct,
-            ::gui::gui_widget::Text,
-        > {
+        pub fn w0(&mut self) -> &mut ::gui::gui_widget::Text {
             if let WidgetSet0::W0(val) = self {
                 val
             } else {
                 panic!("Incorrect wrapped type.")
             }
         }
-        pub fn w1(&mut self) -> &mut ::gui::gui_widget::Text {
+        pub fn w1(
+            &mut self,
+        ) -> &mut ::gui::gui_widget::Button<
+            IncrementBtn,
+            CompStruct,
+            ::gui::gui_widget::Text,
+        > {
             if let WidgetSet0::W1(val) = self {
                 val
             } else {
@@ -54,7 +54,7 @@ mod gen {
         fn id(&self) -> WidgetID {
             match self {
                 WidgetSet0::W0(_) => WidgetID::new(0u32, 1u32),
-                WidgetSet0::W1(_) => WidgetID::new(0u32, 3u32),
+                WidgetSet0::W1(_) => WidgetID::new(0u32, 2u32),
                 WidgetSet0::W2(_) => WidgetID::new(0u32, 4u32),
             }
         }
@@ -65,16 +65,16 @@ mod gen {
         ) {
             match self {
                 WidgetSet0::W0(w) => {
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::render(w, scene, handle)
+                }
+                WidgetSet0::W1(w) => {
                     <::gui::gui_widget::Button<
                         IncrementBtn,
                         CompStruct,
                         ::gui::gui_widget::Text,
                     > as Widget<CompStruct>>::render(w, scene, handle)
-                }
-                WidgetSet0::W1(w) => {
-                    <::gui::gui_widget::Text as Widget<
-                        CompStruct,
-                    >>::render(w, scene, handle)
                 }
                 WidgetSet0::W2(w) => {
                     <::gui::gui_widget::Button<
@@ -92,16 +92,16 @@ mod gen {
         ) -> Size {
             match self {
                 WidgetSet0::W0(w) => {
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::resize(w, constraints, handle)
+                }
+                WidgetSet0::W1(w) => {
                     <::gui::gui_widget::Button<
                         IncrementBtn,
                         CompStruct,
                         ::gui::gui_widget::Text,
                     > as Widget<CompStruct>>::resize(w, constraints, handle)
-                }
-                WidgetSet0::W1(w) => {
-                    <::gui::gui_widget::Text as Widget<
-                        CompStruct,
-                    >>::resize(w, constraints, handle)
                 }
                 WidgetSet0::W2(w) => {
                     <::gui::gui_widget::Button<
@@ -115,16 +115,16 @@ mod gen {
         fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<CompStruct>) {
             match self {
                 WidgetSet0::W0(w) => {
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::event(w, event, handle)
+                }
+                WidgetSet0::W1(w) => {
                     <::gui::gui_widget::Button<
                         IncrementBtn,
                         CompStruct,
                         ::gui::gui_widget::Text,
                     > as Widget<CompStruct>>::event(w, event, handle)
-                }
-                WidgetSet0::W1(w) => {
-                    <::gui::gui_widget::Text as Widget<
-                        CompStruct,
-                    >>::event(w, event, handle)
                 }
                 WidgetSet0::W2(w) => {
                     <::gui::gui_widget::Button<
@@ -190,20 +190,20 @@ mod gen {
             CounterHolder {
                 widget: ::gui::gui_widget::HVStack::new_vertical(
                     WidgetID::new(0u32, 0u32),
-                    10f32,
+                    40f32,
                     vec![
-                        WidgetSet0::W0(::gui::gui_widget::Button::new(WidgetID::new(0u32,
-                        1u32), ::gui::gui_core::Colour::rgba8(255u8, 255u8, 255u8,
+                        WidgetSet0::W0(::gui::gui_widget::Text::new(WidgetID::new(0u32,
+                        1u32), ::gui::gui_core::Colour::rgba8(33u8, 37u8, 41u8, 255u8),
+                        40f32)),
+                        WidgetSet0::W1(::gui::gui_widget::Button::new(WidgetID::new(0u32,
+                        2u32), ::gui::gui_core::Colour::rgba8(255u8, 255u8, 255u8,
                         255u8), ::gui::gui_core::Colour::rgba8(241u8, 243u8, 245u8,
                         255u8), ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8,
                         255u8), ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8,
                         255u8), ::gui::gui_core::Colour::rgba8(206u8, 212u8, 218u8,
                         255u8), false, ::gui::gui_widget::Text::new(WidgetID::new(0u32,
-                        2u32), ::gui::gui_core::Colour::rgba8(33u8, 37u8, 41u8, 255u8),
-                        14f32))),
-                        WidgetSet0::W1(::gui::gui_widget::Text::new(WidgetID::new(0u32,
                         3u32), ::gui::gui_core::Colour::rgba8(33u8, 37u8, 41u8, 255u8),
-                        14f32)),
+                        40f32))),
                         WidgetSet0::W2(::gui::gui_widget::Button::new(WidgetID::new(0u32,
                         4u32), ::gui::gui_core::Colour::rgba8(255u8, 255u8, 255u8,
                         255u8), ::gui::gui_core::Colour::rgba8(241u8, 243u8, 245u8,
@@ -212,7 +212,7 @@ mod gen {
                         255u8), ::gui::gui_core::Colour::rgba8(206u8, 212u8, 218u8,
                         255u8), false, ::gui::gui_widget::Text::new(WidgetID::new(0u32,
                         5u32), ::gui::gui_core::Colour::rgba8(33u8, 37u8, 41u8, 255u8),
-                        14f32)))
+                        40f32)))
                     ],
                 ),
                 comp_struct: self,
@@ -224,9 +224,9 @@ mod gen {
         }
         fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
             match (id.component_id(), id.widget_id()) {
-                (0u32, 2u32) => Some(WidgetID::new(0u32, 1u32)),
+                (0u32, 3u32) => Some(WidgetID::new(0u32, 2u32)),
                 (0u32, 5u32) => Some(WidgetID::new(0u32, 4u32)),
-                (0u32, 1u32) | (0u32, 3u32) | (0u32, 4u32) => {
+                (0u32, 1u32) | (0u32, 2u32) | (0u32, 4u32) => {
                     Some(WidgetID::new(0u32, 0u32))
                 }
                 _ => None,
@@ -280,17 +280,17 @@ mod gen {
                 let widget = &mut self.widget.widgets(2usize).w2();
                 widget.set_disabled(value, handle_ref);
             }
-            if force_update {
-                let value = get_bundle_message("Counter-IncrText-text", None);
-                let widget = &mut self.widget.widgets(0usize).w0().get_widget();
-                widget.set_text(value, handle_ref);
-            }
             if force_update || text {
                 let value = get_bundle_message(
                     "Counter-Count-text",
                     Some(&self.Counter_Count_text),
                 );
-                let widget = &mut self.widget.widgets(1usize).w1();
+                let widget = &mut self.widget.widgets(0usize).w0();
+                widget.set_text(value, handle_ref);
+            }
+            if force_update {
+                let value = get_bundle_message("Counter-IncrText-text", None);
+                let widget = &mut self.widget.widgets(1usize).w1().get_widget();
                 widget.set_text(value, handle_ref);
             }
             if force_update {
@@ -372,17 +372,17 @@ mod gen {
             );
             let handle_ref = &mut event_handle;
             match (id.component_id(), id.widget_id()) {
-                (0u32, 2u32) => {
-                    self.widget
-                        .widgets(0usize)
-                        .w0()
-                        .get_widget()
-                        .event(event, handle_ref);
-                }
                 (0u32, 1u32) => {
                     self.widget.widgets(0usize).w0().event(event, handle_ref);
                 }
                 (0u32, 3u32) => {
+                    self.widget
+                        .widgets(1usize)
+                        .w1()
+                        .get_widget()
+                        .event(event, handle_ref);
+                }
+                (0u32, 2u32) => {
                     self.widget.widgets(1usize).w1().event(event, handle_ref);
                 }
                 (0u32, 5u32) => {

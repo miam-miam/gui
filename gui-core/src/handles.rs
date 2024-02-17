@@ -116,8 +116,6 @@ impl<'a, T: ToComponent> RenderHandle<'a, T> {
             let mut builder = SceneBuilder::for_fragment(&mut fragment);
             w.render(&mut builder, self);
 
-            dbg!((std::any::type_name_of_val(w), vector));
-
             scene.append(&fragment, Some(Affine::translate(vector)));
         }
     }
@@ -136,14 +134,7 @@ impl<'a, T: ToComponent> RenderHandle<'a, T> {
 
     pub fn get_local_rect(&self, id: WidgetID) -> Rect {
         let global = self.get_global_rect(id);
-        let parent_pos = self
-            .comp_struct
-            .get_parent(id)
-            .map_or_else(Point::default, |id| {
-                self.global_positions[id.widget_id() as usize].origin()
-            });
-        let vector = global.origin() - parent_pos;
-        global.with_origin(vector.to_point())
+        global.with_origin((0.0, 0.0))
     }
 }
 
@@ -248,14 +239,7 @@ impl<'a, T: ToComponent> EventHandle<'a, T> {
 
     pub fn get_local_rect(&self, id: WidgetID) -> Rect {
         let global = self.get_global_rect(id);
-        let parent_pos = self
-            .comp_struct
-            .get_parent(id)
-            .map_or_else(Point::default, |id| {
-                self.global_positions[id.widget_id() as usize].origin()
-            });
-        let vector = global.origin() - parent_pos;
-        global.with_origin(vector.to_point())
+        global.with_origin((0.0, 0.0))
     }
 
     pub fn propagate_event<'b, W: Widget<T> + 'b>(
