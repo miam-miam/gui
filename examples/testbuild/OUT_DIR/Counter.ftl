@@ -1,2 +1,3 @@
-Counter-Other-text = Hiya
-Counter-Text-text = Testsfa
+Counter-Count-text = {$count}
+Counter-IncrText-text = Increment
+Counter-DecrText-text = Decrement

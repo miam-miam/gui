@@ -2,8 +2,12 @@ use crate::fluent::FluentIdent;
 use crate::widget_set::WidgetSet;
 use anyhow::anyhow;
 use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, WidgetDeclaration};
+use gui_core::widget::WidgetID;
+use itertools::Itertools;
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::quote;
+use quote::{format_ident, quote};
+use std::cmp::max_by_key;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Clone, Debug)]
 pub struct Widget<'a> {
@@ -14,16 +18,23 @@ pub struct Widget<'a> {
     pub handler: Option<Ident>,
     pub fluents: Vec<FluentIdent<'a>>,
     pub variables: Vec<(&'static str, &'a str)>,
+    pub id: WidgetID,
 }
 
 impl<'a> Widget<'a> {
     pub fn new(component: &'a ComponentDeclaration) -> anyhow::Result<Self> {
-        Self::new_inner(component.name.as_str(), &component.child)
+        static COMPONENT_COUNTER: AtomicU32 = AtomicU32::new(0);
+        Self::new_inner(
+            component.name.as_str(),
+            &component.child,
+            COMPONENT_COUNTER.fetch_add(1, Ordering::Relaxed),
+        )
     }
 
     pub fn new_inner(
         component_name: &str,
         widget_declaration: &'a WidgetDeclaration,
+        component_id: u32,
     ) -> anyhow::Result<Self> {
         let widget = widget_declaration.widget.as_ref();
         let widget_type_name = widget.name();
@@ -51,27 +62,30 @@ impl<'a> Widget<'a> {
                 )
             })
             .collect();
+
+        static WIDGET_COUNTER: AtomicU32 = AtomicU32::new(0);
+        let id = WidgetID::new(component_id, WIDGET_COUNTER.fetch_add(1, Ordering::Relaxed));
         Ok(Self {
             widget_type_name,
             widget_declaration,
             child_widgets: widget
                 .widgets()
-                .map(|ws| WidgetSet::new(component_name, ws))
+                .map(|ws| WidgetSet::new(component_name, ws, component_id))
                 .transpose()?,
             child_type: None,
             handler,
             fluents,
             variables: widget.get_vars(),
+            id,
         })
     }
 
     pub fn gen_widget_type(&self) -> TokenStream {
         let mut stream = TokenStream::new();
-        let comp_struct = Ident::new("CompStruct", Span::call_site());
-        let child_type = self.child_widgets.as_ref().map(WidgetSet::gen_widget_type);
+        let child_type = self.child_widgets.as_ref().map(|s| s.gen_widget_type());
         self.widget_declaration.widget.widget_type(
             self.handler.as_ref(),
-            &comp_struct,
+            &format_ident!("CompStruct"),
             child_type.as_ref(),
             &mut stream,
         );
@@ -101,17 +115,23 @@ impl<'a> Widget<'a> {
     ) {
         let widget_ident = Ident::new("widget", Span::call_site());
         let value_ident = Ident::new("value", Span::call_site());
+        let handle_ident = Ident::new("handle_ref", Span::call_site());
         let string_var_name = &var.name;
 
-        stream.extend(quote!(let widget = #widget_stmt;));
+        let mut update_stream = TokenStream::new();
 
         for (prop, _var) in self.variables.iter().filter(|(_p, v)| v == &var.name) {
             self.widget_declaration.widget.on_property_update(
                 prop,
                 &widget_ident,
                 &value_ident,
-                stream,
+                &handle_ident,
+                &mut update_stream,
             );
+        }
+
+        if !update_stream.is_empty() {
+            stream.extend(quote!(let widget = #widget_stmt; #update_stream));
         }
 
         for fluent in self
@@ -151,6 +171,7 @@ impl<'a> Widget<'a> {
         let widget_stmt = widget_stmt.map_or_else(|| quote! {&mut self.widget}, Clone::clone);
         let widget = Ident::new("widget", Span::call_site());
         let value = Ident::new("value", Span::call_site());
+        let handle_ident = Ident::new("handle_ref", Span::call_site());
 
         for fluent in &self.fluents {
             let property_ident = (!fluent.fluent.vars.is_empty()).then_some(&fluent.property_ident);
@@ -168,6 +189,7 @@ impl<'a> Widget<'a> {
                 fluent.property,
                 &widget,
                 &value,
+                &handle_ident,
                 &mut on_property_update,
             );
             stream.extend(quote! {
@@ -179,11 +201,8 @@ impl<'a> Widget<'a> {
             });
         }
 
-        dbg!(&widget_stmt.to_string());
-
         if let Some(ws) = &self.child_widgets {
             for (get_stmt, w) in ws.gen_widget_gets(&widget_stmt) {
-                dbg!(&get_stmt.to_string());
                 w.gen_fluent_update(Some(&get_stmt), stream)
             }
         }
@@ -195,13 +214,54 @@ impl<'a> Widget<'a> {
 
         self.widget_declaration
             .widget
-            .create_widget(child_init.as_ref(), &mut stream);
+            .create_widget(self.id, child_init.as_ref(), &mut stream);
         stream
     }
 
     pub fn gen_widget_set(&self, stream: &mut TokenStream) {
         if let Some(set) = &self.child_widgets {
             set.gen_widget_set(stream)
+        }
+    }
+
+    pub fn get_largest_id(&self) -> WidgetID {
+        max_by_key(
+            self.id,
+            self.child_widgets
+                .as_ref()
+                .and_then(|s| s.largest_id())
+                .unwrap_or_default(),
+            |i| i.widget_id(),
+        )
+    }
+
+    pub fn gen_widget_id_to_widget(
+        &self,
+        widget_stmt: Option<&TokenStream>,
+        acc: &mut Vec<(WidgetID, TokenStream)>,
+    ) {
+        let widget_stmt = widget_stmt.map_or_else(|| quote! {self.widget}, Clone::clone);
+
+        if let Some(set) = &self.child_widgets {
+            for (get_stmt, w) in set.gen_widget_gets(&widget_stmt) {
+                w.gen_widget_id_to_widget(Some(&get_stmt), acc);
+            }
+        }
+
+        acc.push((self.id, widget_stmt));
+    }
+
+    pub fn get_parent_ids(&self, acc: &mut Vec<(WidgetID, Vec<WidgetID>)>) {
+        if let Some(set) = &self.child_widgets {
+            let child_ids = set
+                .widgets
+                .iter()
+                .map(|(_, w)| {
+                    w.get_parent_ids(acc);
+                    w.id
+                })
+                .collect_vec();
+            acc.push((self.id, child_ids));
         }
     }
 

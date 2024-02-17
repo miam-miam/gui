@@ -9,14 +9,18 @@ use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::Affine;
 use gui_core::vello::peniko::{Brush, Color};
-use gui_core::widget::{Widget, WidgetBuilder};
-use gui_core::{Colour, FontContext, SceneBuilder, Var};
+use gui_core::widget::{
+    EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
+    WidgetID,
+};
+use gui_core::{Colour, FontContext, SceneBuilder, ToComponent, Var};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
 use std::borrow::Cow;
 
 pub struct Text {
+    id: WidgetID,
     text: String,
     colour: Colour,
     size: f32,
@@ -24,9 +28,10 @@ pub struct Text {
 }
 
 impl Text {
-    pub fn new(text: String, colour: Colour, size: f32) -> Self {
+    pub fn new(id: WidgetID, colour: Colour, size: f32) -> Self {
         Text {
-            text,
+            id,
+            text: String::new(),
             colour,
             size,
             layout: None,
@@ -44,52 +49,61 @@ impl Text {
         self.layout = Some(layout_builder.build());
     }
 
-    pub fn set_text(&mut self, text: Cow<'_, str>) {
+    pub fn set_text(&mut self, text: Cow<'_, str>, handle: &mut UpdateHandle) {
         if self.text != text {
             self.text = text.into_owned();
             self.layout = None;
+            handle.resize();
         }
     }
 
-    pub fn set_colour(&mut self, colour: Colour) {
+    pub fn set_colour(&mut self, colour: Colour, handle: &mut UpdateHandle) {
         if self.colour != colour {
             self.colour = colour;
             self.layout = None;
+            handle.invalidate_id(self.id);
         }
     }
 
-    pub fn set_size(&mut self, size: f32) {
+    pub fn set_size(&mut self, size: f32, handle: &mut UpdateHandle) {
         if self.size != size {
             self.size = size;
             self.layout = None;
+            handle.resize();
         }
     }
 }
 
-impl<T> Widget<T> for Text {
-    fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext) {
+impl<C: ToComponent> Widget<C> for Text {
+    fn id(&self) -> WidgetID {
+        self.id
+    }
+
+    fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<C>) {
         if self.layout.is_none() {
             if self.text.is_empty() {
                 return;
             }
-            self.build(fcx);
+            self.build(handle.get_fcx());
         }
 
         let layout = self.layout.as_mut().unwrap();
-        text::render_text(scene, Affine::translate((0.0, 0.0)), layout);
+        text::render_text(scene, Affine::IDENTITY, layout);
     }
 
-    fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size {
+    fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<C>) -> Size {
         if self.layout.is_none() {
             if self.text.is_empty() {
-                return Size::ZERO;
+                return constraints.get_min();
             }
-            self.build(fcx);
+            self.build(handle.get_fcx());
         }
         let layout = self.layout.as_mut().unwrap();
         layout.break_all_lines(constraints.max_advance(), Alignment::Start);
         Size::new(layout.width() as f64, layout.height() as f64)
     }
+
+    fn event(&mut self, _event: WidgetEvent, _handle: &mut EventHandle<C>) {}
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -129,7 +143,7 @@ impl WidgetBuilder for TextBuilder {
         }
     }
 
-    fn create_widget(&self, _widget: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, _widget: Option<&TokenStream>, stream: &mut TokenStream) {
         let colour = match &self.colour {
             Some(Var::Value(v)) => v.to_token_stream(),
             _ => Colour(Color::rgb8(33, 37, 41)).to_token_stream(),
@@ -140,7 +154,7 @@ impl WidgetBuilder for TextBuilder {
         };
 
         stream.extend(quote! {
-            ::gui::gui_widget::Text::new(String::new(), #colour, #size)
+            ::gui::gui_widget::Text::new(#id, #colour, #size)
         });
     }
 
@@ -149,12 +163,13 @@ impl WidgetBuilder for TextBuilder {
         property: &'static str,
         widget: &Ident,
         value: &Ident,
+        handle: &Ident,
         stream: &mut TokenStream,
     ) {
         match property {
-            "text" => stream.extend(quote! {#widget.set_text(#value);}),
-            "colour" => stream.extend(quote! {#widget.set_colour(#value);}),
-            "size" => stream.extend(quote! {#widget.set_size(#value);}),
+            "text" => stream.extend(quote! {#widget.set_text(#value, #handle);}),
+            "colour" => stream.extend(quote! {#widget.set_colour(#value, #handle);}),
+            "size" => stream.extend(quote! {#widget.set_size(#value, #handle);}),
             _ => {}
         }
     }

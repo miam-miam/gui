@@ -1,4 +1,7 @@
 styles:
+  - widget: Text
+    properties:
+      size: 40
 components:
   - name: Counter # Names for components must be unique
     variables:
@@ -12,7 +15,13 @@ components:
         # so that custom widgets do not need to deal with layout.
         padding: 10
       properties:
+        spacing: 40
         children:
+          - name: Count
+            widget: Text
+            properties:
+              text: "{$count}" # Can use any variable from the component
+
           - name: IncrementBtn
             widget: Button
             properties:
@@ -21,11 +30,6 @@ components:
                 widget: Text
                 properties:
                   text: Increment # Uses Fluent syntax https://projectfluent.org/
-
-          - name: Count
-            widget: Text
-            properties:
-              text: "{$count}" # Can use any variable from the component
 
           - name: DecrementBtn
             widget: Button

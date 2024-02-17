@@ -3,12 +3,14 @@ use crate::fluent::FluentIdent;
 use crate::widget::Widget;
 use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, VariableDeclaration};
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::quote;
+use quote::{format_ident, quote};
 use std::fs;
 use std::path::Path;
 use std::str::FromStr;
 
 pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> anyhow::Result<()> {
+    let component_holder = format_ident!("{}Holder", component.name);
+
     let normal_variables: Vec<&NormalVariableDeclaration> = component
         .variables
         .iter()
@@ -75,22 +77,40 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let mut struct_handlers = TokenStream::new();
     widget_tree.gen_handler_structs(&mut struct_handlers)?;
 
-    let component_holder = Ident::new(&format!("{}Holder", component.name), Span::call_site());
-
     let rs_path = Path::new(&out_dir).join(format!("{}.rs", component.name));
 
     let widget_type = widget_tree.gen_widget_type();
     let widget_init = widget_tree.gen_widget_init();
 
+    let largest_id = widget_tree.get_largest_id();
+
+    let mut id_to_widgets = vec![];
+    widget_tree.gen_widget_id_to_widget(None, &mut id_to_widgets);
+    let event_match_arms = id_to_widgets.iter().map(|(id, widget_get)| {
+        let component = id.component_id();
+        let widget = id.widget_id();
+        quote!((#component, #widget) => {#widget_get.event(event, handle_ref);})
+    });
+
+    let mut parent_ids = vec![];
+    widget_tree.get_parent_ids(&mut parent_ids);
+    let parent_match_arms = parent_ids.iter().map(|(parent, children)| {
+        let unwrapped_vals = children.iter().map(|id| {
+            let component = id.component_id();
+            let widget = id.widget_id();
+            quote!((#component, #widget))
+        });
+        quote!(#( #unwrapped_vals )|* => Some(#parent),)
+    });
+
     let gen_module = quote! {
         #[allow(clippy::suspicious_else_formatting)]
         mod gen {
             use super::__private_CompStruct as CompStruct;
-            use gui::gui_core::glazier::{PointerEvent, WindowHandle};
-            use gui::gui_core::parley::font::FontContext;
             use gui::gui_core::vello::SceneBuilder;
-            use gui::gui_core::widget::Widget;
-            use gui::gui_core::{Component, LayoutConstraints, Size, Point, ToComponent, ToHandler, Update, Variable};
+            use gui::gui_core::glazier::kurbo::Rect;
+            use gui::gui_core::widget::{Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle, WidgetEvent, Handle};
+            use gui::gui_core::{Component, LayoutConstraints, Size, ToComponent, ToHandler, Update, Variable};
 
             #widget_set
 
@@ -118,35 +138,108 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                         #( #fluent_arg_idents: FluentArgs::new() ),*
                     }
                 }
+
+                fn largest_id(&self) -> WidgetID {
+                    #largest_id
+                }
+
+                fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
+                    match (id.component_id(), id.widget_id()) {
+                        #(#parent_match_arms)*
+                        _ => None,
+                    }
+                }
             }
 
             #[automatically_derived]
             impl Component for #component_holder {
-                fn render(&mut self, mut scene: SceneBuilder, fcx: &mut FontContext) {
-                    self.widget.render(&mut scene, fcx);
+                fn render<'a>(
+                    &mut self,
+                    mut scene: SceneBuilder,
+                    handle: &'a mut Handle,
+                    global_positions: &'a mut [Rect],
+                    active_widget: &'a mut Option<WidgetID>,
+                    hovered_widgets: &'a [WidgetID],
+                ) -> bool {
+                    let mut render_handle = RenderHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct);
+                    self.widget.render(&mut scene, &mut render_handle);
+                    render_handle.unwrap()
                 }
 
-                fn update_vars(&mut self, force_update: bool) {
+                fn update_vars<'a>(
+                    &mut self,
+                    force_update: bool,
+                    handle: &'a mut Handle,
+                    global_positions: &'a [Rect],
+                ) -> bool {
+                    let mut update_handle = UpdateHandle::new(handle, global_positions);
+                    let handle_ref = &mut update_handle;
                     #( let mut #fluent_properties = false; )*
                     #if_update
                     #prop_update
                     #( <CompStruct as Update<#var_names>>::reset(&mut self.comp_struct); )*
+                    update_handle.unwrap()
                 }
 
-                fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size{
-                    self.widget.resize(constraints, fcx)
+                fn resize<'a>(
+                    &mut self,
+                    constraints: LayoutConstraints,
+                    handle: &'a mut Handle,
+                    local_positions: &'a mut [Rect],
+                ) -> Size {
+                    let mut resize_handle = ResizeHandle::new(handle, local_positions, &mut self.comp_struct);
+                    self.widget.resize(constraints, &mut resize_handle)
                 }
 
-                fn pointer_down(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle) {
-                    self.widget.pointer_down(local_pos, event, window, &mut self.comp_struct);
+                fn propagate_event<'a>(
+                    &mut self,
+                    event: WidgetEvent,
+                    handle: &'a mut Handle,
+                    global_positions: &'a [Rect],
+                    active_widget: &'a mut Option<WidgetID>,
+                    hovered_widgets: &'a mut Vec<WidgetID>,
+                ) -> bool {
+                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct);
+                    self.widget.event(event, &mut event_handle);
+                    let (mut resize, events) = event_handle.unwrap();
+                    for (id, e) in events {
+                        if self.event(id, e, handle, global_positions, active_widget, hovered_widgets) {
+                            resize = true;
+                        }
+                    }
+                    resize
                 }
 
-                fn pointer_up(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle) {
-                    self.widget.pointer_up(local_pos, event, window, &mut self.comp_struct);
+                fn largest_id(&self) -> WidgetID {
+                    self.comp_struct.largest_id()
                 }
 
-                fn pointer_move(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle) {
-                    self.widget.pointer_move(local_pos, event, window, &mut self.comp_struct);
+                fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
+                    self.comp_struct.get_parent(id)
+                }
+
+                fn event<'a>(
+                    &mut self,
+                    id: WidgetID,
+                    event: WidgetEvent,
+                    handle: &'a mut Handle,
+                    global_positions: &'a [Rect],
+                    active_widget: &'a mut Option<WidgetID>,
+                    hovered_widgets: &'a mut Vec<WidgetID>,
+                ) -> bool {
+                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct);
+                    let handle_ref = &mut event_handle;
+                    match (id.component_id(), id.widget_id()) {
+                        #(#event_match_arms)*
+                        _ => {},
+                    }
+                    let (mut resize, events) = event_handle.unwrap();
+                    for (id, e) in events {
+                        if self.event(id, e, handle, global_positions, active_widget, hovered_widgets) {
+                            resize = true;
+                        }
+                    }
+                    resize
                 }
             }
         }

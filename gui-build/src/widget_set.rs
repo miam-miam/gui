@@ -1,5 +1,6 @@
 use crate::widget::Widget;
 use gui_core::parse::WidgetDeclaration;
+use gui_core::widget::WidgetID;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
@@ -15,12 +16,13 @@ impl<'a> WidgetSet<'a> {
     pub fn new(
         component_name: &str,
         widgets: Vec<(TokenStream, &'a WidgetDeclaration)>,
+        component_id: u32,
     ) -> anyhow::Result<Self> {
         static COUNTER: AtomicU32 = AtomicU32::new(0);
 
         let widgets = widgets
             .into_iter()
-            .map(|(s, w)| Ok((s, Widget::new_inner(component_name, w)?)))
+            .map(|(s, w)| Ok((s, Widget::new_inner(component_name, w, component_id)?)))
             .collect::<anyhow::Result<Vec<_>>>()?;
 
         Ok(Self {
@@ -89,6 +91,8 @@ impl<'a> WidgetSet<'a> {
                 .map(|(_, w)| w.gen_widget_type())
                 .collect_vec();
 
+            let ids = self.widgets.iter().map(|(_, w)| w.id);
+
             stream.extend(quote! {
                 enum #widget_set {
                     #( #variants(#types) ),*
@@ -107,35 +111,30 @@ impl<'a> WidgetSet<'a> {
                 }
 
                 impl Widget<CompStruct> for #widget_set {
-                    fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext) {
+                    fn id(&self) -> WidgetID {
                         match self {
-                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::render(w, scene, fcx) ),*
+                            #( #widget_set::#variants(_) => #ids ),*
                         }
                     }
 
-                    fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size {
+                     fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<CompStruct>) {
                         match self {
-                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::resize(w, constraints, fcx) ),*
+                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::render(w, scene, handle) ),*
                         }
                     }
 
-                    fn pointer_down(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle, handler: &mut CompStruct) {
+                    fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<CompStruct>) -> Size {
                         match self {
-                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::pointer_down(w, local_pos, event, window, handler) ),*
+                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::resize(w, constraints, handle) ),*
                         }
                     }
 
-                    fn pointer_up(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle, handler: &mut CompStruct) {
+                    fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<CompStruct>) {
                         match self {
-                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::pointer_up(w, local_pos, event, window, handler) ),*
+                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::event(w, event, handle) ),*
                         }
                     }
 
-                    fn pointer_move(&mut self, local_pos: Point, event: &PointerEvent, window: &WindowHandle, handler: &mut CompStruct) {
-                        match self {
-                            #( #widget_set::#variants(w) => <#types as Widget<CompStruct>>::pointer_move(w, local_pos, event, window, handler) ),*
-                        }
-                    }
                 }
             });
         }
@@ -161,5 +160,12 @@ impl<'a> WidgetSet<'a> {
                 }
                 (s, w)
             })
+    }
+
+    pub fn largest_id(&self) -> Option<WidgetID> {
+        self.widgets
+            .iter()
+            .map(|(_, w)| w.get_largest_id())
+            .max_by_key(|i| i.widget_id())
     }
 }

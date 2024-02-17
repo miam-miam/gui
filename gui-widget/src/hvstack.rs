@@ -1,10 +1,11 @@
-use gui_core::glazier::kurbo::{Affine, Rect};
-use gui_core::glazier::{PointerEvent, WindowHandle};
+use gui_core::glazier::kurbo::Rect;
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
-use gui_core::vello::SceneFragment;
-use gui_core::widget::{Widget, WidgetBuilder};
-use gui_core::{FontContext, LayoutConstraints, Point, SceneBuilder, Size, Var};
+use gui_core::widget::{
+    EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
+    WidgetID,
+};
+use gui_core::{LayoutConstraints, Point, SceneBuilder, Size, ToComponent, Var};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
@@ -39,67 +40,54 @@ impl Axis {
     }
 }
 
-pub struct HVStack<C, W: Widget<C>> {
+pub struct HVStack<C: ToComponent, W: Widget<C>> {
+    id: WidgetID,
     axis: Axis,
     spacing: f32,
     children: Vec<W>,
-    positions: Vec<Rect>,
     phantom: PhantomData<C>,
 }
 
-impl<C, W: Widget<C>> HVStack<C, W> {
-    pub fn new_horizontal(spacing: f32, children: Vec<W>) -> Self {
+impl<C: ToComponent, W: Widget<C>> HVStack<C, W> {
+    pub fn new_horizontal(id: WidgetID, spacing: f32, children: Vec<W>) -> Self {
         Self {
+            id,
             axis: Axis::Horizontal,
             spacing,
             children,
-            positions: vec![],
             phantom: PhantomData,
         }
     }
 
-    pub fn new_vertical(spacing: f32, children: Vec<W>) -> Self {
+    pub fn new_vertical(id: WidgetID, spacing: f32, children: Vec<W>) -> Self {
         Self {
+            id,
             axis: Axis::Vertical,
             spacing,
             children,
-            positions: vec![],
             phantom: PhantomData,
         }
     }
 
-    pub fn set_spacing(&mut self, spacing: f32) {
+    pub fn set_spacing(&mut self, spacing: f32, handle: &mut UpdateHandle) {
         self.spacing = spacing;
+        handle.invalidate_id(self.id);
     }
 
     pub fn widgets(&mut self, i: usize) -> &mut W {
         self.children.get_mut(i).unwrap()
     }
-
-    fn hitcast(&mut self, pos: Point) -> Option<(Point, &mut W)> {
-        self.positions
-            .iter()
-            .find_position(|p| p.contains(pos))
-            .and_then(|(i, p)| {
-                self.children
-                    .get_mut(i)
-                    .map(|c| ((pos - p.origin()).to_point(), c))
-            })
-    }
 }
 
-impl<C, W: Widget<C>> Widget<C> for HVStack<C, W> {
-    fn render(&mut self, scene: &mut SceneBuilder, fcx: &mut FontContext) {
-        for (child, pos) in self.children.iter_mut().zip(self.positions.iter()) {
-            let mut fragment = SceneFragment::new();
-            let mut builder = SceneBuilder::for_fragment(&mut fragment);
-            child.render(&mut builder, fcx);
-
-            scene.append(&fragment, Some(Affine::translate(pos.origin().to_vec2())));
-        }
+impl<C: ToComponent, W: Widget<C>> Widget<C> for HVStack<C, W> {
+    fn id(&self) -> WidgetID {
+        self.id
     }
 
-    fn resize(&mut self, constraints: LayoutConstraints, fcx: &mut FontContext) -> Size {
+    fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<C>) {
+        handle.render_widgets(scene, self.children.iter_mut());
+    }
+    fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<C>) -> Size {
         let child_length = self.children.len();
         let total_spacing = self.spacing as f64 * (child_length - 1) as f64;
         let mut remaining = constraints.map(|s| s - self.axis.to_size(total_spacing));
@@ -115,81 +103,48 @@ impl<C, W: Widget<C>> Widget<C> for HVStack<C, W> {
                         Axis::Vertical => remaining
                             .map(|s| Size::new(s.width, s.height / (child_length - i) as f64)),
                     };
-                    let size = child.resize(allocated_space, fcx);
+                    let size = child.resize(allocated_space, handle);
                     remaining = remaining.map(|s| s - self.axis.to_size(self.axis.get_axis(size)));
-                    size
+                    (size, child.id())
                 })
                 .collect_vec();
 
         let max_length = layouts
             .iter()
-            .map(|s| self.axis.invert().get_axis(*s))
+            .map(|(s, _)| self.axis.invert().get_axis(*s))
             .reduce(f64::max)
             .unwrap_or_default();
         let mut acc = 0.0;
 
-        self.positions = layouts
-            .iter()
-            .map(|s| {
-                let pos = match self.axis {
-                    Axis::Horizontal => {
-                        Point::new(acc, (max_length - self.axis.invert().get_axis(*s)) / 2.0)
-                    }
-                    Axis::Vertical => {
-                        Point::new((max_length - self.axis.invert().get_axis(*s)) / 2.0, acc)
-                    }
-                };
-                acc += self.axis.get_axis(*s) + self.spacing as f64;
-                Rect::from_origin_size(pos, *s)
-            })
-            .collect_vec();
+        for (s, id) in layouts.iter().copied() {
+            let pos = match self.axis {
+                Axis::Horizontal => {
+                    Point::new(acc, (max_length - self.axis.invert().get_axis(s)) / 2.0)
+                }
+                Axis::Vertical => {
+                    Point::new((max_length - self.axis.invert().get_axis(s)) / 2.0, acc)
+                }
+            };
+            acc += self.axis.get_axis(s) + self.spacing as f64;
+            handle.position_widget(Rect::from_origin_size(pos, s), id)
+        }
 
         match self.axis {
             Axis::Horizontal => Size::new(
-                Itertools::intersperse(layouts.iter().map(|s| s.width), self.spacing as f64).sum(),
+                Itertools::intersperse(layouts.iter().map(|(s, _)| s.width), self.spacing as f64)
+                    .sum(),
                 max_length,
             ),
             Axis::Vertical => Size::new(
                 max_length,
-                Itertools::intersperse(layouts.iter().map(|s| s.height), self.spacing as f64).sum(),
+                Itertools::intersperse(layouts.iter().map(|(s, _)| s.height), self.spacing as f64)
+                    .sum(),
             ),
         }
     }
 
-    fn pointer_down(
-        &mut self,
-        local_pos: Point,
-        event: &PointerEvent,
-        window: &WindowHandle,
-        handler: &mut C,
-    ) {
-        if let Some((new_pos, w)) = self.hitcast(local_pos) {
-            w.pointer_down(new_pos, event, window, handler)
-        }
-    }
-
-    fn pointer_up(
-        &mut self,
-        local_pos: Point,
-        event: &PointerEvent,
-        window: &WindowHandle,
-        handler: &mut C,
-    ) {
-        if let Some((new_pos, w)) = self.hitcast(local_pos) {
-            w.pointer_up(new_pos, event, window, handler)
-        }
-    }
-
-    fn pointer_move(
-        &mut self,
-        local_pos: Point,
-        event: &PointerEvent,
-        window: &WindowHandle,
-        handler: &mut C,
-    ) {
-        if let Some((new_pos, w)) = self.hitcast(local_pos) {
-            w.pointer_move(new_pos, event, window, handler)
-        }
+    fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<C>) {
+        handle.propagate_event(event, self.children.iter_mut())
     }
 }
 
@@ -224,14 +179,14 @@ impl WidgetBuilder for HStackBuilder {
         }
     }
 
-    fn create_widget(&self, widget: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream) {
         let spacing = match &self.spacing {
             Some(Var::Value(v)) => v.to_token_stream(),
             _ => 0_10f32.to_token_stream(),
         };
 
         stream.extend(quote! {
-            ::gui::gui_widget::HVStack::new_horizontal(#spacing, vec![#widget])
+            ::gui::gui_widget::HVStack::new_horizontal(#id, #spacing, vec![#widget])
         });
     }
 
@@ -240,11 +195,12 @@ impl WidgetBuilder for HStackBuilder {
         property: &'static str,
         widget: &Ident,
         value: &Ident,
+        handle: &Ident,
         stream: &mut TokenStream,
     ) {
         #[allow(clippy::single_match)]
         match property {
-            "spacing" => stream.extend(quote! {#widget.set_disabled(#value);}),
+            "spacing" => stream.extend(quote! {#widget.set_spacing(#value, #handle);}),
             _ => {}
         }
     }
@@ -311,14 +267,14 @@ impl WidgetBuilder for VStackBuilder {
         }
     }
 
-    fn create_widget(&self, widget: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream) {
         let spacing = match &self.spacing {
             Some(Var::Value(v)) => v.to_token_stream(),
             _ => 0_10f32.to_token_stream(),
         };
 
         stream.extend(quote! {
-            ::gui::gui_widget::HVStack::new_vertical(#spacing, vec![#widget])
+            ::gui::gui_widget::HVStack::new_vertical(#id, #spacing, vec![#widget])
         });
     }
 
@@ -327,11 +283,12 @@ impl WidgetBuilder for VStackBuilder {
         property: &'static str,
         widget: &Ident,
         value: &Ident,
+        handle: &Ident,
         stream: &mut TokenStream,
     ) {
         #[allow(clippy::single_match)]
         match property {
-            "spacing" => stream.extend(quote! {#widget.set_disabled(#value);}),
+            "spacing" => stream.extend(quote! {#widget.set_spacing(#value, #handle);}),
             _ => {}
         }
     }

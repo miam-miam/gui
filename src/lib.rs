@@ -1,14 +1,14 @@
 mod update;
 
-use gui_core::glazier::kurbo::{Affine, Size};
+use gui_core::glazier::kurbo::{Affine, Rect, Size};
 use gui_core::glazier::{
-    Application, FileDialogToken, FileInfo, IdleToken, KeyEvent, PointerEvent, Region, Scalable,
-    TimerToken, WinHandler, WindowBuilder, WindowHandle,
+    Application, Cursor, FileDialogToken, FileInfo, IdleToken, KeyEvent, PointerEvent, Region,
+    Scalable, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
 use gui_core::vello::peniko::Color;
 use gui_core::vello::util::{RenderContext, RenderSurface};
 use gui_core::vello::{RenderParams, Renderer, RendererOptions, Scene, SceneFragment};
-use gui_core::{Component, FontContext, Point, SceneBuilder, ToComponent};
+use gui_core::{Component, SceneBuilder, ToComponent};
 use std::any::Any;
 use tracing_subscriber::EnvFilter;
 
@@ -22,8 +22,9 @@ pub use gui_derive::ToComponent;
 
 pub use gui_widget;
 
-use gui_core::vello::kurbo::Vec2;
+use gui_core::widget::{Handle, WidgetEvent, WidgetID};
 pub use gui_core::Update;
+use itertools::Itertools;
 pub use update::Updateable;
 
 const WIDTH: usize = 2048;
@@ -47,14 +48,15 @@ where
 }
 
 struct WindowState<C: Component + 'static> {
-    handle: WindowHandle,
+    handle: Handle,
     renderer: Option<Renderer>,
     render: RenderContext,
     surface: Option<RenderSurface>,
     scene: Scene,
     size: Size,
-    transform: Vec2,
-    font_context: FontContext,
+    global_positions: Vec<Rect>,
+    active_widget: Option<WidgetID>,
+    hovered_widgets: Vec<WidgetID>,
     component: C,
 }
 
@@ -67,38 +69,46 @@ impl<C: Component> WindowState<C> {
             renderer: None,
             render,
             scene: Default::default(),
-            font_context: FontContext::new(),
+            active_widget: None,
+            hovered_widgets: vec![],
+            global_positions: vec![
+                Rect::default();
+                component.largest_id().widget_id() as usize + 1
+            ],
             component,
             size: Size::new(800.0, 600.0),
-            transform: Vec2::default(),
         }
-    }
-
-    fn schedule_render(&self) {
-        self.handle.invalidate();
     }
 
     fn resize(&mut self) {
         let (max_width, max_height) = self.surface_size();
+        let mut local_positions =
+            vec![Rect::default(); self.component.largest_id().widget_id() as usize + 1];
         let size = self.component.resize(
             LayoutConstraints::new_max(Size::new(max_width as f64, max_height as f64)),
-            &mut self.font_context,
+            &mut self.handle,
+            &mut local_positions[..],
         );
-        self.transform = Vec2::new(
-            (max_width as f64 - size.width) / 2.0,
-            (max_height as f64 - size.height) / 2.0,
-        );
-    }
 
-    fn get_local_point(&self, event: &PointerEvent) -> Point {
-        (event.pos.to_vec2() - self.transform).to_point()
+        self.global_positions[0] =
+            Rect::from_center_size((max_width as f64 / 2.0, max_height as f64 / 2.0), size);
+
+        for (i, rect) in local_positions.into_iter().enumerate() {
+            if let Some(parent) = self.component.get_parent(WidgetID::new(
+                self.component.largest_id().component_id(),
+                i as u32,
+            )) {
+                let parent_rect = self.global_positions[parent.widget_id() as usize];
+                self.global_positions[i] = rect + parent_rect.origin().to_vec2();
+            }
+        }
     }
 
     fn surface_size(&self) -> (u32, u32) {
-        let handle = &self.handle;
-        let scale = handle.get_scale().unwrap_or_default();
-        let insets = handle.content_insets().to_px(scale);
-        let mut size = handle.get_size().to_px(scale);
+        let window = &self.handle.window;
+        let scale = window.get_scale().unwrap_or_default();
+        let insets = window.content_insets().to_px(scale);
+        let mut size = window.get_size().to_px(scale);
         size.width -= insets.x_value();
         size.height -= insets.y_value();
         (size.width as u32, size.height as u32)
@@ -109,8 +119,11 @@ impl<C: Component> WindowState<C> {
         let (width, height) = self.surface_size();
         if self.surface.is_none() {
             self.surface = Some(
-                pollster::block_on(self.render.create_surface(&self.handle, width, height))
-                    .expect("failed to create surface"),
+                pollster::block_on(
+                    self.render
+                        .create_surface(&self.handle.window, width, height),
+                )
+                .expect("failed to create surface"),
             );
         }
 
@@ -135,8 +148,19 @@ impl<C: Component> WindowState<C> {
             let mut sb = SceneBuilder::for_scene(&mut self.scene);
             let mut fragment = SceneFragment::new();
             let component = SceneBuilder::for_fragment(&mut fragment);
-            self.component.render(component, &mut self.font_context);
-            sb.append(&fragment, Some(Affine::translate(self.transform)));
+            self.component.render(
+                component,
+                &mut self.handle,
+                &mut self.global_positions[..],
+                &mut self.active_widget,
+                &self.hovered_widgets[..],
+            );
+            sb.append(
+                &fragment,
+                Some(Affine::translate(
+                    self.global_positions[0].origin().to_vec2(),
+                )),
+            );
 
             self.renderer
                 .get_or_insert_with(|| Renderer::new(device, &renderer_options).unwrap())
@@ -146,28 +170,56 @@ impl<C: Component> WindowState<C> {
             device.poll(wgpu_types::Maintain::Wait);
         }
     }
+
+    fn send_component_event(&mut self, id: WidgetID, event: WidgetEvent) -> bool {
+        self.component.event(
+            id,
+            event,
+            &mut self.handle,
+            &self.global_positions[..],
+            &mut self.active_widget,
+            &mut self.hovered_widgets,
+        )
+    }
+
+    fn propagate_component_event(&mut self, event: WidgetEvent) -> bool {
+        self.component.propagate_event(
+            event,
+            &mut self.handle,
+            &self.global_positions[..],
+            &mut self.active_widget,
+            &mut self.hovered_widgets,
+        )
+    }
 }
 
 impl<C: Component + 'static> WinHandler for WindowState<C> {
     fn connect(&mut self, handle: &WindowHandle) {
-        self.handle = handle.clone();
-        self.component.update_vars(true);
+        self.handle.window = handle.clone();
+        self.component
+            .update_vars(true, &mut self.handle, &self.global_positions[..]);
         self.resize();
         self.render();
     }
 
     fn size(&mut self, size: Size) {
-        self.size = size;
+        if self.size != size {
+            self.size = size;
+            self.resize();
+        }
     }
 
     fn prepare_paint(&mut self) {
-        self.component.update_vars(false);
-        self.resize();
+        if self
+            .component
+            .update_vars(false, &mut self.handle, &self.global_positions[..])
+        {
+            self.resize();
+        }
     }
 
     fn paint(&mut self, _: &Region) {
         self.render();
-        self.schedule_render();
     }
 
     fn command(&mut self, _id: u32) {}
@@ -194,21 +246,65 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
     }
 
     fn pointer_move(&mut self, event: &PointerEvent) {
-        self.component
-            .pointer_move(self.get_local_point(event), event, &self.handle);
-        self.component.update_vars(false);
+        self.handle.window.set_cursor(&Cursor::Arrow);
+        let mouse_point = event.pos;
+        let un_hovered_widgets = self
+            .hovered_widgets
+            .iter()
+            .filter(|i| !self.global_positions[i.widget_id() as usize].contains(mouse_point))
+            .copied()
+            .collect_vec();
+
+        self.hovered_widgets = self
+            .hovered_widgets
+            .iter()
+            .copied()
+            .filter(|i| self.global_positions[i.widget_id() as usize].contains(mouse_point))
+            .collect_vec();
+
+        let mut resize = false;
+        for id in un_hovered_widgets.into_iter() {
+            if self.send_component_event(id, WidgetEvent::HoverChange) {
+                resize = true;
+            }
+        }
+
+        let event_resize = if let Some(id) = self.active_widget {
+            self.send_component_event(id, WidgetEvent::PointerMove(event))
+        } else {
+            self.propagate_component_event(WidgetEvent::PointerMove(event))
+        };
+        let var_resize =
+            self.component
+                .update_vars(false, &mut self.handle, &self.global_positions[..]);
+
+        if event_resize || var_resize || resize {
+            self.resize();
+        }
     }
 
     fn pointer_down(&mut self, event: &PointerEvent) {
-        self.component
-            .pointer_down(self.get_local_point(event), event, &self.handle);
-        self.component.update_vars(false);
+        let event_resize = self.propagate_component_event(WidgetEvent::PointerDown(event));
+        let var_resize =
+            self.component
+                .update_vars(false, &mut self.handle, &self.global_positions[..]);
+        if event_resize || var_resize {
+            self.resize();
+        }
     }
 
     fn pointer_up(&mut self, event: &PointerEvent) {
-        self.component
-            .pointer_up(self.get_local_point(event), event, &self.handle);
-        self.component.update_vars(false);
+        let event_resize = if let Some(id) = self.active_widget {
+            self.send_component_event(id, WidgetEvent::PointerUp(event))
+        } else {
+            self.propagate_component_event(WidgetEvent::PointerUp(event))
+        };
+        let var_resize =
+            self.component
+                .update_vars(false, &mut self.handle, &self.global_positions[..]);
+        if event_resize || var_resize {
+            self.resize();
+        }
     }
 
     fn timer(&mut self, id: TimerToken) {
@@ -224,7 +320,7 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
     }
 
     fn request_close(&mut self) {
-        self.handle.close();
+        self.handle.window.close();
     }
 
     fn destroy(&mut self) {
