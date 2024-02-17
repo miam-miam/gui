@@ -1,7 +1,10 @@
 use gui_core::glazier::kurbo::Rect;
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
-use gui_core::widget::{EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID};
+use gui_core::widget::{
+    EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
+    WidgetID,
+};
 use gui_core::{LayoutConstraints, Point, SceneBuilder, Size, ToComponent, Var};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
