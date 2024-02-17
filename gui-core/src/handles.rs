@@ -1,7 +1,7 @@
 use crate::widget::{Widget, WidgetEvent, WidgetID};
 use crate::{LayoutConstraints, Point, Size, ToComponent};
 use glazier::kurbo::{Affine, Rect};
-use glazier::WindowHandle;
+use glazier::{Cursor, WindowHandle};
 use parley::FontContext;
 use vello::{SceneBuilder, SceneFragment};
 
@@ -294,6 +294,9 @@ impl<'a, T: ToComponent> EventHandle<'a, T> {
 
     pub fn is_hovered(&self, id: WidgetID) -> bool {
         self.hovered_widgets.contains(&id)
+    }
+    pub fn set_cursor(&mut self, cursor: &Cursor) {
+        self.handle.window.set_cursor(cursor)
     }
     pub fn get_handler(&mut self) -> &mut T {
         self.comp_struct

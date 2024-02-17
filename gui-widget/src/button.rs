@@ -1,4 +1,5 @@
 use gui_core::glazier::kurbo::{Shape, Size};
+use gui_core::glazier::Cursor;
 use gui_core::layout::LayoutConstraints;
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::WidgetDeclaration;
@@ -184,9 +185,9 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget
         });
         match event {
             WidgetEvent::PointerUp(_) => {
+                handle.set_active(self.id(), false);
+                handle.invalidate_id(self.id());
                 if hit {
-                    handle.set_active(self.id(), false);
-                    handle.invalidate_id(self.id());
                     handle.get_handler().on_press();
                 }
             }
@@ -197,8 +198,11 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget
                 }
             }
             WidgetEvent::PointerMove(_) => {
-                if hit && handle.add_hover(self.id()) {
-                    handle.invalidate_id(self.id());
+                if hit {
+                    handle.set_cursor(&Cursor::Pointer);
+                    if handle.add_hover(self.id()) {
+                        handle.invalidate_id(self.id());
+                    }
                 }
             }
             WidgetEvent::HoverChange | WidgetEvent::ActiveChange => handle.invalidate_id(self.id()),

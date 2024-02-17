@@ -2,8 +2,8 @@ mod update;
 
 use gui_core::glazier::kurbo::{Affine, Rect, Size};
 use gui_core::glazier::{
-    Application, FileDialogToken, FileInfo, IdleToken, KeyEvent, PointerEvent, Region, Scalable,
-    TimerToken, WinHandler, WindowBuilder, WindowHandle,
+    Application, Cursor, FileDialogToken, FileInfo, IdleToken, KeyEvent, PointerEvent, Region,
+    Scalable, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
 use gui_core::vello::peniko::Color;
 use gui_core::vello::util::{RenderContext, RenderSurface};
@@ -162,8 +162,6 @@ impl<C: Component> WindowState<C> {
                 )),
             );
 
-            println!("HIya");
-
             self.renderer
                 .get_or_insert_with(|| Renderer::new(device, &renderer_options).unwrap())
                 .render_to_surface(device, queue, &self.scene, &surface_texture, &render_params)
@@ -171,6 +169,27 @@ impl<C: Component> WindowState<C> {
             surface_texture.present();
             device.poll(wgpu_types::Maintain::Wait);
         }
+    }
+
+    fn send_component_event(&mut self, id: WidgetID, event: WidgetEvent) -> bool {
+        self.component.event(
+            id,
+            event,
+            &mut self.handle,
+            &self.global_positions[..],
+            &mut self.active_widget,
+            &mut self.hovered_widgets,
+        )
+    }
+
+    fn propagate_component_event(&mut self, event: WidgetEvent) -> bool {
+        self.component.propagate_event(
+            event,
+            &mut self.handle,
+            &self.global_positions[..],
+            &mut self.active_widget,
+            &mut self.hovered_widgets,
+        )
     }
 }
 
@@ -227,6 +246,7 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
     }
 
     fn pointer_move(&mut self, event: &PointerEvent) {
+        self.handle.window.set_cursor(&Cursor::Arrow);
         let mouse_point = event.pos;
         let un_hovered_widgets = self
             .hovered_widgets
@@ -244,25 +264,16 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
 
         let mut resize = false;
         for id in un_hovered_widgets.into_iter() {
-            if self.component.event(
-                id,
-                WidgetEvent::HoverChange,
-                &mut self.handle,
-                &self.global_positions[..],
-                &mut self.active_widget,
-                &mut self.hovered_widgets,
-            ) {
+            if self.send_component_event(id, WidgetEvent::HoverChange) {
                 resize = true;
             }
         }
 
-        let event_resize = self.component.propagate_event(
-            WidgetEvent::PointerMove(event),
-            &mut self.handle,
-            &self.global_positions[..],
-            &mut self.active_widget,
-            &mut self.hovered_widgets,
-        );
+        let event_resize = if let Some(id) = self.active_widget {
+            self.send_component_event(id, WidgetEvent::PointerMove(event))
+        } else {
+            self.propagate_component_event(WidgetEvent::PointerMove(event))
+        };
         let var_resize =
             self.component
                 .update_vars(false, &mut self.handle, &self.global_positions[..]);
@@ -273,13 +284,7 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
     }
 
     fn pointer_down(&mut self, event: &PointerEvent) {
-        let event_resize = self.component.propagate_event(
-            WidgetEvent::PointerDown(event),
-            &mut self.handle,
-            &self.global_positions[..],
-            &mut self.active_widget,
-            &mut self.hovered_widgets,
-        );
+        let event_resize = self.propagate_component_event(WidgetEvent::PointerDown(event));
         let var_resize =
             self.component
                 .update_vars(false, &mut self.handle, &self.global_positions[..]);
@@ -289,13 +294,11 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
     }
 
     fn pointer_up(&mut self, event: &PointerEvent) {
-        let event_resize = self.component.propagate_event(
-            WidgetEvent::PointerUp(event),
-            &mut self.handle,
-            &self.global_positions[..],
-            &mut self.active_widget,
-            &mut self.hovered_widgets,
-        );
+        let event_resize = if let Some(id) = self.active_widget {
+            self.send_component_event(id, WidgetEvent::PointerUp(event))
+        } else {
+            self.propagate_component_event(WidgetEvent::PointerUp(event))
+        };
         let var_resize =
             self.component
                 .update_vars(false, &mut self.handle, &self.global_positions[..]);
