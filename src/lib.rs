@@ -162,6 +162,8 @@ impl<C: Component> WindowState<C> {
                 )),
             );
 
+            println!("HIya");
+
             self.renderer
                 .get_or_insert_with(|| Renderer::new(device, &renderer_options).unwrap())
                 .render_to_surface(device, queue, &self.scene, &surface_texture, &render_params)

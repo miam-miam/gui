@@ -4,7 +4,8 @@ mod gen {
     use gui::gui_core::vello::SceneBuilder;
     use gui::gui_core::glazier::kurbo::Rect;
     use gui::gui_core::widget::{
-        Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, WidgetEvent, Handle,
+        Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle,
+        WidgetEvent, Handle,
     };
     use gui::gui_core::{
         Component, LayoutConstraints, Size, ToComponent, ToHandler, Update, Variable,
@@ -252,7 +253,14 @@ mod gen {
             self.widget.render(&mut scene, &mut render_handle);
             render_handle.unwrap()
         }
-        fn update_vars(&mut self, force_update: bool) {
+        fn update_vars<'a>(
+            &mut self,
+            force_update: bool,
+            handle: &'a mut Handle,
+            global_positions: &'a [Rect],
+        ) -> bool {
+            let mut update_handle = UpdateHandle::new(handle, global_positions);
+            let handle_ref = &mut update_handle;
             let mut text = false;
             if force_update
                 || <CompStruct as Update<count>>::is_updated(&self.comp_struct)
@@ -270,12 +278,12 @@ mod gen {
                     disabled_decrement,
                 >>::value(&self.comp_struct);
                 let widget = &mut self.widget.widgets(2usize).w2();
-                widget.set_disabled(value);
+                widget.set_disabled(value, handle_ref);
             }
             if force_update {
                 let value = get_bundle_message("Counter-IncrText-text", None);
                 let widget = &mut self.widget.widgets(0usize).w0().get_widget();
-                widget.set_text(value);
+                widget.set_text(value, handle_ref);
             }
             if force_update || text {
                 let value = get_bundle_message(
@@ -283,15 +291,16 @@ mod gen {
                     Some(&self.Counter_Count_text),
                 );
                 let widget = &mut self.widget.widgets(1usize).w1();
-                widget.set_text(value);
+                widget.set_text(value, handle_ref);
             }
             if force_update {
                 let value = get_bundle_message("Counter-DecrText-text", None);
                 let widget = &mut self.widget.widgets(2usize).w2().get_widget();
-                widget.set_text(value);
+                widget.set_text(value, handle_ref);
             }
             <CompStruct as Update<count>>::reset(&mut self.comp_struct);
             <CompStruct as Update<disabled_decrement>>::reset(&mut self.comp_struct);
+            update_handle.unwrap()
         }
         fn resize<'a>(
             &mut self,
