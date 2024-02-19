@@ -93,7 +93,6 @@ impl<'de> Deserialize<'de> for Fluent {
 #[cfg(test)]
 mod test {
     use crate::parse::fluent::Fluent;
-    use crate::parse::var::Name;
     use std::collections::HashMap;
 
     #[test]
