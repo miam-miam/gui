@@ -122,5 +122,7 @@ mod test {
         );
         assert!(serde_yaml::from_str::<Name>("not-allowed-hyphens").is_err());
         assert!(serde_yaml::from_str::<Name>("0StartNumbers").is_err());
+        assert!(serde_yaml::from_str::<Name>("await").is_err());
+        assert!(serde_yaml::from_str::<Name>("fn").is_err());
     }
 }
