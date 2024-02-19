@@ -81,7 +81,11 @@ fn add_info_to_env(static_gui: &GUIDeclaration) {
     let components = static_gui.components.iter().map(|c| &c.name).format(",");
     println!("cargo:rustc-env=GUI_COMPONENTS={components}");
     for component in &static_gui.components {
-        let variables = component.variables.iter().map(|v| v.get_name()).format(",");
+        let variables = component
+            .variables
+            .iter()
+            .map(|v| v.get_name().as_str())
+            .format(",");
         println!(
             "cargo:rustc-env=GUI_COMPONENT_{}={variables}",
             component.name
