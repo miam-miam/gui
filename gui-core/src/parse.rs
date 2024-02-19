@@ -3,13 +3,14 @@ pub mod var;
 
 pub mod fluent;
 
+use crate::parse::var::Name;
 use crate::widget::WidgetBuilder;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetDeclaration {
-    pub name: Option<String>,
+    pub name: Option<Name>,
     #[serde(flatten)]
     pub widget: Box<dyn WidgetBuilder>,
     pub layout_properties: Option<LayoutDeclaration>,
@@ -22,20 +23,20 @@ pub struct LayoutDeclaration {
 
 #[derive(Deserialize, Debug, Eq, PartialEq, Hash)]
 pub struct NormalVariableDeclaration {
-    pub name: String,
+    pub name: Name,
     #[serde(rename = "type")]
     pub var_type: String,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct ComponentVariableDeclaration {
-    pub name: String,
+    pub name: Name,
     pub component: String,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct ComponentsVariableDeclaration {
-    pub name: String,
+    pub name: Name,
     pub components: String,
 }
 
@@ -48,7 +49,7 @@ pub enum VariableDeclaration {
 }
 
 impl VariableDeclaration {
-    pub fn get_name(&self) -> &String {
+    pub fn get_name(&self) -> &Name {
         match self {
             VariableDeclaration::Normal(v) => &v.name,
             VariableDeclaration::Component(c) => &c.name,

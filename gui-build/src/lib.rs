@@ -3,7 +3,7 @@ mod fluent;
 mod widget;
 mod widget_set;
 
-use anyhow::{anyhow, bail};
+use anyhow::{anyhow, bail, Context};
 use gui_core::parse::{GUIDeclaration, WidgetDeclaration};
 use gui_core::widget::{AsAny, WidgetBuilder};
 use itertools::Itertools;
@@ -16,25 +16,29 @@ use std::path::Path;
 extern crate gui_widget;
 
 pub fn build<P: AsRef<Path>>(path: P) {
-    build_path(path.as_ref()).unwrap()
+    if let Err(e) = build_path(path.as_ref()) {
+        println!("{e:#}");
+        std::process::exit(1);
+    }
 }
 
 fn build_path(path: &Path) -> anyhow::Result<()> {
-    println!("cargo:rerun-if-changed={}", path.display());
-    println!("cargo:rerun-if-changed=build.rs");
-
-    let file = File::open(path)?;
+    let file = File::open(path).context("Failed to open GUI configuration file")?;
     let out_dir = env::var_os("OUT_DIR").ok_or_else(|| anyhow!("could not find OUT_DIR env"))?;
     let path = Path::new(&out_dir);
-    let mut ser: GUIDeclaration = serde_yaml::from_reader(file)?;
+    let mut ser: GUIDeclaration =
+        serde_yaml::from_reader(file).context("Failed to parse file GUI configuration file")?;
 
-    combine_styles(&mut ser)?;
-
-    add_info_to_env(&ser);
+    combine_styles(&mut ser).context("Failed to combine styles")?;
 
     for component in ser.components.iter_mut() {
-        component::create_component(path, component)?;
+        component::create_component(path, component)
+            .with_context(|| format!("Failed to create component {}", component.name))?;
     }
+
+    println!("cargo:rerun-if-changed={}", path.display());
+    println!("cargo:rerun-if-changed=build.rs");
+    add_info_to_env(&ser);
 
     Ok(())
 }
@@ -81,7 +85,11 @@ fn add_info_to_env(static_gui: &GUIDeclaration) {
     let components = static_gui.components.iter().map(|c| &c.name).format(",");
     println!("cargo:rustc-env=GUI_COMPONENTS={components}");
     for component in &static_gui.components {
-        let variables = component.variables.iter().map(|v| v.get_name()).format(",");
+        let variables = component
+            .variables
+            .iter()
+            .map(|v| v.get_name().as_str())
+            .format(",");
         println!(
             "cargo:rustc-env=GUI_COMPONENT_{}={variables}",
             component.name

@@ -116,11 +116,15 @@ impl<'a> Widget<'a> {
         let widget_ident = Ident::new("widget", Span::call_site());
         let value_ident = Ident::new("value", Span::call_site());
         let handle_ident = Ident::new("handle_ref", Span::call_site());
-        let string_var_name = &var.name;
+        let string_var_name: &str = &var.name;
 
         let mut update_stream = TokenStream::new();
 
-        for (prop, _var) in self.variables.iter().filter(|(_p, v)| v == &var.name) {
+        for (prop, _var) in self
+            .variables
+            .iter()
+            .filter(|(_p, v)| *v == var.name.as_str())
+        {
             self.widget_declaration.widget.on_property_update(
                 prop,
                 &widget_ident,

@@ -1,3 +1,5 @@
+use crate::parse::var::Name;
+use anyhow::anyhow;
 use fluent_syntax::ast::{Entry, Expression, InlineExpression, Message, Pattern, PatternElement};
 use fluent_syntax::parser;
 use itertools::Itertools;
@@ -7,13 +9,13 @@ use std::fmt::Formatter;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Fluent {
-    pub vars: Vec<String>,
+    pub vars: Vec<Name>,
     pub text: String,
 }
 
 struct FluentVisitor;
 
-fn get_vars(pattern: &Pattern<String>) -> Vec<String> {
+fn get_vars(pattern: &Pattern<String>) -> anyhow::Result<Vec<Name>> {
     pattern
         .elements
         .iter()
@@ -24,7 +26,9 @@ fn get_vars(pattern: &Pattern<String>) -> Vec<String> {
                     let (Expression::Select { selector, .. } | Expression::Inline(selector)) =
                         current_expr;
                     match selector {
-                        InlineExpression::VariableReference { id } => return Some(id.name.clone()),
+                        InlineExpression::VariableReference { id } => {
+                            return Some(id.name.parse().map_err(|e| anyhow!("{e}")))
+                        }
                         InlineExpression::Placeable { expression } => {
                             current_expr = expression.as_ref();
                         }
@@ -36,8 +40,7 @@ fn get_vars(pattern: &Pattern<String>) -> Vec<String> {
             }
             None
         })
-        .unique()
-        .collect()
+        .process_results(|iter| iter.unique().collect())
 }
 
 impl<'de> Visitor<'de> for FluentVisitor {
@@ -65,7 +68,9 @@ impl<'de> Visitor<'de> for FluentVisitor {
                 value: Some(pattern),
                 ..
             }) => Ok(Fluent {
-                vars: get_vars(pattern),
+                vars: get_vars(pattern).map_err(|e| {
+                    Error::invalid_value(Unexpected::Other(&format!("{:#?}", e)), &self)
+                })?,
                 text: v.to_string(),
             }),
             _ => Err(Error::invalid_value(
@@ -109,7 +114,7 @@ complex_test: |
         assert_eq!(
             ser.get("test"),
             Some(&Fluent {
-                vars: vec![String::from("userName")],
+                vars: vec!["userName".parse().unwrap()],
                 text: String::from("Hello, {$userName}!")
             })
         );
@@ -117,7 +122,7 @@ complex_test: |
         assert_eq!(
             ser.get("just_var"),
             Some(&Fluent {
-                vars: vec![String::from("user")],
+                vars: vec!["user".parse().unwrap()],
                 text: String::from("{$user} {$user}")
             })
         );
@@ -125,9 +130,9 @@ complex_test: |
         assert_eq!(
             ser.get("complex_test").unwrap().vars,
             vec![
-                String::from("userName"),
-                String::from("photoCount"),
-                String::from("userGender")
+                "userName".parse().unwrap(),
+                "photoCount".parse().unwrap(),
+                "userGender".parse().unwrap()
             ]
         )
     }
