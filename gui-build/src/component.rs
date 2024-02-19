@@ -1,6 +1,7 @@
 use crate::fluent;
 use crate::fluent::FluentIdent;
 use crate::widget::Widget;
+use anyhow::Context;
 use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, VariableDeclaration};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
@@ -32,7 +33,8 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let mut fluents = vec![];
     widget_tree.push_fluents(&mut fluents);
 
-    create_bundle(out_dir, &component.name, &fluents[..])?;
+    create_bundle(out_dir, &component.name, &fluents[..])
+        .context("Failed to create fluent bundle")?;
 
     let if_update: TokenStream = normal_variables
         .iter()
