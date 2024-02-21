@@ -1,3 +1,4 @@
+mod testing;
 mod update;
 
 use gui_core::glazier::kurbo::{Affine, Rect, Size};
@@ -26,6 +27,8 @@ use gui_core::widget::{Handle, WidgetEvent, WidgetID};
 pub use gui_core::Update;
 use itertools::Itertools;
 pub use update::Updateable;
+use wgpu::Maintain;
+pub use testing::TestHarness;
 
 const WIDTH: usize = 2048;
 const HEIGHT: usize = 1536;
@@ -167,7 +170,7 @@ impl<C: Component> WindowState<C> {
                 .render_to_surface(device, queue, &self.scene, &surface_texture, &render_params)
                 .unwrap();
             surface_texture.present();
-            device.poll(wgpu_types::Maintain::Wait);
+            device.poll(Maintain::Wait);
         }
     }
 

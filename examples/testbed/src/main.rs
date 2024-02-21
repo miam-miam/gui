@@ -1,5 +1,5 @@
 use gui::gui_widget::button::ButtonHandler;
-use gui::{ToComponent, Update, Updateable};
+use gui::{TestHarness, ToComponent, Update, Updateable};
 
 #[derive(ToComponent, Default)]
 struct Counter {
@@ -29,4 +29,17 @@ impl ButtonHandler<gen::DecrementBtn> for Counter {
 
 fn main() {
     gui::run(Counter::default())
+}
+
+#[cfg(test)]
+mod test {
+    use crate::Counter;
+    use gui::TestHarness;
+
+    #[test]
+    fn test() {
+        let mut harness = TestHarness::new(Counter::default());
+        harness.resize();
+        harness.render();
+    }
 }
