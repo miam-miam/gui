@@ -18,8 +18,8 @@ use wgpu::{
     TextureUsages,
 };
 
-const WIDTH: usize = 2048;
-const HEIGHT: usize = 1536;
+const WIDTH: usize = 512;
+const HEIGHT: usize = 512;
 
 pub struct TestHarness<T: ToComponent> {
     handle: Handle,
@@ -37,7 +37,7 @@ pub struct TestHarness<T: ToComponent> {
 impl<T: ToComponent> TestHarness<T> {
     pub fn new(component: T) -> Self {
         let render = RenderContext::new().unwrap();
-        Self {
+        let mut harness = Self {
             handle: Default::default(),
             renderer: None,
             render,
@@ -49,9 +49,17 @@ impl<T: ToComponent> TestHarness<T> {
                 component.largest_id().widget_id() as usize + 1
             ],
             component: component.to_component_holder(),
-            size: Size::new(800.0, 600.0),
+            size: Size::new(512.0, 512.0),
             phantom: PhantomData,
-        }
+        };
+        harness.init();
+        harness
+    }
+
+    fn init(&mut self) {
+        self.component
+            .update_vars(true, &mut self.handle, &self.global_positions[..]);
+        self.resize();
     }
     pub fn resize(&mut self) {
         let mut local_positions =
@@ -98,7 +106,7 @@ impl<T: ToComponent> TestHarness<T> {
                 | TextureUsages::RENDER_ATTACHMENT
                 | TextureUsages::STORAGE_BINDING,
             label: None,
-            view_formats: &[],
+            view_formats: &[TextureFormat::Rgba8UnormSrgb],
         };
         let texture = device.create_texture(&texture_desc);
         let texture_view = texture.create_view(&Default::default());
@@ -115,7 +123,7 @@ impl<T: ToComponent> TestHarness<T> {
         };
         let output_buffer = device.create_buffer(&output_buffer_desc);
         let renderer_options = RendererOptions {
-            surface_format: Some(TextureFormat::Rgba8Unorm),
+            surface_format: Some(TextureFormat::Rgba8UnormSrgb),
             timestamp_period: queue.get_timestamp_period(),
         };
         let render_params = RenderParams {

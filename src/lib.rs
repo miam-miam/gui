@@ -26,9 +26,9 @@ pub use gui_widget;
 use gui_core::widget::{Handle, WidgetEvent, WidgetID};
 pub use gui_core::Update;
 use itertools::Itertools;
+pub use testing::TestHarness;
 pub use update::Updateable;
 use wgpu::Maintain;
-pub use testing::TestHarness;
 
 const WIDTH: usize = 2048;
 const HEIGHT: usize = 1536;
