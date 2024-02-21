@@ -1,5 +1,5 @@
 use gui::gui_widget::button::ButtonHandler;
-use gui::{TestHarness, ToComponent, Update, Updateable};
+use gui::{ToComponent, Update, Updateable};
 
 #[derive(ToComponent, Default)]
 struct Counter {
@@ -34,12 +34,13 @@ fn main() {
 #[cfg(test)]
 mod test {
     use crate::Counter;
-    use gui::TestHarness;
+    use gui::{assert_screenshot, TestHarness};
 
     #[test]
     fn test() {
         let mut harness = TestHarness::new(Counter::default());
         harness.resize();
         harness.render();
+        assert_screenshot!(harness, "valid_start_state");
     }
 }

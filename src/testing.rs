@@ -1,25 +1,43 @@
 use gui_core::glazier::kurbo::{Affine, Rect};
-use gui_core::glazier::{
-    Application, Cursor, FileDialogToken, FileInfo, IdleToken, KeyEvent, PointerEvent, Region,
-    TimerToken, WinHandler, WindowBuilder, WindowHandle,
-};
 use gui_core::vello::peniko::Color;
-use gui_core::vello::util::{RenderContext, RenderSurface};
+use gui_core::vello::util::RenderContext;
 use gui_core::vello::{RenderParams, Renderer, RendererOptions, Scene, SceneFragment};
 use gui_core::widget::{Handle, WidgetEvent, WidgetID};
 use gui_core::{Component, LayoutConstraints, SceneBuilder, Size, ToComponent};
-use itertools::Itertools;
-use std::any::Any;
+use image::io::Reader as ImageReader;
+use image::{ImageBuffer, Pixel, Rgba};
+use std::fs::{create_dir_all, OpenOptions};
+use std::io::Write;
 use std::marker::PhantomData;
-use tracing_subscriber::EnvFilter;
+use std::ops::Deref;
+use std::path::Path;
 use wgpu::{
-    BufferAddress, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Extent3d,
-    ImageCopyBuffer, Maintain, MapMode, TextureDescriptor, TextureDimension, TextureFormat,
-    TextureUsages,
+    BufferAddress, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Extent3d, Maintain,
+    MapMode, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
 };
+
+#[macro_export]
+macro_rules! assert_screenshot {
+    ($harness:expr, $($arg:tt)*) => {$harness.take_screenshot(file!(), &format!($($arg)*))};
+}
 
 const WIDTH: usize = 512;
 const HEIGHT: usize = 512;
+
+fn compare_images<
+    P: Pixel,
+    LC: Deref<Target = [P::Subpixel]>,
+    RC: Deref<Target = [P::Subpixel]>,
+>(
+    lhs: &ImageBuffer<P, LC>,
+    rhs: &ImageBuffer<P, RC>,
+) -> bool {
+    if lhs.width() != rhs.width() || lhs.height() != rhs.height() {
+        return false;
+    }
+    let length = (lhs.width() * lhs.height()) as usize;
+    lhs.as_raw()[..length] == rhs.as_raw()[..length]
+}
 
 pub struct TestHarness<T: ToComponent> {
     handle: Handle,
@@ -31,6 +49,7 @@ pub struct TestHarness<T: ToComponent> {
     active_widget: Option<WidgetID>,
     hovered_widgets: Vec<WidgetID>,
     component: T::Component,
+    image_buffer: Vec<u8>,
     phantom: PhantomData<T>,
 }
 
@@ -50,6 +69,7 @@ impl<T: ToComponent> TestHarness<T> {
             ],
             component: component.to_component_holder(),
             size: Size::new(512.0, 512.0),
+            image_buffer: vec![],
             phantom: PhantomData,
         };
         harness.init();
@@ -177,25 +197,66 @@ impl<T: ToComponent> TestHarness<T> {
         );
 
         queue.submit(Some(encoder.finish()));
-        {
-            let buffer_slice = output_buffer.slice(..);
 
-            // NOTE: We have to create the mapping THEN device.poll() before await
-            // the future. Otherwise the application will freeze.
-            let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
-            buffer_slice.map_async(MapMode::Read, move |result| {
-                tx.send(result).unwrap();
-            });
-            device.poll(Maintain::Wait);
-            pollster::block_on(rx.receive()).unwrap().unwrap();
+        let buffer_slice = output_buffer.slice(..);
 
-            let data = buffer_slice.get_mapped_range();
+        // NOTE: We have to create the mapping THEN device.poll() before await
+        // the future. Otherwise, the application will freeze.
+        let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
+        buffer_slice.map_async(MapMode::Read, move |result| {
+            tx.send(result).unwrap();
+        });
+        device.poll(Maintain::Wait);
+        pollster::block_on(rx.receive()).unwrap().unwrap();
 
-            use image::{ImageBuffer, Rgba};
-            let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(width, height, data).unwrap();
-            buffer.save("image.png").unwrap();
-        }
+        let data = buffer_slice.get_mapped_range();
+        self.image_buffer.extend_from_slice(&data);
+        drop(data);
         output_buffer.unmap();
+    }
+
+    pub fn take_screenshot(&mut self, file_path: &str, message: &str) {
+        if message.contains(char::is_whitespace) {
+            panic!("Message should not contain any whitespace: {message}")
+        }
+
+        self.render();
+        let new_image = ImageBuffer::<Rgba<u8>, _>::from_raw(
+            self.size.width as u32,
+            self.size.height as u32,
+            &self.image_buffer[..],
+        )
+        .expect("generated image is valid");
+        let cargo_dir_env =
+            std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR should be set by cargo");
+        let cargo_dir = Path::new(&cargo_dir_env);
+        let screenshot_dir = cargo_dir.join("screenshots");
+        create_dir_all(&screenshot_dir).expect("screenshots folder can be created");
+        let gitignore = screenshot_dir.join(".gitignore");
+        let _ = OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(gitignore)
+            .and_then(|mut f| writeln!(f, "*.new.png\n.gitignore"));
+        let file_name = Path::new(file_path)
+            .file_stem()
+            .expect("filepath points to a rust file")
+            .to_str()
+            .expect("filename to be valid UTF-8");
+        let reference_path = screenshot_dir.join(format!("{file_name}_{message}.png"));
+        let new_path = screenshot_dir.join(format!("{file_name}_{message}.new.png"));
+        if let Ok(reference_file) = ImageReader::open(reference_path) {
+            let reference_img = reference_file.decode().unwrap().to_rgba8();
+            if !compare_images(&reference_img, &new_image) {
+                let _ = std::fs::remove_file(&new_path);
+                new_image.save(&new_path).unwrap();
+                panic!("")
+            }
+        } else {
+            let _ = std::fs::remove_file(&new_path);
+            new_image.save(&new_path).unwrap();
+            panic!("No reference file");
+        }
     }
 
     fn send_component_event(&mut self, id: WidgetID, event: WidgetEvent) -> bool {

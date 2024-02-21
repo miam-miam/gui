@@ -23,6 +23,18 @@ To install them on Debian or Ubuntu, run
 sudo apt-get install pkg-config clang libwayland-dev libxkbcommon-x11-dev libvulkan-dev
 ```
 
+### CI
+
+To run tests in CI install a software render
+```yaml
+- name: install llvmpipe and lavapipe (sofware based renderers)
+  run: |
+    sudo apt-get update -y -qq
+    sudo add-apt-repository ppa:oibaf/graphics-drivers -y
+    sudo apt-get update
+    sudo apt install -y libegl1-mesa libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
+```
+
 ## Styling
 
 Default styles are currently adapted from https://github.com/mantinedev/mantine.
