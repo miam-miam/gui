@@ -1,3 +1,5 @@
+mod messages;
+
 use gui_core::glazier::kurbo::{Affine, Rect};
 use gui_core::vello::peniko::Color;
 use gui_core::vello::util::RenderContext;
@@ -11,6 +13,7 @@ use std::io::Write;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::path::Path;
+use std::thread;
 use wgpu::{
     BufferAddress, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Extent3d, Maintain,
     MapMode, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
@@ -35,8 +38,15 @@ fn compare_images<
     if lhs.width() != rhs.width() || lhs.height() != rhs.height() {
         return false;
     }
-    let length = (lhs.width() * lhs.height()) as usize;
+    let length = (lhs.width() * lhs.height() * P::CHANNEL_COUNT as u32) as usize;
     lhs.as_raw()[..length] == rhs.as_raw()[..length]
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+struct TestReport {
+    total_tests: u32,
+    failed_tests: u32,
+    wip_tests: u32,
 }
 
 pub struct TestHarness<T: ToComponent> {
@@ -50,6 +60,7 @@ pub struct TestHarness<T: ToComponent> {
     hovered_widgets: Vec<WidgetID>,
     component: T::Component,
     image_buffer: Vec<u8>,
+    report: TestReport,
     phantom: PhantomData<T>,
 }
 
@@ -69,6 +80,7 @@ impl<T: ToComponent> TestHarness<T> {
             ],
             component: component.to_component_holder(),
             size: Size::new(512.0, 512.0),
+            report: TestReport::default(),
             image_buffer: vec![],
             phantom: PhantomData,
         };
@@ -81,6 +93,7 @@ impl<T: ToComponent> TestHarness<T> {
             .update_vars(true, &mut self.handle, &self.global_positions[..]);
         self.resize();
     }
+
     pub fn resize(&mut self) {
         let mut local_positions =
             vec![Rect::default(); self.component.largest_id().widget_id() as usize + 1];
@@ -219,7 +232,13 @@ impl<T: ToComponent> TestHarness<T> {
         if message.contains(char::is_whitespace) {
             panic!("Message should not contain any whitespace: {message}")
         }
-
+        let file_name = Path::new(file_path)
+            .file_stem()
+            .expect("filepath points to a rust file")
+            .to_str()
+            .expect("filename to be valid UTF-8");
+        self.report.total_tests += 1;
+        messages::start_test(file_name, message).unwrap();
         self.render();
         let new_image = ImageBuffer::<Rgba<u8>, _>::from_raw(
             self.size.width as u32,
@@ -238,24 +257,23 @@ impl<T: ToComponent> TestHarness<T> {
             .write(true)
             .open(gitignore)
             .and_then(|mut f| writeln!(f, "*.new.png\n.gitignore"));
-        let file_name = Path::new(file_path)
-            .file_stem()
-            .expect("filepath points to a rust file")
-            .to_str()
-            .expect("filename to be valid UTF-8");
         let reference_path = screenshot_dir.join(format!("{file_name}_{message}.png"));
         let new_path = screenshot_dir.join(format!("{file_name}_{message}.new.png"));
-        if let Ok(reference_file) = ImageReader::open(reference_path) {
+        if let Ok(reference_file) = ImageReader::open(&reference_path) {
             let reference_img = reference_file.decode().unwrap().to_rgba8();
             if !compare_images(&reference_img, &new_image) {
                 let _ = std::fs::remove_file(&new_path);
                 new_image.save(&new_path).unwrap();
-                panic!("")
+                self.report.failed_tests += 1;
+                messages::print_fail_test(&reference_path, &new_path).unwrap()
+            } else {
+                messages::print_pass_test().unwrap()
             }
         } else {
             let _ = std::fs::remove_file(&new_path);
             new_image.save(&new_path).unwrap();
-            panic!("No reference file");
+            self.report.wip_tests += 1;
+            messages::print_wip_test(&reference_path, &new_path).unwrap()
         }
     }
 
@@ -368,3 +386,18 @@ impl<T: ToComponent> TestHarness<T> {
 //         todo!()
 //     }
 // }
+
+impl<T: ToComponent> Drop for TestHarness<T> {
+    fn drop(&mut self) {
+        if !thread::panicking() {
+            if self.report.failed_tests > 0 {
+                panic!(
+                    "{} of {} tests failed",
+                    self.report.failed_tests, self.report.total_tests
+                );
+            } else if self.report.wip_tests > 0 {
+                panic!("created {} new images to check", self.report.wip_tests)
+            }
+        }
+    }
+}
