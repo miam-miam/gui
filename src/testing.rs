@@ -1,4 +1,5 @@
 mod messages;
+mod render;
 
 use crate::WindowState;
 use gui_core::glazier::kurbo::{Affine, Rect};
@@ -17,9 +18,12 @@ use std::ops::Deref;
 use std::path::Path;
 use std::thread;
 use wgpu::{
-    BufferAddress, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Extent3d, Maintain,
-    MapMode, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
+    Buffer, BufferAddress, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Device,
+    Extent3d, Maintain, MapMode, Queue, Texture, TextureDescriptor, TextureDimension,
+    TextureFormat, TextureUsages, TextureView,
 };
+
+const RGBA_SIZE: usize = std::mem::size_of::<u32>();
 
 #[macro_export]
 macro_rules! assert_screenshot {
@@ -59,10 +63,7 @@ where
     phantom: PhantomData<T>,
 }
 
-impl<T: ToComponent + 'static> TestHarness<T>
-where
-    <T as ToComponent>::Component: 'static,
-{
+impl<T: ToComponent> TestHarness<T> {
     pub fn new<S: Into<Size>>(component: T, size: S) -> Self {
         let mut harness = Self {
             window_state: WindowState::new(component.to_component_holder()),
@@ -75,14 +76,6 @@ where
         harness
     }
 
-    pub fn get_component(&mut self) -> &mut T {
-        self.window_state
-            .component
-            .get_comp_struct()
-            .downcast_mut::<T>()
-            .unwrap()
-    }
-
     fn init(&mut self, size: Size) {
         self.window_state.size = size;
         self.window_state.component.update_vars(
@@ -92,136 +85,6 @@ where
         );
         self.window_state.resize();
     }
-
-    fn render(&mut self) {
-        let (width, height) = (
-            self.window_state.size.width as u32,
-            self.window_state.size.height as u32,
-        );
-        let size = Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        };
-
-        // TODO Move out of here
-        let dev_id = pollster::block_on(self.window_state.render.device(None)).unwrap();
-        let device = &self.window_state.render.devices[dev_id].device;
-        let queue = &self.window_state.render.devices[dev_id].queue;
-        let texture_desc = TextureDescriptor {
-            size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: TextureDimension::D2,
-            format: TextureFormat::Rgba8Unorm,
-            usage: TextureUsages::COPY_SRC
-                | TextureUsages::RENDER_ATTACHMENT
-                | TextureUsages::STORAGE_BINDING,
-            label: None,
-            view_formats: &[TextureFormat::Rgba8UnormSrgb],
-        };
-        let texture = device.create_texture(&texture_desc);
-        let texture_view = texture.create_view(&Default::default());
-        let byte_aligned_width = (std::mem::size_of::<u32>() as u32 * width).next_multiple_of(256);
-
-        let output_buffer_size = (byte_aligned_width * height) as BufferAddress;
-        let output_buffer_desc = BufferDescriptor {
-            size: output_buffer_size,
-            usage: BufferUsages::COPY_DST
-                    // this tells wpgu that we want to read this buffer from the cpu
-                    | BufferUsages::MAP_READ,
-            label: None,
-            mapped_at_creation: false,
-        };
-        let output_buffer = device.create_buffer(&output_buffer_desc);
-        let renderer_options = RendererOptions {
-            surface_format: Some(TextureFormat::Rgba8UnormSrgb),
-            timestamp_period: queue.get_timestamp_period(),
-        };
-        let render_params = RenderParams {
-            base_color: Color::WHITE,
-            width,
-            height,
-        };
-
-        let mut sb = SceneBuilder::for_scene(&mut self.window_state.scene);
-        let mut fragment = SceneFragment::new();
-        let component = SceneBuilder::for_fragment(&mut fragment);
-        self.window_state.component.render(
-            component,
-            &mut self.window_state.handle,
-            &mut self.window_state.global_positions[..],
-            &mut self.window_state.active_widget,
-            &self.window_state.hovered_widgets[..],
-        );
-        sb.append(
-            &fragment,
-            Some(Affine::translate(
-                self.window_state.global_positions[0].origin().to_vec2(),
-            )),
-        );
-
-        self.window_state
-            .renderer
-            .get_or_insert_with(|| Renderer::new(device, &renderer_options).unwrap())
-            .render_to_texture(
-                device,
-                queue,
-                &self.window_state.scene,
-                &texture_view,
-                &render_params,
-            )
-            .unwrap();
-        device.poll(Maintain::Wait);
-
-        let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor {
-            label: Some("Copy out buffer"),
-        });
-        encoder.copy_texture_to_buffer(
-            wgpu::ImageCopyTexture {
-                aspect: wgpu::TextureAspect::All,
-                texture: &texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-            },
-            wgpu::ImageCopyBuffer {
-                buffer: &output_buffer,
-                layout: wgpu::ImageDataLayout {
-                    offset: 0,
-                    bytes_per_row: Some(byte_aligned_width),
-                    rows_per_image: Some(height),
-                },
-            },
-            texture_desc.size,
-        );
-
-        queue.submit(Some(encoder.finish()));
-
-        let buffer_slice = output_buffer.slice(..);
-
-        // NOTE: We have to create the mapping THEN device.poll() before await
-        // the future. Otherwise, the application will freeze.
-        let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
-        buffer_slice.map_async(MapMode::Read, move |result| {
-            tx.send(result).unwrap();
-        });
-        device.poll(Maintain::Wait);
-        pollster::block_on(rx.receive()).unwrap().unwrap();
-
-        let data = buffer_slice.get_mapped_range();
-        let capacity_needed = height as usize * width as usize * std::mem::size_of::<u32>();
-        if let Some(additional) = capacity_needed.checked_sub(self.image_buffer.capacity()) {
-            self.image_buffer.reserve(additional);
-        }
-        for row in 0..height {
-            let start = (row * byte_aligned_width) as usize;
-            let end = start + std::mem::size_of::<u32>() * width as usize;
-            self.image_buffer.extend_from_slice(&data[start..end])
-        }
-        drop(data);
-        output_buffer.unmap();
-    }
-
     fn get_screenshot_environment() -> String {
         option_env!("CI").map_or_else(
             || {
@@ -380,6 +243,19 @@ where
         };
         self.last_mouse_pos = Some(pointer_event.pos);
         self.window_state.pointer_move(&pointer_event);
+    }
+}
+
+impl<T: ToComponent + 'static> TestHarness<T>
+where
+    <T as ToComponent>::Component: 'static,
+{
+    pub fn get_component(&mut self) -> &mut T {
+        self.window_state
+            .component
+            .get_comp_struct()
+            .downcast_mut::<T>()
+            .unwrap()
     }
 }
 
