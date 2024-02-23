@@ -42,7 +42,7 @@ impl Text {
         let mut lcx = LayoutContext::new();
         let mut layout_builder = lcx.ranged_builder(fcx, &self.text, 1.0);
         layout_builder.push_default(&StyleProperty::FontSize(self.size));
-        layout_builder.push_default(&StyleProperty::FontWeight(FontWeight::SEMI_BOLD));
+        layout_builder.push_default(&StyleProperty::FontWeight(FontWeight::BOLD));
         layout_builder.push_default(&StyleProperty::Brush(ParleyBrush(Brush::Solid(
             self.colour.0,
         ))));
