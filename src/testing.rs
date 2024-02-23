@@ -2,12 +2,10 @@ mod messages;
 mod render;
 
 use crate::WindowState;
-use gui_core::glazier::kurbo::{Affine, Rect};
+use gui_core::glazier::kurbo::Rect;
 use gui_core::glazier::{PointerButton, PointerEvent, WinHandler};
-use gui_core::vello::peniko::Color;
-use gui_core::vello::{RenderParams, Renderer, RendererOptions, SceneFragment};
 use gui_core::widget::WidgetID;
-use gui_core::{Component, Point, SceneBuilder, Size, ToComponent};
+use gui_core::{Component, Point, Size, ToComponent};
 use image::io::Reader as ImageReader;
 use image::{ImageBuffer, Pixel, Rgba};
 use std::default::Default;
@@ -15,15 +13,8 @@ use std::fs::{create_dir_all, OpenOptions};
 use std::io::Write;
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::thread;
-use wgpu::{
-    Buffer, BufferAddress, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Device,
-    Extent3d, Maintain, MapMode, Queue, Texture, TextureDescriptor, TextureDimension,
-    TextureFormat, TextureUsages, TextureView,
-};
-
-const RGBA_SIZE: usize = std::mem::size_of::<u32>();
 
 #[macro_export]
 macro_rules! assert_screenshot {
@@ -43,6 +34,13 @@ fn compare_images<
     }
     let length = (lhs.width() * lhs.height() * P::CHANNEL_COUNT as u32) as usize;
     lhs.as_raw()[..length] == rhs.as_raw()[..length]
+}
+
+fn get_screenshot_environment() -> String {
+    option_env!("CI").map_or_else(
+        || option_env!("GUI_SCREENSHOT_RUNNER").map_or(String::new(), |s| String::from('_') + s),
+        |_| "_ci".into(),
+    )
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -85,21 +83,38 @@ impl<T: ToComponent> TestHarness<T> {
         );
         self.window_state.resize();
     }
-    fn get_screenshot_environment() -> String {
-        option_env!("CI").map_or_else(
-            || {
-                option_env!("GUI_SCREENSHOT_RUNNER")
-                    .map_or(String::new(), |s| String::from('_') + s)
-            },
-            |_| "_ci".into(),
-        )
-    }
 
     /// Returns the size of the widget (not the component)
     pub fn set_size<S: Into<Size>>(&mut self, size: S) -> Size {
         self.window_state.size = size.into();
         self.window_state.resize();
         self.window_state.global_positions[0].size()
+    }
+
+    fn create_screenshot_paths(&self, source_file_name: &str, message: &str) -> (PathBuf, PathBuf) {
+        let cargo_dir_env =
+            std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR should be set by cargo");
+        let cargo_dir = Path::new(&cargo_dir_env);
+
+        let screenshot_dir = cargo_dir.join("screenshots");
+        let wip_dir = screenshot_dir.join("wip");
+        create_dir_all(&wip_dir).expect("screenshots folder can be created");
+
+        let gitignore = screenshot_dir.join(".gitignore");
+        let _ = OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(gitignore)
+            .and_then(|mut f| writeln!(f, "wip\n.gitignore"));
+
+        let screenshot_runner = get_screenshot_environment();
+
+        let count = self.report.total_tests - 1;
+        let file_name = format!("{source_file_name}_{count:03}_{message}{screenshot_runner}.png");
+        let reference_path = screenshot_dir.join(&file_name);
+        let new_path = wip_dir.join(&file_name);
+
+        (reference_path, new_path)
     }
 
     pub fn take_screenshot(&mut self, file_path: &str, message: &str) {
@@ -126,28 +141,7 @@ impl<T: ToComponent> TestHarness<T> {
         )
         .expect("generated image is valid");
 
-        let cargo_dir_env =
-            std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR should be set by cargo");
-        let cargo_dir = Path::new(&cargo_dir_env);
-        let screenshot_dir = cargo_dir.join("screenshots");
-        let wip_dir = screenshot_dir.join("wip");
-        create_dir_all(&wip_dir).expect("screenshots folder can be created");
-        let gitignore = screenshot_dir.join(".gitignore");
-
-        let _ = OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .open(gitignore)
-            .and_then(|mut f| writeln!(f, "wip\n.gitignore"));
-
-        let screenshot_runner = Self::get_screenshot_environment();
-        let count = self.report.total_tests - 1;
-        let reference_path = screenshot_dir.join(format!(
-            "{file_name}_{count:03}_{message}{screenshot_runner}.png"
-        ));
-        let new_path = wip_dir.join(format!(
-            "{file_name}_{count:03}_{message}{screenshot_runner}.png"
-        ));
+        let (reference_path, new_path) = self.create_screenshot_paths(file_name, message);
 
         if let Ok(reference_file) = ImageReader::open(&reference_path) {
             let reference_img = reference_file.decode().unwrap().to_rgba8();
