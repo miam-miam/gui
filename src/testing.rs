@@ -228,6 +228,16 @@ impl<T: ToComponent> TestHarness<T> {
         output_buffer.unmap();
     }
 
+    fn get_screenshot_environment() -> String {
+        option_env!("CI").map_or_else(
+            || {
+                option_env!("GUI_SCREENSHOT_RUNNER")
+                    .map_or(String::new(), |s| String::from('_') + s)
+            },
+            |_| "_ci".into(),
+        )
+    }
+
     pub fn take_screenshot(&mut self, file_path: &str, message: &str) {
         if message.contains(char::is_whitespace) {
             panic!("Message should not contain any whitespace: {message}")
@@ -257,8 +267,11 @@ impl<T: ToComponent> TestHarness<T> {
             .write(true)
             .open(gitignore)
             .and_then(|mut f| writeln!(f, "*.new.png\n.gitignore"));
-        let reference_path = screenshot_dir.join(format!("{file_name}_{message}.png"));
-        let new_path = screenshot_dir.join(format!("{file_name}_{message}.new.png"));
+        let screenshot_runner = Self::get_screenshot_environment();
+        let reference_path =
+            screenshot_dir.join(format!("{file_name}_{message}{screenshot_runner}.png"));
+        let new_path =
+            screenshot_dir.join(format!("{file_name}_{message}{screenshot_runner}.new.png"));
         if let Ok(reference_file) = ImageReader::open(&reference_path) {
             let reference_img = reference_file.decode().unwrap().to_rgba8();
             if !compare_images(&reference_img, &new_image) {

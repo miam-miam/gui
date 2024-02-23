@@ -1,7 +1,7 @@
 use std::io;
 use std::io::Write;
 use std::path::Path;
-use termcolor::{Color, ColorChoice, ColorSpec, HyperlinkSpec, StandardStream, WriteColor};
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 pub(crate) fn start_test(filename: &str, message: &str) -> io::Result<()> {
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
