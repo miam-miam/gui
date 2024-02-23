@@ -8,6 +8,7 @@ pub mod layout;
 pub use layout::LayoutConstraints;
 pub use parse::colour::Colour;
 pub use parse::var::Var;
+use std::any::Any;
 pub use vello::kurbo::Size;
 
 pub use glazier;
@@ -59,6 +60,8 @@ pub trait Component {
     fn largest_id(&self) -> WidgetID;
     fn get_parent(&self, id: WidgetID) -> Option<WidgetID>;
     fn get_id(&self, name: &str) -> Option<WidgetID>;
+    // Only used for the test harness.
+    fn get_comp_struct(&mut self) -> &mut dyn Any;
     fn event<'a>(
         &mut self,
         id: WidgetID,

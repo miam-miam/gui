@@ -57,8 +57,8 @@ pub(crate) fn print_wip_test(expected: &Path, wip: &Path) -> io::Result<()> {
     writeln!(&mut stdout, ".")?;
     writeln!(
         &mut stdout,
-        "Rename the file to `{}` to accept it as correct.",
-        expected.display()
+        "Move the file to it's parent directory `{}` to accept it as correct.",
+        expected.parent().unwrap().display()
     )?;
     stdout.reset()?;
     Ok(())

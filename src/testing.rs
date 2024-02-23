@@ -1,13 +1,15 @@
 mod messages;
 
+use crate::WindowState;
 use gui_core::glazier::kurbo::{Affine, Rect};
+use gui_core::glazier::{PointerButton, PointerEvent, WinHandler};
 use gui_core::vello::peniko::Color;
-use gui_core::vello::util::RenderContext;
-use gui_core::vello::{RenderParams, Renderer, RendererOptions, Scene, SceneFragment};
-use gui_core::widget::{Handle, WidgetEvent, WidgetID};
-use gui_core::{Component, LayoutConstraints, SceneBuilder, Size, ToComponent};
+use gui_core::vello::{RenderParams, Renderer, RendererOptions, SceneFragment};
+use gui_core::widget::WidgetID;
+use gui_core::{Component, Point, SceneBuilder, Size, ToComponent};
 use image::io::Reader as ImageReader;
 use image::{ImageBuffer, Pixel, Rgba};
+use std::default::Default;
 use std::fs::{create_dir_all, OpenOptions};
 use std::io::Write;
 use std::marker::PhantomData;
@@ -23,9 +25,6 @@ use wgpu::{
 macro_rules! assert_screenshot {
     ($harness:expr, $($arg:tt)*) => {$harness.take_screenshot(file!(), &format!($($arg)*))};
 }
-
-const WIDTH: usize = 512;
-const HEIGHT: usize = 512;
 
 fn compare_images<
     P: Pixel,
@@ -49,76 +48,56 @@ struct TestReport {
     wip_tests: u32,
 }
 
-pub struct TestHarness<T: ToComponent> {
-    handle: Handle,
-    renderer: Option<Renderer>,
-    render: RenderContext,
-    scene: Scene,
-    size: Size,
-    global_positions: Vec<Rect>,
-    active_widget: Option<WidgetID>,
-    hovered_widgets: Vec<WidgetID>,
-    component: T::Component,
+pub struct TestHarness<T: ToComponent>
+where
+    <T as ToComponent>::Component: 'static,
+{
+    window_state: WindowState<T::Component>,
     image_buffer: Vec<u8>,
     report: TestReport,
+    last_mouse_pos: Option<Point>,
     phantom: PhantomData<T>,
 }
 
-impl<T: ToComponent> TestHarness<T> {
+impl<T: ToComponent + 'static> TestHarness<T>
+where
+    <T as ToComponent>::Component: 'static,
+{
     pub fn new(component: T) -> Self {
-        let render = RenderContext::new().unwrap();
         let mut harness = Self {
-            handle: Default::default(),
-            renderer: None,
-            render,
-            scene: Default::default(),
-            active_widget: None,
-            hovered_widgets: vec![],
-            global_positions: vec![
-                Rect::default();
-                component.largest_id().widget_id() as usize + 1
-            ],
-            component: component.to_component_holder(),
-            size: Size::new(512.0, 512.0),
+            window_state: WindowState::new(component.to_component_holder()),
             report: TestReport::default(),
             image_buffer: vec![],
+            last_mouse_pos: None,
             phantom: PhantomData,
         };
         harness.init();
         harness
     }
 
+    pub fn get_component(&mut self) -> &mut T {
+        self.window_state
+            .component
+            .get_comp_struct()
+            .downcast_mut::<T>()
+            .unwrap()
+    }
+
     fn init(&mut self) {
-        self.component
-            .update_vars(true, &mut self.handle, &self.global_positions[..]);
-        self.resize();
-    }
-
-    pub fn resize(&mut self) {
-        let mut local_positions =
-            vec![Rect::default(); self.component.largest_id().widget_id() as usize + 1];
-        let size = self.component.resize(
-            LayoutConstraints::new_max(self.size),
-            &mut self.handle,
-            &mut local_positions[..],
+        self.window_state.size = Size::new(512.0, 512.0);
+        self.window_state.component.update_vars(
+            true,
+            &mut self.window_state.handle,
+            &self.window_state.global_positions[..],
         );
-
-        self.global_positions[0] =
-            Rect::from_center_size((self.size.width / 2.0, self.size.height / 2.0), size);
-
-        for (i, rect) in local_positions.into_iter().enumerate() {
-            if let Some(parent) = self.component.get_parent(WidgetID::new(
-                self.component.largest_id().component_id(),
-                i as u32,
-            )) {
-                let parent_rect = self.global_positions[parent.widget_id() as usize];
-                self.global_positions[i] = rect + parent_rect.origin().to_vec2();
-            }
-        }
+        self.window_state.resize();
     }
 
-    pub fn render(&mut self) {
-        let (width, height) = (self.size.width as u32, self.size.height as u32);
+    fn render(&mut self) {
+        let (width, height) = (
+            self.window_state.size.width as u32,
+            self.window_state.size.height as u32,
+        );
         let size = Extent3d {
             width,
             height,
@@ -126,9 +105,9 @@ impl<T: ToComponent> TestHarness<T> {
         };
 
         // TODO Move out of here
-        let dev_id = pollster::block_on(self.render.device(None)).unwrap();
-        let device = &self.render.devices[dev_id].device;
-        let queue = &self.render.devices[dev_id].queue;
+        let dev_id = pollster::block_on(self.window_state.render.device(None)).unwrap();
+        let device = &self.window_state.render.devices[dev_id].device;
+        let queue = &self.window_state.render.devices[dev_id].queue;
         let texture_desc = TextureDescriptor {
             size,
             mip_level_count: 1,
@@ -165,26 +144,33 @@ impl<T: ToComponent> TestHarness<T> {
             height,
         };
 
-        let mut sb = SceneBuilder::for_scene(&mut self.scene);
+        let mut sb = SceneBuilder::for_scene(&mut self.window_state.scene);
         let mut fragment = SceneFragment::new();
         let component = SceneBuilder::for_fragment(&mut fragment);
-        self.component.render(
+        self.window_state.component.render(
             component,
-            &mut self.handle,
-            &mut self.global_positions[..],
-            &mut self.active_widget,
-            &self.hovered_widgets[..],
+            &mut self.window_state.handle,
+            &mut self.window_state.global_positions[..],
+            &mut self.window_state.active_widget,
+            &self.window_state.hovered_widgets[..],
         );
         sb.append(
             &fragment,
             Some(Affine::translate(
-                self.global_positions[0].origin().to_vec2(),
+                self.window_state.global_positions[0].origin().to_vec2(),
             )),
         );
 
-        self.renderer
+        self.window_state
+            .renderer
             .get_or_insert_with(|| Renderer::new(device, &renderer_options).unwrap())
-            .render_to_texture(device, queue, &self.scene, &texture_view, &render_params)
+            .render_to_texture(
+                device,
+                queue,
+                &self.window_state.scene,
+                &texture_view,
+                &render_params,
+            )
             .unwrap();
         device.poll(Maintain::Wait);
 
@@ -238,40 +224,60 @@ impl<T: ToComponent> TestHarness<T> {
         )
     }
 
+    /// Returns the size of the widget (not the component)
+    pub fn set_size<S: Into<Size>>(&mut self, size: S) -> Size {
+        self.window_state.size = size.into();
+        self.window_state.resize();
+        self.window_state.global_positions[0].size()
+    }
+
     pub fn take_screenshot(&mut self, file_path: &str, message: &str) {
         if message.contains(char::is_whitespace) {
             panic!("Message should not contain any whitespace: {message}")
         }
+
+        self.report.total_tests += 1;
         let file_name = Path::new(file_path)
             .file_stem()
             .expect("filepath points to a rust file")
             .to_str()
             .expect("filename to be valid UTF-8");
-        self.report.total_tests += 1;
         messages::start_test(file_name, message).unwrap();
+
+        self.window_state.prepare_paint();
+        self.image_buffer.clear();
         self.render();
+
         let new_image = ImageBuffer::<Rgba<u8>, _>::from_raw(
-            self.size.width as u32,
-            self.size.height as u32,
+            self.window_state.size.width as u32,
+            self.window_state.size.height as u32,
             &self.image_buffer[..],
         )
         .expect("generated image is valid");
+
         let cargo_dir_env =
             std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR should be set by cargo");
         let cargo_dir = Path::new(&cargo_dir_env);
         let screenshot_dir = cargo_dir.join("screenshots");
-        create_dir_all(&screenshot_dir).expect("screenshots folder can be created");
+        let wip_dir = screenshot_dir.join("wip");
+        create_dir_all(&wip_dir).expect("screenshots folder can be created");
         let gitignore = screenshot_dir.join(".gitignore");
+
         let _ = OpenOptions::new()
             .create_new(true)
             .write(true)
             .open(gitignore)
-            .and_then(|mut f| writeln!(f, "*.new.png\n.gitignore"));
+            .and_then(|mut f| writeln!(f, "wip\n.gitignore"));
+
         let screenshot_runner = Self::get_screenshot_environment();
-        let reference_path =
-            screenshot_dir.join(format!("{file_name}_{message}{screenshot_runner}.png"));
-        let new_path =
-            screenshot_dir.join(format!("{file_name}_{message}{screenshot_runner}.new.png"));
+        let count = self.report.total_tests - 1;
+        let reference_path = screenshot_dir.join(format!(
+            "{file_name}_{count:03}_{message}{screenshot_runner}.png"
+        ));
+        let new_path = wip_dir.join(format!(
+            "{file_name}_{count:03}_{message}{screenshot_runner}.png"
+        ));
+
         if let Ok(reference_file) = ImageReader::open(&reference_path) {
             let reference_img = reference_file.decode().unwrap().to_rgba8();
             if !compare_images(&reference_img, &new_image) {
@@ -290,115 +296,84 @@ impl<T: ToComponent> TestHarness<T> {
         }
     }
 
-    fn send_component_event(&mut self, id: WidgetID, event: WidgetEvent) -> bool {
-        self.component.event(
-            id,
-            event,
-            &mut self.handle,
-            &self.global_positions[..],
-            &mut self.active_widget,
-            &mut self.hovered_widgets,
+    pub fn get_id(&self, name: &str) -> Option<WidgetID> {
+        self.window_state.component.get_id(name)
+    }
+
+    pub fn get_local_rect(&self, id: WidgetID) -> Rect {
+        Rect::from_origin_size(
+            (0.0, 0.0),
+            self.window_state.global_positions[id.widget_id() as usize].size(),
         )
     }
 
-    fn propagate_component_event(&mut self, event: WidgetEvent) -> bool {
-        self.component.propagate_event(
-            event,
-            &mut self.handle,
-            &self.global_positions[..],
-            &mut self.active_widget,
-            &mut self.hovered_widgets,
-        )
+    fn get_global_point(&self, id: WidgetID, local_pos: Point) -> Point {
+        (self.window_state.global_positions[id.widget_id() as usize]
+            .origin()
+            .to_vec2()
+            + local_pos.to_vec2())
+        .to_point()
+    }
+
+    pub fn simulate_pointer_down_up(&mut self, button: PointerButton, local_pos: Option<WidgetID>) {
+        self.simulate_pointer_down(button, local_pos);
+        self.simulate_pointer_up(button, local_pos);
+    }
+
+    pub fn simulate_pointer_down(&mut self, button: PointerButton, local_pos: Option<WidgetID>) {
+        let pos = local_pos.map_or_else(
+            || {
+                self.last_mouse_pos
+                    .unwrap_or_else(|| self.window_state.size.to_rect().center())
+            },
+            |id| self.window_state.global_positions[id.widget_id() as usize].center(),
+        );
+        let mut pointer_event = PointerEvent {
+            pos,
+            ..PointerEvent::default()
+        };
+
+        if Some(pointer_event.pos) != self.last_mouse_pos {
+            self.last_mouse_pos = Some(pointer_event.pos);
+            self.window_state.pointer_move(&pointer_event);
+        }
+        pointer_event.button = button;
+
+        self.window_state.pointer_down(&pointer_event);
+    }
+
+    pub fn simulate_pointer_up(&mut self, button: PointerButton, local_pos: Option<WidgetID>) {
+        let pos = local_pos.map_or_else(
+            || {
+                self.last_mouse_pos
+                    .unwrap_or_else(|| self.window_state.size.to_rect().center())
+            },
+            |id| self.window_state.global_positions[id.widget_id() as usize].center(),
+        );
+        let mut pointer_event = PointerEvent {
+            pos,
+            ..PointerEvent::default()
+        };
+
+        if Some(pointer_event.pos) != self.last_mouse_pos {
+            self.last_mouse_pos = Some(pointer_event.pos);
+            self.window_state.pointer_move(&pointer_event);
+        }
+        pointer_event.button = button;
+
+        self.window_state.pointer_up(&pointer_event);
+    }
+
+    pub fn simulate_pointer_move(&mut self, id: WidgetID, local_pos: Option<Point>) {
+        let pos = local_pos.unwrap_or_else(|| self.get_local_rect(id).center());
+        let pointer_event = PointerEvent {
+            pos: self.get_global_point(id, pos),
+            ..PointerEvent::default()
+        };
+        self.last_mouse_pos = Some(pointer_event.pos);
+        self.window_state.pointer_move(&pointer_event);
     }
 }
-//
-// impl<C: Component + 'static> WinHandler for TestHarness<C> {
-//     fn connect(&mut self, handle: &WindowHandle) {
-//         self.handle.window = handle.clone();
-//         self.component
-//             .update_vars(true, &mut self.handle, &self.global_positions[..]);
-//         self.resize();
-//         self.render();
-//     }
-//
-//     fn prepare_paint(&mut self) {
-//         if self
-//             .component
-//             .update_vars(false, &mut self.handle, &self.global_positions[..])
-//         {
-//             self.resize();
-//         }
-//     }
-//
-//     fn paint(&mut self, _: &Region) {
-//         self.render();
-//     }
-//
-//     fn pointer_move(&mut self, event: &PointerEvent) {
-//         self.handle.window.set_cursor(&Cursor::Arrow);
-//         let mouse_point = event.pos;
-//         let un_hovered_widgets = self
-//             .hovered_widgets
-//             .iter()
-//             .filter(|i| !self.global_positions[i.widget_id() as usize].contains(mouse_point))
-//             .copied()
-//             .collect_vec();
-//
-//         self.hovered_widgets = self
-//             .hovered_widgets
-//             .iter()
-//             .copied()
-//             .filter(|i| self.global_positions[i.widget_id() as usize].contains(mouse_point))
-//             .collect_vec();
-//
-//         let mut resize = false;
-//         for id in un_hovered_widgets.into_iter() {
-//             if self.send_component_event(id, WidgetEvent::HoverChange) {
-//                 resize = true;
-//             }
-//         }
-//
-//         let event_resize = if let Some(id) = self.active_widget {
-//             self.send_component_event(id, WidgetEvent::PointerMove(event))
-//         } else {
-//             self.propagate_component_event(WidgetEvent::PointerMove(event))
-//         };
-//         let var_resize =
-//             self.component
-//                 .update_vars(false, &mut self.handle, &self.global_positions[..]);
-//
-//         if event_resize || var_resize || resize {
-//             self.resize();
-//         }
-//     }
-//
-//     fn pointer_down(&mut self, event: &PointerEvent) {
-//         let event_resize = self.propagate_component_event(WidgetEvent::PointerDown(event));
-//         let var_resize =
-//             self.component
-//                 .update_vars(false, &mut self.handle, &self.global_positions[..]);
-//         if event_resize || var_resize {
-//             self.resize();
-//         }
-//     }
-//
-//     fn pointer_up(&mut self, event: &PointerEvent) {
-//         let event_resize = if let Some(id) = self.active_widget {
-//             self.send_component_event(id, WidgetEvent::PointerUp(event))
-//         } else {
-//             self.propagate_component_event(WidgetEvent::PointerUp(event))
-//         };
-//         let var_resize =
-//             self.component
-//                 .update_vars(false, &mut self.handle, &self.global_positions[..]);
-//         if event_resize || var_resize {
-//             self.resize();
-//         }
-//     }
-//     fn as_any(&mut self) -> &mut dyn Any {
-//         todo!()
-//     }
-// }
 
 impl<T: ToComponent> Drop for TestHarness<T> {
     fn drop(&mut self) {
