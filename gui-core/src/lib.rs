@@ -58,6 +58,7 @@ pub trait Component {
     ) -> bool;
     fn largest_id(&self) -> WidgetID;
     fn get_parent(&self, id: WidgetID) -> Option<WidgetID>;
+    fn get_id(&self, name: &str) -> Option<WidgetID>;
     fn event<'a>(
         &mut self,
         id: WidgetID,
@@ -74,6 +75,7 @@ pub trait ToComponent {
     fn to_component_holder(self) -> Self::Component;
     fn largest_id(&self) -> WidgetID;
     fn get_parent(&self, id: WidgetID) -> Option<WidgetID>;
+    fn get_id(&self, name: &str) -> Option<WidgetID>;
 }
 
 pub trait Variable {

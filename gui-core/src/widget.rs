@@ -92,7 +92,7 @@ impl<T: Any> AsAny for T {
     }
 }
 
-#[typetag::deserialize(tag = "widget", content = "properties")]
+#[typetag::deserialize(tag = "widget", content = "properties", deny_unknown_fields)]
 pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
     fn widget_type(
         &self,

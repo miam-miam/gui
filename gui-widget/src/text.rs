@@ -106,7 +106,7 @@ impl<C: ToComponent> Widget<C> for Text {
     fn event(&mut self, _event: WidgetEvent, _handle: &mut EventHandle<C>) {}
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
 pub struct TextBuilder {
     pub text: Option<Fluent>,

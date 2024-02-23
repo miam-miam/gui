@@ -105,6 +105,12 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         quote!(#( #unwrapped_vals )|* => Some(#parent),)
     });
 
+    let named_match_arms = widget_tree.iter().filter_map(|w| {
+        let name = w.widget_declaration.name.as_ref()?.as_str();
+        let id = w.id;
+        Some(quote!(#name => Some(#id),))
+    });
+
     let gen_module = quote! {
         #[allow(clippy::suspicious_else_formatting)]
         mod gen {
@@ -148,6 +154,13 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                 fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
                     match (id.component_id(), id.widget_id()) {
                         #(#parent_match_arms)*
+                        _ => None,
+                    }
+                }
+
+                fn get_id(&self, name: &str) -> Option<WidgetID> {
+                    match name {
+                        #(#named_match_arms)*
                         _ => None,
                     }
                 }
@@ -218,6 +231,10 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
 
                 fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
                     self.comp_struct.get_parent(id)
+                }
+
+                fn get_id(&self, name: &str) -> Option<WidgetID> {
+                    self.comp_struct.get_id(name)
                 }
 
                 fn event<'a>(
