@@ -8,6 +8,7 @@ pub mod layout;
 pub use layout::LayoutConstraints;
 pub use parse::colour::Colour;
 pub use parse::var::Var;
+use std::any::Any;
 pub use vello::kurbo::Size;
 
 pub use glazier;
@@ -58,6 +59,9 @@ pub trait Component {
     ) -> bool;
     fn largest_id(&self) -> WidgetID;
     fn get_parent(&self, id: WidgetID) -> Option<WidgetID>;
+    fn get_id(&self, name: &str) -> Option<WidgetID>;
+    // Only used for the test harness.
+    fn get_comp_struct(&mut self) -> &mut dyn Any;
     fn event<'a>(
         &mut self,
         id: WidgetID,
@@ -74,6 +78,7 @@ pub trait ToComponent {
     fn to_component_holder(self) -> Self::Component;
     fn largest_id(&self) -> WidgetID;
     fn get_parent(&self, id: WidgetID) -> Option<WidgetID>;
+    fn get_id(&self, name: &str) -> Option<WidgetID>;
 }
 
 pub trait Variable {
@@ -88,19 +93,4 @@ pub trait Update<T: Variable> {
     fn is_updated(&self) -> bool;
     fn value(&self) -> T::VarType;
     fn reset(&mut self) {}
-}
-
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
 }

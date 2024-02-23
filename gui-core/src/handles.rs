@@ -20,6 +20,14 @@ impl Default for Handle {
     }
 }
 
+impl Handle {
+    pub fn if_window<F: FnOnce(&mut WindowHandle)>(&mut self, f: F) {
+        if self.window != WindowHandle::default() {
+            f(&mut self.window);
+        }
+    }
+}
+
 pub struct UpdateHandle<'a> {
     handle: &'a mut Handle,
     global_positions: &'a [Rect],
@@ -45,7 +53,7 @@ impl<'a> UpdateHandle<'a> {
     }
     pub fn invalidate_id(&mut self, id: WidgetID) {
         let rect = self.global_positions[id.widget_id() as usize];
-        self.handle.window.invalidate_rect(rect);
+        self.handle.if_window(|w| w.invalidate_rect(rect));
     }
     pub fn invalidate_rect(&mut self, id: WidgetID, local_rect: Rect) {
         let global_rect = self.global_positions[id.widget_id() as usize];
@@ -214,7 +222,7 @@ impl<'a, T: ToComponent> EventHandle<'a, T> {
 
     pub fn invalidate_id(&mut self, id: WidgetID) {
         let rect = self.global_positions[id.widget_id() as usize];
-        self.handle.window.invalidate_rect(rect);
+        self.handle.if_window(|w| w.invalidate_rect(rect));
     }
 
     pub fn invalidate_rect(&mut self, id: WidgetID, local_rect: Rect) {
@@ -296,7 +304,7 @@ impl<'a, T: ToComponent> EventHandle<'a, T> {
         self.hovered_widgets.contains(&id)
     }
     pub fn set_cursor(&mut self, cursor: &Cursor) {
-        self.handle.window.set_cursor(cursor)
+        self.handle.if_window(|w| w.set_cursor(cursor))
     }
     pub fn get_handler(&mut self) -> &mut T {
         self.comp_struct

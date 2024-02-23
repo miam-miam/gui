@@ -23,6 +23,27 @@ To install them on Debian or Ubuntu, run
 sudo apt-get install pkg-config clang libwayland-dev libxkbcommon-x11-dev libvulkan-dev
 ```
 
+### CI
+
+To run tests in CI install a software render
+```yaml
+- name: install llvmpipe and lavapipe (sofware based renderers)
+  shell: bash
+  run: |
+    set -e
+
+    sudo apt-get update -y -qq
+
+    # vulkan sdk
+    wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+    sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
+
+    sudo add-apt-repository ppa:kisak/kisak-mesa
+
+    sudo apt-get update
+    sudo apt install -y libegl1-mesa libgl1-mesa-dri libxcb-xfixes0-dev vulkan-sdk mesa-vulkan-drivers
+```
+
 ## Styling
 
 Default styles are currently adapted from https://github.com/mantinedev/mantine.

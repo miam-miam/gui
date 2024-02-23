@@ -1,3 +1,4 @@
+mod testing;
 mod update;
 
 use gui_core::glazier::kurbo::{Affine, Rect, Size};
@@ -22,13 +23,17 @@ pub use gui_derive::ToComponent;
 
 pub use gui_widget;
 
+pub use gui_core::glazier::PointerButton;
+
 use gui_core::widget::{Handle, WidgetEvent, WidgetID};
 pub use gui_core::Update;
 use itertools::Itertools;
+pub use testing::TestHarness;
 pub use update::Updateable;
+use wgpu::Maintain;
 
-const WIDTH: usize = 2048;
-const HEIGHT: usize = 1536;
+const WIDTH: usize = 1024;
+const HEIGHT: usize = 768;
 
 pub fn run<T: ToComponent>(component: T)
 where
@@ -39,7 +44,7 @@ where
         .init();
     let app = Application::new().unwrap();
     let window = WindowBuilder::new(app.clone())
-        .size((WIDTH as f64 / 2., HEIGHT as f64 / 2.).into())
+        .size((WIDTH as f64, HEIGHT as f64).into())
         .handler(Box::new(WindowState::new(component.to_component_holder())))
         .build()
         .unwrap();
@@ -76,7 +81,7 @@ impl<C: Component> WindowState<C> {
                 component.largest_id().widget_id() as usize + 1
             ],
             component,
-            size: Size::new(800.0, 600.0),
+            size: Size::new(WIDTH as f64, HEIGHT as f64),
         }
     }
 
@@ -106,6 +111,9 @@ impl<C: Component> WindowState<C> {
 
     fn surface_size(&self) -> (u32, u32) {
         let window = &self.handle.window;
+        if window == &WindowHandle::default() {
+            return (self.size.width as u32, self.size.height as u32);
+        }
         let scale = window.get_scale().unwrap_or_default();
         let insets = window.content_insets().to_px(scale);
         let mut size = window.get_size().to_px(scale);
@@ -167,7 +175,7 @@ impl<C: Component> WindowState<C> {
                 .render_to_surface(device, queue, &self.scene, &surface_texture, &render_params)
                 .unwrap();
             surface_texture.present();
-            device.poll(wgpu_types::Maintain::Wait);
+            device.poll(Maintain::Wait);
         }
     }
 
@@ -246,7 +254,9 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
     }
 
     fn pointer_move(&mut self, event: &PointerEvent) {
-        self.handle.window.set_cursor(&Cursor::Arrow);
+        if self.handle.window != WindowHandle::default() {
+            self.handle.window.set_cursor(&Cursor::Arrow);
+        }
         let mouse_point = event.pos;
         let un_hovered_widgets = self
             .hovered_widgets

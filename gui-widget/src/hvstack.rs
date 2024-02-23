@@ -257,7 +257,7 @@ impl WidgetBuilder for VStackBuilder {
     }
 
     fn name(&self) -> &'static str {
-        "HStack"
+        "VStack"
     }
     fn combine(&mut self, rhs: &dyn WidgetBuilder) {
         if let Some(other) = rhs.as_any().downcast_ref::<Self>() {
