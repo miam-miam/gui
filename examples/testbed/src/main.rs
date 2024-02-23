@@ -38,11 +38,11 @@ mod test {
 
     #[test]
     fn test() {
-        let mut harness = TestHarness::new(Counter::default());
+        let mut harness = TestHarness::new(Counter::default(), (500.0, 500.0));
         assert_screenshot!(harness, "valid_start_state");
         harness.set_size((1024.0, 1024.0));
         assert_screenshot!(harness, "larger_resize");
-        harness.set_size((512.0, 512.0));
+        harness.set_size((500.0, 500.0));
         let incr_btn = harness.get_id("IncrementBtn").unwrap();
         let decr_btn = harness.get_id("DecrementBtn").unwrap();
 

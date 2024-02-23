@@ -63,7 +63,7 @@ impl<T: ToComponent + 'static> TestHarness<T>
 where
     <T as ToComponent>::Component: 'static,
 {
-    pub fn new(component: T) -> Self {
+    pub fn new<S: Into<Size>>(component: T, size: S) -> Self {
         let mut harness = Self {
             window_state: WindowState::new(component.to_component_holder()),
             report: TestReport::default(),
@@ -71,7 +71,7 @@ where
             last_mouse_pos: None,
             phantom: PhantomData,
         };
-        harness.init();
+        harness.init(size.into());
         harness
     }
 
@@ -83,8 +83,8 @@ where
             .unwrap()
     }
 
-    fn init(&mut self) {
-        self.window_state.size = Size::new(512.0, 512.0);
+    fn init(&mut self, size: Size) {
+        self.window_state.size = size;
         self.window_state.component.update_vars(
             true,
             &mut self.window_state.handle,
@@ -122,9 +122,9 @@ where
         };
         let texture = device.create_texture(&texture_desc);
         let texture_view = texture.create_view(&Default::default());
-        let u32_size = std::mem::size_of::<u32>() as u32;
+        let byte_aligned_width = (std::mem::size_of::<u32>() as u32 * width).next_multiple_of(256);
 
-        let output_buffer_size = (u32_size * width * height) as BufferAddress;
+        let output_buffer_size = (byte_aligned_width * height) as BufferAddress;
         let output_buffer_desc = BufferDescriptor {
             size: output_buffer_size,
             usage: BufferUsages::COPY_DST
@@ -188,7 +188,7 @@ where
                 buffer: &output_buffer,
                 layout: wgpu::ImageDataLayout {
                     offset: 0,
-                    bytes_per_row: Some(u32_size * width),
+                    bytes_per_row: Some(byte_aligned_width),
                     rows_per_image: Some(height),
                 },
             },
@@ -209,7 +209,15 @@ where
         pollster::block_on(rx.receive()).unwrap().unwrap();
 
         let data = buffer_slice.get_mapped_range();
-        self.image_buffer.extend_from_slice(&data);
+        let capacity_needed = height as usize * width as usize * std::mem::size_of::<u32>();
+        if let Some(additional) = capacity_needed.checked_sub(self.image_buffer.capacity()) {
+            self.image_buffer.reserve(additional);
+        }
+        for row in 0..height {
+            let start = (row * byte_aligned_width) as usize;
+            let end = start + std::mem::size_of::<u32>() * width as usize;
+            self.image_buffer.extend_from_slice(&data[start..end])
+        }
         drop(data);
         output_buffer.unmap();
     }
