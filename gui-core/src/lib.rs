@@ -94,18 +94,3 @@ pub trait Update<T: Variable> {
     fn value(&self) -> T::VarType;
     fn reset(&mut self) {}
 }
-
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}

@@ -96,6 +96,3 @@ fn add_info_to_env(static_gui: &GUIDeclaration) {
         );
     }
 }
-
-#[cfg(test)]
-mod tests {}
