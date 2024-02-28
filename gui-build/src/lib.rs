@@ -33,7 +33,7 @@ fn build_path(path: &Path) -> anyhow::Result<()> {
 
     for component in ser.components.iter_mut() {
         component::create_component(path, component)
-            .with_context(|| format!("Failed to create component {}", component.name))?;
+            .with_context(|| format!("Failed to create component {}", component.name.as_str()))?;
     }
 
     println!("cargo:rerun-if-changed={}", path.display());
@@ -82,7 +82,11 @@ fn combine_style(
 }
 
 fn add_info_to_env(static_gui: &GUIDeclaration) {
-    let components = static_gui.components.iter().map(|c| &c.name).format(",");
+    let components = static_gui
+        .components
+        .iter()
+        .map(|c| c.name.as_str())
+        .format(",");
     println!("cargo:rustc-env=GUI_COMPONENTS={components}");
     for component in &static_gui.components {
         let variables = component
@@ -92,7 +96,7 @@ fn add_info_to_env(static_gui: &GUIDeclaration) {
             .format(",");
         println!(
             "cargo:rustc-env=GUI_COMPONENT_{}={variables}",
-            component.name
+            component.name.as_str()
         );
     }
 }

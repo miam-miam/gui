@@ -10,7 +10,7 @@ use std::path::Path;
 use std::str::FromStr;
 
 pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> anyhow::Result<()> {
-    let component_holder = format_ident!("{}Holder", component.name);
+    let component_holder = format_ident!("{}Holder", *component.name);
 
     let normal_variables: Vec<&NormalVariableDeclaration> = component
         .variables
@@ -79,7 +79,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let mut struct_handlers = TokenStream::new();
     widget_tree.gen_handler_structs(&mut struct_handlers)?;
 
-    let rs_path = Path::new(&out_dir).join(format!("{}.rs", component.name));
+    let rs_path = Path::new(&out_dir).join(format!("{}.rs", component.name.as_str()));
 
     let widget_type = widget_tree.gen_widget_type();
     let widget_init = widget_tree.gen_widget_init();
