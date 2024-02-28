@@ -85,6 +85,7 @@ pub struct StateDeclaration {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct GUIDeclaration {
+    #[serde(default)]
     pub styles: Vec<Box<dyn WidgetBuilder>>,
     pub components: Vec<ComponentDeclaration>,
 }

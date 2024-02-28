@@ -1,43 +1,46 @@
-styles:
-  - widget: Text
-    properties:
-      size: 40
 components:
-  - name: Counter # Names for components must be unique
-    variables:
-      - name: count
-        type: u32
-      - name: disabled_decrement
-        type: bool
-    child:
-      widget: VStack
-      layoutProperties: # Under the hood these settings create a layout widget
-        # so that custom widgets do not need to deal with layout.
-        padding: 10
-      properties:
-        spacing: 40
-        children:
-          - name: Count
+  - name: TrafficLight # Names for components must be unique
+    states:
+      - name: Green
+        overrides:
+          - name: Switch
+            widget: Button
+            properties:
+              background_colour: green
+          - name: SwitchText
             widget: Text
             properties:
-              text: "{$count}" # Can use any variable from the component
+              text: Go Yellow
 
-          - name: IncrementBtn
+      - name: Yellow
+        overrides:
+          - name: Switch
             widget: Button
             properties:
-              child:
-                name: IncrText
-                widget: Text
-                properties:
-                  text: Increment # Uses Fluent syntax https://projectfluent.org/
+              background_colour: yellow
+          - name: SwitchText
+            widget: Text
+            properties:
+              text: Go Red
 
-          - name: DecrementBtn
+      - name: Red
+        overrides:
+          - name: Switch
             widget: Button
             properties:
-              disabled:
-                variable: disabled_decrement
-              child:
-                name: DecrText
-                widget: Text
-                properties:
-                  text: Decrement
+              background_colour: red
+          - name: SwitchText
+            widget: Text
+            properties:
+              text: Go Green
+
+
+    child:
+      name: Switch
+      widget: Button
+      properties:
+        child:
+          name: SwitchText
+          widget: Text
+          properties:
+            text: Next

@@ -3,6 +3,7 @@ use quote::{quote, ToTokens};
 use std::collections::HashSet;
 use std::env;
 use syn::parse::{Parse, ParseStream};
+use syn::spanned::Spanned;
 use syn::{Data, DeriveInput, Fields};
 
 #[derive(Clone, Debug)]
@@ -76,7 +77,7 @@ impl ToTokens for Derive {
         let gen_vars = self.vars_to_gen.iter().map(|(v_name, ident)| {
             let var_ident = Ident::new(v_name, ident.span());
             quote! {
-                impl ::gui::Update<gen::#var_ident> for Counter {
+                impl ::gui::Update<gen::#var_ident> for #component_ident {
                     fn is_updated(&self) -> bool {
                         self.#ident.is_updated()
                     }

@@ -2,7 +2,10 @@ use crate::fluent;
 use crate::fluent::FluentIdent;
 use crate::widget::Widget;
 use anyhow::Context;
-use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, VariableDeclaration};
+use gui_core::parse::{
+    ComponentDeclaration, NormalVariableDeclaration, StateDeclaration, VariableDeclaration,
+};
+use itertools::Itertools;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 use std::fs;
@@ -76,6 +79,8 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         .iter()
         .map(|n| Ident::new(&n.name, Span::call_site()));
 
+    let state_declaration = create_state(component.states.as_slice());
+
     let mut struct_handlers = TokenStream::new();
     widget_tree.gen_handler_structs(&mut struct_handlers)?;
 
@@ -120,6 +125,8 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             use gui::gui_core::glazier::kurbo::Rect;
             use gui::gui_core::widget::{Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle, WidgetEvent, Handle};
             use gui::gui_core::{Component, LayoutConstraints, Size, ToComponent, ToHandler, Update, Variable};
+
+            #state_declaration
 
             #widget_set
 
@@ -299,4 +306,27 @@ fn create_bundle(
     }
     fs::write(ftl_path, bundle)?;
     Ok(())
+}
+
+fn create_state(states: &[StateDeclaration]) -> TokenStream {
+    if states.is_empty() {
+        return TokenStream::new();
+    }
+
+    let names = states.iter().map(|s| format_ident!("{}", s.name.as_str()));
+
+    quote! {
+        #[allow(non_camel_case_types)]
+        #[derive(Default, Copy, Clone, Eq, PartialEq)]
+        pub(crate) enum State {
+            #[default]
+            #(#names),*
+        }
+        #[allow(non_camel_case_types)]
+        pub(crate) struct state;
+
+        impl Variable for state {
+            type VarType = State;
+        }
+    }
 }

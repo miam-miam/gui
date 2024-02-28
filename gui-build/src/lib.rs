@@ -11,6 +11,7 @@ use std::any::TypeId;
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
+use std::ops::Not;
 use std::path::Path;
 
 extern crate gui_widget;
@@ -24,15 +25,16 @@ pub fn build<P: AsRef<Path>>(path: P) {
 
 fn build_path(path: &Path) -> anyhow::Result<()> {
     let file = File::open(path).context("Failed to open GUI configuration file")?;
-    let out_dir = env::var_os("OUT_DIR").ok_or_else(|| anyhow!("could not find OUT_DIR env"))?;
-    let path = Path::new(&out_dir);
+    let out_dir_env =
+        env::var_os("OUT_DIR").ok_or_else(|| anyhow!("could not find OUT_DIR env"))?;
+    let out_dir = Path::new(&out_dir_env);
     let mut ser: GUIDeclaration =
         serde_yaml::from_reader(file).context("Failed to parse file GUI configuration file")?;
 
     combine_styles(&mut ser).context("Failed to combine styles")?;
 
     for component in ser.components.iter_mut() {
-        component::create_component(path, component)
+        component::create_component(out_dir, component)
             .with_context(|| format!("Failed to create component {}", component.name.as_str()))?;
     }
 
@@ -89,10 +91,17 @@ fn add_info_to_env(static_gui: &GUIDeclaration) {
         .format(",");
     println!("cargo:rustc-env=GUI_COMPONENTS={components}");
     for component in &static_gui.components {
+        let state_name = component
+            .states
+            .is_empty()
+            .not()
+            .then_some("state")
+            .into_iter();
         let variables = component
             .variables
             .iter()
             .map(|v| v.get_name().as_str())
+            .chain(state_name)
             .format(",");
         println!(
             "cargo:rustc-env=GUI_COMPONENT_{}={variables}",
