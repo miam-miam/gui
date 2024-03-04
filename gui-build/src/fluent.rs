@@ -3,18 +3,18 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct FluentIdent<'a> {
-    pub fluent: &'a Fluent,
+pub struct FluentIdent {
+    pub fluent: Fluent,
     pub ident: Ident,
     pub name: String,
     pub property: &'static str,
     pub property_ident: Ident,
 }
 
-impl<'a> FluentIdent<'a> {
+impl FluentIdent {
     pub fn new(
         property: &'static str,
-        fluent: &'a Fluent,
+        fluent: Fluent,
         component_name: &str,
         widget_name: Option<&str>,
         widget_type_name: &str,
@@ -25,6 +25,22 @@ impl<'a> FluentIdent<'a> {
             property,
             ident: format_ident!("{component_name}_{fluent_widget_name}_{property}"),
             name: format!("{component_name}-{fluent_widget_name}-{property}"),
+            property_ident: Ident::new(property, Span::call_site()),
+        }
+    }
+
+    pub fn new_state_override(
+        property: &'static str,
+        fluent: Fluent,
+        component_name: &str,
+        widget_name: &str,
+        state_name: &str,
+    ) -> Self {
+        Self {
+            fluent,
+            property,
+            ident: format_ident!("{component_name}_{widget_name}_{state_name}_{property}"),
+            name: format!("{component_name}-{widget_name}-{state_name}-{property}"),
             property_ident: Ident::new(property, Span::call_site()),
         }
     }

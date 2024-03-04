@@ -1,5 +1,6 @@
 use gui_core::glazier::kurbo::Rect;
 use gui_core::parse::fluent::Fluent;
+use gui_core::parse::var::Name;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::widget::{
     EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
@@ -49,21 +50,21 @@ pub struct HVStack<C: ToComponent, W: Widget<C>> {
 }
 
 impl<C: ToComponent, W: Widget<C>> HVStack<C, W> {
-    pub fn new_horizontal(id: WidgetID, spacing: f32, children: Vec<W>) -> Self {
+    pub fn new_horizontal(id: WidgetID, children: Vec<W>) -> Self {
         Self {
             id,
             axis: Axis::Horizontal,
-            spacing,
+            spacing: Default::default(),
             children,
             phantom: PhantomData,
         }
     }
 
-    pub fn new_vertical(id: WidgetID, spacing: f32, children: Vec<W>) -> Self {
+    pub fn new_vertical(id: WidgetID, children: Vec<W>) -> Self {
         Self {
             id,
             axis: Axis::Vertical,
-            spacing,
+            spacing: Default::default(),
             children,
             phantom: PhantomData,
         }
@@ -180,13 +181,8 @@ impl WidgetBuilder for HStackBuilder {
     }
 
     fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream) {
-        let spacing = match &self.spacing {
-            Some(Var::Value(v)) => v.to_token_stream(),
-            _ => 0_10f32.to_token_stream(),
-        };
-
         stream.extend(quote! {
-            ::gui::gui_widget::HVStack::new_horizontal(#id, #spacing, vec![#widget])
+            ::gui::gui_widget::HVStack::new_horizontal(#id, vec![#widget])
         });
     }
 
@@ -205,14 +201,24 @@ impl WidgetBuilder for HStackBuilder {
         }
     }
 
-    fn get_fluents(&self) -> Vec<(&'static str, &Fluent)> {
+    fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
+        let mut array = vec![];
+        match &self.spacing {
+            Some(Var::Value(v)) => array.push(("spacing", v.to_token_stream())),
+            None => array.push(("spacing", 0_10f32.to_token_stream())),
+            _ => {}
+        };
+        array
+    }
+
+    fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
         vec![]
     }
 
-    fn get_vars(&self) -> Vec<(&'static str, &str)> {
+    fn get_vars(&self) -> Vec<(&'static str, Name)> {
         let mut array = vec![];
         if let Some(Var::Variable(v)) = &self.spacing {
-            array.push(("spacing", v.as_str()));
+            array.push(("spacing", v.clone()));
         }
         array
     }
@@ -268,13 +274,8 @@ impl WidgetBuilder for VStackBuilder {
     }
 
     fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream) {
-        let spacing = match &self.spacing {
-            Some(Var::Value(v)) => v.to_token_stream(),
-            _ => 0_10f32.to_token_stream(),
-        };
-
         stream.extend(quote! {
-            ::gui::gui_widget::HVStack::new_vertical(#id, #spacing, vec![#widget])
+            ::gui::gui_widget::HVStack::new_vertical(#id, vec![#widget])
         });
     }
 
@@ -293,14 +294,24 @@ impl WidgetBuilder for VStackBuilder {
         }
     }
 
-    fn get_fluents(&self) -> Vec<(&'static str, &Fluent)> {
+    fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
+        let mut array = vec![];
+        match &self.spacing {
+            Some(Var::Value(v)) => array.push(("spacing", v.to_token_stream())),
+            None => array.push(("spacing", 0_10f32.to_token_stream())),
+            _ => {}
+        };
+        array
+    }
+
+    fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
         vec![]
     }
 
-    fn get_vars(&self) -> Vec<(&'static str, &str)> {
+    fn get_vars(&self) -> Vec<(&'static str, Name)> {
         let mut array = vec![];
         if let Some(Var::Variable(v)) = &self.spacing {
-            array.push(("spacing", v.as_str()));
+            array.push(("spacing", v.clone()));
         }
         array
     }

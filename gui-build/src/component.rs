@@ -5,7 +5,6 @@ use anyhow::Context;
 use gui_core::parse::{
     ComponentDeclaration, NormalVariableDeclaration, StateDeclaration, VariableDeclaration,
 };
-use itertools::Itertools;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 use std::fs;

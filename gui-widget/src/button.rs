@@ -2,6 +2,7 @@ use gui_core::glazier::kurbo::{Shape, Size};
 use gui_core::glazier::Cursor;
 use gui_core::layout::LayoutConstraints;
 use gui_core::parse::fluent::Fluent;
+use gui_core::parse::var::Name;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::{Affine, Vec2};
 use gui_core::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
@@ -34,24 +35,15 @@ pub struct Button<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> {
 
 impl<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> Button<T, C, W> {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        id: WidgetID,
-        background_colour: Colour,
-        disabled_colour: Colour,
-        clicked_colour: Colour,
-        hover_colour: Colour,
-        border_colour: Colour,
-        disabled: bool,
-        child: W,
-    ) -> Self {
+    pub fn new(id: WidgetID, child: W) -> Self {
         Button {
             id,
-            background_colour,
-            disabled_colour,
-            clicked_colour,
-            hover_colour,
-            border_colour,
-            disabled,
+            background_colour: Default::default(),
+            disabled_colour: Default::default(),
+            clicked_colour: Default::default(),
+            hover_colour: Default::default(),
+            border_colour: Default::default(),
+            disabled: Default::default(),
             child,
             phantom: PhantomData,
         }
@@ -261,33 +253,8 @@ impl WidgetBuilder for ButtonBuilder {
     }
 
     fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream) {
-        let background_colour = match &self.background_colour {
-            Some(Var::Value(v)) => v.to_token_stream(),
-            _ => Colour(Color::WHITE).to_token_stream(),
-        };
-        let disabled_colour = match &self.disabled_colour {
-            Some(Var::Value(v)) => v.to_token_stream(),
-            _ => Colour(Color::rgb8(241, 243, 245)).to_token_stream(),
-        };
-        let clicked_colour = match &self.clicked_colour {
-            Some(Var::Value(v)) => v.to_token_stream(),
-            _ => Colour(Color::rgb8(248, 249, 250)).to_token_stream(),
-        };
-        let hover_colour = match &self.hover_colour {
-            Some(Var::Value(v)) => v.to_token_stream(),
-            _ => Colour(Color::rgb8(248, 249, 250)).to_token_stream(),
-        };
-        let border_colour = match &self.border_colour {
-            Some(Var::Value(v)) => v.to_token_stream(),
-            _ => Colour(Color::rgb8(206, 212, 218)).to_token_stream(),
-        };
-        let disabled = match &self.disabled {
-            Some(Var::Value(v)) => v.to_token_stream(),
-            _ => false.to_token_stream(),
-        };
-
         stream.extend(quote! {
-            ::gui::gui_widget::Button::new(#id, #background_colour, #disabled_colour, #clicked_colour, #hover_colour, #border_colour, #disabled, #widget)
+            ::gui::gui_widget::Button::new(#id, #widget)
         });
     }
 
@@ -316,29 +283,76 @@ impl WidgetBuilder for ButtonBuilder {
         }
     }
 
-    fn get_fluents(&self) -> Vec<(&'static str, &Fluent)> {
+    fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
+        let mut array = vec![];
+        match &self.background_colour {
+            Some(Var::Value(v)) => array.push(("background_colour", v.to_token_stream())),
+            None => array.push(("background_colour", Colour(Color::WHITE).to_token_stream())),
+            _ => {}
+        }
+        match &self.disabled_colour {
+            Some(Var::Value(v)) => array.push(("disabled_colour", v.to_token_stream())),
+            None => array.push((
+                "disabled_colour",
+                Colour(Color::rgb8(241, 243, 245)).to_token_stream(),
+            )),
+            _ => {}
+        };
+        match &self.clicked_colour {
+            Some(Var::Value(v)) => array.push(("clicked_colour", v.to_token_stream())),
+            None => array.push((
+                "clicked_colour",
+                Colour(Color::rgb8(248, 249, 250)).to_token_stream(),
+            )),
+            _ => {}
+        };
+        match &self.hover_colour {
+            Some(Var::Value(v)) => array.push(("hover_colour", v.to_token_stream())),
+            None => array.push((
+                "hover_colour",
+                Colour(Color::rgb8(248, 249, 250)).to_token_stream(),
+            )),
+            _ => {}
+        };
+        match &self.border_colour {
+            Some(Var::Value(v)) => array.push(("border_colour", v.to_token_stream())),
+            None => array.push((
+                "border_colour",
+                Colour(Color::rgb8(206, 212, 218)).to_token_stream(),
+            )),
+            _ => {}
+        };
+        match &self.disabled {
+            Some(Var::Value(v)) => array.push(("disabled", v.to_token_stream())),
+            None => array.push(("disabled", false.to_token_stream())),
+            _ => {}
+        };
+        array
+    }
+
+    fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
         vec![]
     }
 
-    fn get_vars(&self) -> Vec<(&'static str, &str)> {
+    fn get_vars(&self) -> Vec<(&'static str, Name)> {
         let mut array = vec![];
         if let Some(Var::Variable(v)) = &self.disabled {
-            array.push(("disabled", v.as_str()));
+            array.push(("disabled", v.clone()));
         }
         if let Some(Var::Variable(v)) = &self.background_colour {
-            array.push(("background_colour", v.as_str()));
+            array.push(("background_colour", v.clone()));
         }
         if let Some(Var::Variable(v)) = &self.disabled_colour {
-            array.push(("disabled_colour", v.as_str()));
+            array.push(("disabled_colour", v.clone()));
         }
         if let Some(Var::Variable(v)) = &self.clicked_colour {
-            array.push(("clicked_colour", v.as_str()));
+            array.push(("clicked_colour", v.clone()));
         }
         if let Some(Var::Variable(v)) = &self.hover_colour {
-            array.push(("hover_colour", v.as_str()));
+            array.push(("hover_colour", v.clone()));
         }
         if let Some(Var::Variable(v)) = &self.border_colour {
-            array.push(("border_colour", v.as_str()));
+            array.push(("border_colour", v.clone()));
         }
         array
     }

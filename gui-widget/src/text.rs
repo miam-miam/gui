@@ -6,6 +6,7 @@ use gui_core::parley::layout::{Alignment, Layout};
 use gui_core::parley::style::{FontWeight, StyleProperty};
 use gui_core::parley::LayoutContext;
 use gui_core::parse::fluent::Fluent;
+use gui_core::parse::var::Name;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::Affine;
 use gui_core::vello::peniko::{Brush, Color};
@@ -28,12 +29,12 @@ pub struct Text {
 }
 
 impl Text {
-    pub fn new(id: WidgetID, colour: Colour, size: f32) -> Self {
+    pub fn new(id: WidgetID) -> Self {
         Text {
             id,
-            text: String::new(),
-            colour,
-            size,
+            text: Default::default(),
+            colour: Default::default(),
+            size: Default::default(),
             layout: None,
         }
     }
@@ -144,17 +145,8 @@ impl WidgetBuilder for TextBuilder {
     }
 
     fn create_widget(&self, id: WidgetID, _widget: Option<&TokenStream>, stream: &mut TokenStream) {
-        let colour = match &self.colour {
-            Some(Var::Value(v)) => v.to_token_stream(),
-            _ => Colour(Color::rgb8(33, 37, 41)).to_token_stream(),
-        };
-        let size = match &self.size {
-            Some(Var::Value(v)) => v.to_token_stream(),
-            _ => 14.0f32.to_token_stream(),
-        };
-
         stream.extend(quote! {
-            ::gui::gui_widget::Text::new(#id, #colour, #size)
+            ::gui::gui_widget::Text::new(#id)
         });
     }
 
@@ -174,17 +166,32 @@ impl WidgetBuilder for TextBuilder {
         }
     }
 
-    fn get_fluents(&self) -> Vec<(&'static str, &Fluent)> {
-        self.text.iter().map(|f| ("text", f)).collect()
+    fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
+        let mut array = vec![];
+        match &self.colour {
+            Some(Var::Value(v)) => array.push(("colour", v.to_token_stream())),
+            None => array.push(("colour", Colour(Color::rgb8(33, 37, 41)).to_token_stream())),
+            _ => {}
+        };
+        match &self.size {
+            Some(Var::Value(v)) => array.push(("size", v.to_token_stream())),
+            None => array.push(("size", 14.0f32.to_token_stream())),
+            _ => {}
+        };
+        array
     }
 
-    fn get_vars(&self) -> Vec<(&'static str, &str)> {
+    fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
+        self.text.iter().map(|f| ("text", f.clone())).collect()
+    }
+
+    fn get_vars(&self) -> Vec<(&'static str, Name)> {
         let mut array = vec![];
         if let Some(Var::Variable(v)) = &self.colour {
-            array.push(("colour", v.as_str()));
+            array.push(("colour", v.clone()));
         }
         if let Some(Var::Variable(v)) = &self.size {
-            array.push(("size", v.as_str()));
+            array.push(("size", v.clone()));
         }
         array
     }

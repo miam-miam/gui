@@ -3,7 +3,6 @@ use quote::{quote, ToTokens};
 use std::collections::HashSet;
 use std::env;
 use syn::parse::{Parse, ParseStream};
-use syn::spanned::Spanned;
 use syn::{Data, DeriveInput, Fields};
 
 #[derive(Clone, Debug)]

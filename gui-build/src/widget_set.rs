@@ -1,5 +1,5 @@
 use crate::widget::Widget;
-use gui_core::parse::WidgetDeclaration;
+use gui_core::parse::{StateDeclaration, WidgetDeclaration};
 use gui_core::widget::WidgetID;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
@@ -16,13 +16,19 @@ impl<'a> WidgetSet<'a> {
     pub fn new(
         component_name: &str,
         widgets: Vec<(TokenStream, &'a WidgetDeclaration)>,
+        states: &'a [StateDeclaration],
         component_id: u32,
     ) -> anyhow::Result<Self> {
         static COUNTER: AtomicU32 = AtomicU32::new(0);
 
         let widgets = widgets
             .into_iter()
-            .map(|(s, w)| Ok((s, Widget::new_inner(component_name, w, component_id)?)))
+            .map(|(s, w)| {
+                Ok((
+                    s,
+                    Widget::new_inner(component_name, w, states, component_id)?,
+                ))
+            })
             .collect::<anyhow::Result<Vec<_>>>()?;
 
         Ok(Self {

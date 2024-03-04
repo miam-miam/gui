@@ -1,8 +1,11 @@
 use crate::fluent::FluentIdent;
 use crate::widget_set::WidgetSet;
-use anyhow::anyhow;
-use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, WidgetDeclaration};
-use gui_core::widget::WidgetID;
+use anyhow::{anyhow, bail};
+use gui_core::parse::var::Name;
+use gui_core::parse::{
+    ComponentDeclaration, NormalVariableDeclaration, StateDeclaration, WidgetDeclaration,
+};
+use gui_core::widget::{WidgetBuilder, WidgetID};
 use itertools::Itertools;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
@@ -10,14 +13,110 @@ use std::cmp::max_by_key;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Clone, Debug)]
+pub struct OverriddenWidgets<'a> {
+    pub state_name: &'a str,
+    pub statics: Vec<(&'static str, TokenStream)>,
+    pub fluents: Vec<FluentIdent>,
+    pub state_fluent_overrides: Vec<FluentIdent>,
+    pub variables: Vec<(&'static str, Name)>,
+}
+
+impl<'a> OverriddenWidgets<'a> {
+    fn new(
+        component_name: &str,
+        widget_declaration: &'a WidgetDeclaration,
+        states: &'a [StateDeclaration],
+    ) -> anyhow::Result<Vec<Self>> {
+        let mut result = vec![];
+        if let Some(widget_name) = widget_declaration.name.as_ref().map(Name::as_str) {
+            for state in states {
+                let state_name = &state.name;
+                if let Some(state_override) = state
+                    .overrides
+                    .iter()
+                    .filter(|w| &*w.name == widget_name)
+                    .at_most_one()
+                    .map_err(|_| {
+                        anyhow!("Can only override widget {widget_name} once in {state_name}.")
+                    })?
+                {
+                    let mut new_widget = state_override.widget.clone();
+                    if new_widget.widgets().is_some_and(|v| !v.is_empty()) {
+                        bail!("Overridden widget {widget_name} in {state_name} contains children.");
+                    }
+                    let widget_builder = widget_declaration.widget.as_ref();
+                    let widget_type_name = widget_builder.name();
+                    let fluents = new_widget
+                        .get_fluents()
+                        .into_iter()
+                        .map(|(prop, fluent)| {
+                            FluentIdent::new(
+                                prop,
+                                fluent,
+                                component_name,
+                                widget_declaration.name.as_deref(),
+                                widget_type_name,
+                            )
+                        })
+                        .collect();
+                    new_widget.combine(widget_builder);
+                    result.push(Self::new_inner(
+                        state_name.as_str(),
+                        component_name,
+                        state_name,
+                        fluents,
+                        new_widget.as_ref(),
+                    ));
+                }
+            }
+        }
+        Ok(result)
+    }
+
+    fn new_inner<'b>(
+        state_name: &'a str,
+        widget_name: &str,
+        component_name: &str,
+        fluents: Vec<FluentIdent>,
+        builder: &'b (dyn WidgetBuilder + 'static),
+    ) -> Self {
+        let statics = builder.get_statics();
+        let state_fluent_overrides = builder
+            .get_fluents()
+            .into_iter()
+            .map(|(prop, fluent)| {
+                FluentIdent::new_state_override(
+                    prop,
+                    fluent,
+                    component_name,
+                    widget_name,
+                    state_name,
+                )
+            })
+            .collect();
+        let variables = builder.get_vars();
+
+        Self {
+            state_name,
+            statics,
+            fluents,
+            state_fluent_overrides,
+            variables,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct Widget<'a> {
     pub widget_type_name: &'static str,
     pub widget_declaration: &'a WidgetDeclaration,
+    pub state_overrides: Vec<OverriddenWidgets<'a>>,
     pub child_widgets: Option<WidgetSet<'a>>,
     pub child_type: Option<Ident>,
     pub handler: Option<Ident>,
-    pub fluents: Vec<FluentIdent<'a>>,
-    pub variables: Vec<(&'static str, &'a str)>,
+    pub statics: Vec<(&'static str, TokenStream)>,
+    pub fluents: Vec<FluentIdent>,
+    pub variables: Vec<(&'static str, Name)>,
     pub id: WidgetID,
 }
 
@@ -27,13 +126,14 @@ impl<'a> Widget<'a> {
         Self::new_inner(
             component.name.as_str(),
             &component.child,
+            &component.states[..],
             COMPONENT_COUNTER.fetch_add(1, Ordering::Relaxed),
         )
     }
-
     pub fn new_inner(
         component_name: &str,
         widget_declaration: &'a WidgetDeclaration,
+        states: &'a [StateDeclaration],
         component_id: u32,
     ) -> anyhow::Result<Self> {
         let widget = widget_declaration.widget.as_ref();
@@ -65,18 +165,21 @@ impl<'a> Widget<'a> {
 
         static WIDGET_COUNTER: AtomicU32 = AtomicU32::new(0);
         let id = WidgetID::new(component_id, WIDGET_COUNTER.fetch_add(1, Ordering::Relaxed));
+        let state_overrides = OverriddenWidgets::new(component_name, widget_declaration, states)?;
         Ok(Self {
             widget_type_name,
             widget_declaration,
             child_widgets: widget
                 .widgets()
-                .map(|ws| WidgetSet::new(component_name, ws, component_id))
+                .map(|ws| WidgetSet::new(component_name, ws, states, component_id))
                 .transpose()?,
             child_type: None,
             handler,
+            state_overrides,
             fluents,
             variables: widget.get_vars(),
             id,
+            statics: widget.get_statics(),
         })
     }
 
@@ -100,7 +203,7 @@ impl<'a> Widget<'a> {
                 .is_some_and(|s| s.widgets.iter().any(|(_, w)| w.contains_fluents()))
     }
 
-    pub fn push_fluents(&'a self, container: &mut Vec<FluentIdent<'a>>) {
+    pub fn push_fluents(&'a self, container: &mut Vec<FluentIdent>) {
         container.extend_from_slice(&self.fluents[..]);
         for (_, child) in self.child_widgets.iter().flat_map(|s| &s.widgets) {
             child.push_fluents(container);
@@ -120,11 +223,7 @@ impl<'a> Widget<'a> {
 
         let mut update_stream = TokenStream::new();
 
-        for (prop, _var) in self
-            .variables
-            .iter()
-            .filter(|(_p, v)| *v == var.name.as_str())
-        {
+        for (prop, _var) in self.variables.iter().filter(|(_p, v)| *v == var.name) {
             self.widget_declaration.widget.on_property_update(
                 prop,
                 &widget_ident,

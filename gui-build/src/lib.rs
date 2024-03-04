@@ -2,7 +2,6 @@ mod component;
 mod fluent;
 mod widget;
 mod widget_set;
-
 use anyhow::{anyhow, bail, Context};
 use gui_core::parse::{GUIDeclaration, WidgetDeclaration};
 use gui_core::widget::{AsAny, WidgetBuilder};
