@@ -30,7 +30,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
 
     let bundle_func = widget_tree
         .contains_fluents()
-        .then(fluent::gen_bundle_function);
+        .then(|| fluent::gen_bundle_function(&component.name));
 
     let mut fluents = vec![];
     widget_tree.push_fluents(&mut fluents);
@@ -54,6 +54,9 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         .filter(|f| !f.fluent.vars.is_empty())
         .map(|fluent| &fluent.property_ident)
         .collect();
+
+    let mut statics_update: TokenStream = TokenStream::new();
+    widget_tree.gen_statics(None, &mut statics_update);
 
     let mut prop_update: TokenStream = TokenStream::new();
     widget_tree.gen_fluent_update(None, &mut prop_update);
@@ -197,6 +200,9 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     let mut update_handle = UpdateHandle::new(handle, global_positions);
                     let handle_ref = &mut update_handle;
                     #( let mut #fluent_properties = false; )*
+                    if force_update {
+                        #statics_update
+                    }
                     #if_update
                     #prop_update
                     #( <CompStruct as Update<#var_names>>::reset(&mut self.comp_struct); )*

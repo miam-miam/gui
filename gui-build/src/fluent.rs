@@ -46,7 +46,8 @@ impl FluentIdent {
     }
 }
 
-pub fn gen_bundle_function() -> TokenStream {
+pub fn gen_bundle_function(component_name: &str) -> TokenStream {
+    let ftl_location = format!("/{component_name}.ftl");
     quote! {
         use gui::{FluentBundle, FluentArgs, FluentResource};
         use std::borrow::Cow;
@@ -56,7 +57,7 @@ pub fn gen_bundle_function() -> TokenStream {
             use gui::langid;
 
             static BUNDLE: OnceLock<FluentBundle<FluentResource>> = OnceLock::new();
-            const FTL_STRING: &str = include_str!(concat!(env!("OUT_DIR"), "/Counter.ftl"));
+            const FTL_STRING: &str = include_str!(concat!(env!("OUT_DIR"), #ftl_location));
             let mut errors = vec![];
             let bundle = BUNDLE.get_or_init(|| {
                 let mut bundle = FluentBundle::new_concurrent(vec![langid!("en-GB")]);

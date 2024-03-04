@@ -327,6 +327,38 @@ impl<'a> Widget<'a> {
         }
     }
 
+    pub fn gen_statics(&self, widget_stmt: Option<&TokenStream>, stream: &mut TokenStream) {
+        let widget_stmt = widget_stmt.map_or_else(|| quote! {&mut self.widget}, Clone::clone);
+        let widget_ident = Ident::new("widget", Span::call_site());
+        let value_ident = Ident::new("value", Span::call_site());
+        let handle_ident = Ident::new("handle_ref", Span::call_site());
+
+        if !self.statics.is_empty() {
+            stream.extend(quote! {
+                let widget = #widget_stmt;
+            })
+        }
+
+        for (prop, value) in &self.statics {
+            stream.extend(quote! {
+                let value = #value;
+            });
+            self.widget_declaration.widget.on_property_update(
+                prop,
+                &widget_ident,
+                &value_ident,
+                &handle_ident,
+                stream,
+            );
+        }
+
+        if let Some(ws) = &self.child_widgets {
+            for (get_stmt, w) in ws.gen_widget_gets(&widget_stmt) {
+                w.gen_statics(Some(&get_stmt), stream);
+            }
+        }
+    }
+
     pub fn get_largest_id(&self) -> WidgetID {
         max_by_key(
             self.id,
