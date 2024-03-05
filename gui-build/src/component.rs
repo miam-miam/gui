@@ -1,7 +1,7 @@
 use crate::fluent;
 use crate::fluent::FluentIdent;
 use crate::widget::Widget;
-use anyhow::Context;
+use anyhow::{bail, Context};
 use gui_core::parse::{
     ComponentDeclaration, NormalVariableDeclaration, StateDeclaration, VariableDeclaration,
 };
@@ -28,12 +28,10 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let mut widget_set = TokenStream::new();
     widget_tree.gen_widget_set(&mut widget_set);
 
-    let bundle_func = widget_tree
-        .contains_fluents()
-        .then(|| fluent::gen_bundle_function(&component.name));
-
     let mut fluents = vec![];
     widget_tree.push_fluents(&mut fluents);
+
+    let bundle_func = (!fluents.is_empty()).then(|| fluent::gen_bundle_function(&component.name));
 
     create_bundle(out_dir, &component.name, &fluents[..])
         .context("Failed to create fluent bundle")?;
@@ -81,7 +79,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         .iter()
         .map(|n| Ident::new(&n.name, Span::call_site()));
 
-    let state_declaration = create_state(component.states.as_slice());
+    let state_declaration = create_state(component.states.as_slice())?;
 
     let mut struct_handlers = TokenStream::new();
     widget_tree.gen_handler_structs(&mut struct_handlers)?;
@@ -118,6 +116,22 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         Some(quote!(#name => Some(#id),))
     });
 
+    let check_state = state_declaration.as_ref().map(|_| {
+        quote! {
+            if force_update || <CompStruct as Update<state>>::is_updated(&self.comp_struct) {
+                let new_state = <CompStruct as Update<state>>::value(&self.comp_struct);
+                if self.state != new_state {
+                    self.state = new_state;
+                    force_update = true;
+                }
+            }
+        }
+    });
+    let state_type = state_declaration.as_ref().map(|_| quote! {state: State,});
+    let state_init = state_declaration
+        .as_ref()
+        .map(|_| quote! {state: Default::default(),});
+
     let gen_module = quote! {
         #[allow(clippy::suspicious_else_formatting)]
         mod gen {
@@ -142,6 +156,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             pub struct #component_holder {
                 comp_struct: CompStruct,
                 widget: #widget_type,
+                #state_type
                 #( #fluent_arg_idents: FluentArgs<'static> ),*
             }
 
@@ -153,6 +168,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     #component_holder {
                         widget: #widget_init,
                         comp_struct: self,
+                        #state_init
                         #( #fluent_arg_idents: FluentArgs::new() ),*
                     }
                 }
@@ -193,13 +209,14 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
 
                 fn update_vars<'a>(
                     &mut self,
-                    force_update: bool,
+                    mut force_update: bool,
                     handle: &'a mut Handle,
                     global_positions: &'a [Rect],
                 ) -> bool {
                     let mut update_handle = UpdateHandle::new(handle, global_positions);
                     let handle_ref = &mut update_handle;
                     #( let mut #fluent_properties = false; )*
+                    #check_state
                     if force_update {
                         #statics_update
                     }
@@ -313,14 +330,19 @@ fn create_bundle(
     Ok(())
 }
 
-fn create_state(states: &[StateDeclaration]) -> TokenStream {
+fn create_state(states: &[StateDeclaration]) -> anyhow::Result<Option<TokenStream>> {
     if states.is_empty() {
-        return TokenStream::new();
+        return Ok(None);
+    }
+
+    if states.len() == 1 {
+        let name = &states[0].name;
+        bail!("Cannot have a singular state but found state {name}.");
     }
 
     let names = states.iter().map(|s| format_ident!("{}", s.name.as_str()));
 
-    quote! {
+    Ok(Some(quote! {
         #[allow(non_camel_case_types)]
         #[derive(Default, Copy, Clone, Eq, PartialEq)]
         pub(crate) enum State {
@@ -333,5 +355,5 @@ fn create_state(states: &[StateDeclaration]) -> TokenStream {
         impl Variable for state {
             type VarType = State;
         }
-    }
+    }))
 }

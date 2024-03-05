@@ -2,7 +2,7 @@ use gui_core::parse::fluent::Fluent;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct FluentIdent {
     pub fluent: Fluent,
     pub ident: Ident,

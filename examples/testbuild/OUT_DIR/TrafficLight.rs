@@ -34,7 +34,7 @@ mod gen {
         use gui::langid;
         static BUNDLE: OnceLock<FluentBundle<FluentResource>> = OnceLock::new();
         const FTL_STRING: &str = include_str!(
-            concat!(env!("OUT_DIR"), "TrafficLight.ftl")
+            concat!(env!("OUT_DIR"), "/TrafficLight.ftl")
         );
         let mut errors = vec![];
         let bundle = BUNDLE
@@ -57,6 +57,7 @@ mod gen {
     pub struct TrafficLightHolder {
         comp_struct: CompStruct,
         widget: ::gui::gui_widget::Button<Switch, CompStruct, ::gui::gui_widget::Text>,
+        state: State,
     }
     #[automatically_derived]
     impl ToComponent for CompStruct {
@@ -68,6 +69,7 @@ mod gen {
                     ::gui::gui_widget::Text::new(WidgetID::new(0u32, 1u32)),
                 ),
                 comp_struct: self,
+                state: Default::default(),
             }
         }
         fn largest_id(&self) -> WidgetID {
@@ -109,36 +111,74 @@ mod gen {
         }
         fn update_vars<'a>(
             &mut self,
-            force_update: bool,
+            mut force_update: bool,
             handle: &'a mut Handle,
             global_positions: &'a [Rect],
         ) -> bool {
             let mut update_handle = UpdateHandle::new(handle, global_positions);
             let handle_ref = &mut update_handle;
-            if force_update {
-                let widget = &mut self.widget;
-                let value = ::gui::gui_core::Colour::rgba8(255u8, 255u8, 255u8, 255u8);
-                widget.set_background_colour(value, handle_ref);
-                let value = ::gui::gui_core::Colour::rgba8(241u8, 243u8, 245u8, 255u8);
-                widget.set_disabled_colour(value, handle_ref);
-                let value = ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8, 255u8);
-                widget.set_clicked_colour(value, handle_ref);
-                let value = ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8, 255u8);
-                widget.set_hover_colour(value, handle_ref);
-                let value = ::gui::gui_core::Colour::rgba8(206u8, 212u8, 218u8, 255u8);
-                widget.set_border_colour(value, handle_ref);
-                let value = false;
-                widget.set_disabled(value, handle_ref);
-                let widget = &mut self.widget.get_widget();
-                let value = ::gui::gui_core::Colour::rgba8(33u8, 37u8, 41u8, 255u8);
-                widget.set_colour(value, handle_ref);
-                let value = 14f32;
-                widget.set_size(value, handle_ref);
+            if force_update
+                || <CompStruct as Update<state>>::is_updated(&self.comp_struct)
+            {
+                let new_state = <CompStruct as Update<state>>::value(&self.comp_struct);
+                if self.state != new_state {
+                    self.state = new_state;
+                    force_update = true;
+                }
             }
             if force_update {
-                let value = get_bundle_message("TrafficLight-SwitchText-text", None);
+                let widget = &mut self.widget;
+                let value = false;
+                widget.set_disabled(value, handle_ref);
+                let value = ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8, 255u8);
+                widget.set_clicked_colour(value, handle_ref);
+                let value = ::gui::gui_core::Colour::rgba8(206u8, 212u8, 218u8, 255u8);
+                widget.set_border_colour(value, handle_ref);
+                let value = ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8, 255u8);
+                widget.set_hover_colour(value, handle_ref);
+                let value = ::gui::gui_core::Colour::rgba8(241u8, 243u8, 245u8, 255u8);
+                widget.set_disabled_colour(value, handle_ref);
+                if self.state == State::Green {
+                    let widget = &mut self.widget;
+                    let value = ::gui::gui_core::Colour::rgba8(0u8, 128u8, 0u8, 255u8);
+                    widget.set_background_colour(value, handle_ref);
+                }
+                if self.state == State::Yellow {
+                    let widget = &mut self.widget;
+                    let value = ::gui::gui_core::Colour::rgba8(255u8, 255u8, 0u8, 255u8);
+                    widget.set_background_colour(value, handle_ref);
+                }
+                if self.state == State::Red {
+                    let widget = &mut self.widget;
+                    let value = ::gui::gui_core::Colour::rgba8(255u8, 0u8, 0u8, 255u8);
+                    widget.set_background_colour(value, handle_ref);
+                }
                 let widget = &mut self.widget.get_widget();
-                widget.set_text(value, handle_ref);
+                let value = 14f32;
+                widget.set_size(value, handle_ref);
+                let value = ::gui::gui_core::Colour::rgba8(33u8, 37u8, 41u8, 255u8);
+                widget.set_colour(value, handle_ref);
+            }
+            if self.state == State::Green {
+                if force_update {
+                    let value = get_bundle_message("TrafficLight-SwitchText-text", None);
+                    let widget = &mut self.widget.get_widget();
+                    widget.set_text(value, handle_ref);
+                }
+            }
+            if self.state == State::Yellow {
+                if force_update {
+                    let value = get_bundle_message("TrafficLight-SwitchText-text", None);
+                    let widget = &mut self.widget.get_widget();
+                    widget.set_text(value, handle_ref);
+                }
+            }
+            if self.state == State::Red {
+                if force_update {
+                    let value = get_bundle_message("TrafficLight-SwitchText-text", None);
+                    let widget = &mut self.widget.get_widget();
+                    widget.set_text(value, handle_ref);
+                }
             }
             update_handle.unwrap()
         }

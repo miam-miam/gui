@@ -7,7 +7,7 @@ use serde::de::{Error, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::fmt::Formatter;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Fluent {
     pub vars: Vec<Name>,
     pub text: String,

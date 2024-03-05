@@ -1,7 +1,8 @@
 mod component;
+mod eq_tokenstream;
 mod fluent;
 mod widget;
-mod widget_set;
+
 use anyhow::{anyhow, bail, Context};
 use gui_core::parse::{GUIDeclaration, WidgetDeclaration};
 use gui_core::widget::{AsAny, WidgetBuilder};
@@ -10,7 +11,6 @@ use std::any::TypeId;
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
-use std::ops::Not;
 use std::path::Path;
 
 extern crate gui_widget;
@@ -90,12 +90,7 @@ fn add_info_to_env(static_gui: &GUIDeclaration) {
         .format(",");
     println!("cargo:rustc-env=GUI_COMPONENTS={components}");
     for component in &static_gui.components {
-        let state_name = component
-            .states
-            .is_empty()
-            .not()
-            .then_some("state")
-            .into_iter();
+        let state_name = (component.states.len() > 1).then_some("state").into_iter();
         let variables = component
             .variables
             .iter()
