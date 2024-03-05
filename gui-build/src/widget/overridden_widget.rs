@@ -10,6 +10,42 @@ use quote::{format_ident, quote};
 use std::collections::HashSet;
 
 #[derive(Clone, Debug, Default)]
+pub struct WidgetProperties {
+    pub statics: Statics,
+    pub fluents: Fluents,
+    pub variables: Variables,
+}
+
+impl WidgetProperties {
+    #[allow(clippy::mutable_key_type)]
+    pub fn remove_common_properties(widgets: &mut [OverriddenWidget]) -> Self {
+        let common_statics = widgets
+            .iter()
+            .map(|w| w.statics.0.iter().collect::<HashSet<_>>())
+            .reduce(|acc, w| acc.intersection(&w).copied().collect())
+            .map_or_else(HashSet::default, |h| {
+                h.into_iter().cloned().collect::<HashSet<(_, _)>>()
+            });
+
+        for w in widgets.iter_mut() {
+            w.statics = Statics(
+                w.statics
+                    .0
+                    .iter()
+                    .filter(|s| !common_statics.contains(*s))
+                    .cloned()
+                    .collect(),
+            )
+        }
+
+        Self {
+            statics: Statics(common_statics.into_iter().collect()),
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct OverriddenWidget<'a> {
     pub state_name: &'a str,
     pub statics: Statics,
@@ -66,22 +102,28 @@ impl<'a> OverriddenWidget<'a> {
         state_name: &'a str,
         widget_name: &str,
         component_name: &str,
-        fluents: Fluents,
+        state_fluent_overrides: Fluents,
         builder: &'b (dyn WidgetBuilder + 'static),
     ) -> Self {
         let statics = Statics::new(builder);
-        let state_fluent_overrides = Fluents(
+        let fluents = Fluents(
             builder
                 .get_fluents()
                 .into_iter()
-                .filter(|(_, fluent)| !fluents.0.iter().map(|f| &f.fluent).contains(fluent))
+                .filter(|(_, fluent)| {
+                    !state_fluent_overrides
+                        .0
+                        .iter()
+                        .map(|f| &f.fluent)
+                        .contains(fluent)
+                })
                 .map(|(prop, fluent)| {
-                    FluentIdent::new_state_override(
+                    FluentIdent::new(
                         prop,
                         fluent,
                         component_name,
-                        widget_name,
-                        state_name,
+                        Some(widget_name),
+                        "", // Can keep as "" as it is only used if widget_name is None.
                     )
                 })
                 .collect(),
@@ -94,34 +136,6 @@ impl<'a> OverriddenWidget<'a> {
             fluents,
             state_fluent_overrides,
             variables,
-        }
-    }
-
-    #[allow(clippy::mutable_key_type)]
-    pub fn remove_common_properties(widgets: &mut [OverriddenWidget]) -> Self {
-        let common_statics = widgets
-            .iter()
-            .map(|w| w.statics.0.iter().collect::<HashSet<_>>())
-            .reduce(|acc, w| acc.intersection(&w).copied().collect())
-            .map_or_else(HashSet::default, |h| {
-                h.into_iter().cloned().collect::<HashSet<(_, _)>>()
-            });
-
-        for w in widgets.iter_mut() {
-            w.statics = Statics(
-                w.statics
-                    .0
-                    .iter()
-                    .filter(|s| !common_statics.contains(*s))
-                    .cloned()
-                    .collect(),
-            )
-        }
-
-        Self {
-            state_name: "",
-            statics: Statics(common_statics.into_iter().collect()),
-            ..Default::default()
         }
     }
 

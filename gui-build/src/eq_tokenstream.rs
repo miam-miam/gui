@@ -32,11 +32,11 @@ impl ToTokens for EqTokenStream {
 }
 
 impl EqTokenStream {
-    fn get(&self) -> &TokenStream {
+    pub fn get(&self) -> &TokenStream {
         &self.0
     }
 
-    fn get_mut(&mut self) -> &mut TokenStream {
+    pub fn get_mut(&mut self) -> &mut TokenStream {
         self.1.take();
         &mut self.0
     }

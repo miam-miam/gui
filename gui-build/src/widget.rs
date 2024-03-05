@@ -5,6 +5,7 @@ mod widget_set;
 
 use crate::fluent::FluentIdent;
 use crate::widget::common::{Fluents, Statics, Variables};
+use crate::widget::overridden_widget::WidgetProperties;
 use anyhow::anyhow;
 use gui_core::parse::{
     ComponentDeclaration, NormalVariableDeclaration, StateDeclaration, WidgetDeclaration,
@@ -25,8 +26,8 @@ pub struct Widget<'a> {
     pub widget_declaration: &'a WidgetDeclaration,
     pub state_overrides: Vec<OverriddenWidget<'a>>,
     pub fully_state_overridden: bool,
-    pub shared_overrides: OverriddenWidget<'a>,
-    pub fallback: OverriddenWidget<'a>,
+    pub shared_overrides: WidgetProperties,
+    pub fallback: WidgetProperties,
     pub child_widgets: Option<WidgetSet<'a>>,
     pub child_type: Option<Ident>,
     pub handler: Option<Ident>,
@@ -73,7 +74,7 @@ impl<'a> Widget<'a> {
         let id = WidgetID::new(component_id, WIDGET_COUNTER.fetch_add(1, Ordering::Relaxed));
         let mut state_overrides =
             OverriddenWidget::new(component_name, widget_declaration, states)?;
-        let shared_overrides = OverriddenWidget::remove_common_properties(&mut state_overrides[..]);
+        let shared_overrides = WidgetProperties::remove_common_properties(&mut state_overrides[..]);
         Ok(Self {
             widget_type_name,
             widget_declaration,
@@ -85,11 +86,10 @@ impl<'a> Widget<'a> {
             fully_state_overridden: state_overrides.len() == states.len(),
             handler,
             state_overrides,
-            fallback: OverriddenWidget {
+            fallback: WidgetProperties {
                 statics: Statics::new(widget),
                 fluents,
                 variables: Variables(widget.get_vars()),
-                ..Default::default()
             },
             id,
             shared_overrides,
@@ -109,12 +109,9 @@ impl<'a> Widget<'a> {
     }
 
     pub fn push_fluents(&'a self, container: &mut Vec<FluentIdent>) {
-        container.extend_from_slice(&self.shared_overrides.fluents.0[..]);
-        if !self.fully_state_overridden {
-            container.extend_from_slice(&self.fallback.fluents.0[..]);
-        }
+        container.extend_from_slice(&self.fallback.fluents.0[..]);
         for ow in &self.state_overrides {
-            container.extend_from_slice(&ow.fluents.0[..])
+            container.extend_from_slice(&ow.state_fluent_overrides.0[..]);
         }
         for (_, child) in self.child_widgets.iter().flat_map(|s| &s.widgets) {
             child.push_fluents(container);
@@ -130,7 +127,7 @@ impl<'a> Widget<'a> {
         self.gen_if_correct_state(stream, |var_stream| {
             self.fallback.variables.gen_variables(
                 &*self.widget_declaration.widget,
-                &widget_stmt,
+                widget_stmt,
                 &var.name,
                 var_stream,
             );
@@ -141,7 +138,7 @@ impl<'a> Widget<'a> {
 
         self.shared_overrides.variables.gen_variables(
             &*self.widget_declaration.widget,
-            &widget_stmt,
+            widget_stmt,
             &var.name,
             stream,
         );
@@ -153,11 +150,14 @@ impl<'a> Widget<'a> {
             widget.gen_if_correct_state(stream, |var_stream| {
                 widget.variables.gen_variables(
                     &*self.widget_declaration.widget,
-                    &widget_stmt,
+                    widget_stmt,
                     &var.name,
                     var_stream,
                 );
                 widget.fluents.gen_fluent_arg_update(&var.name, var_stream);
+                widget
+                    .state_fluent_overrides
+                    .gen_fluent_arg_update(&var.name, var_stream);
             });
         }
 
@@ -201,6 +201,11 @@ impl<'a> Widget<'a> {
         for widget in &self.state_overrides {
             widget.gen_if_correct_state(stream, |state_stream| {
                 widget.fluents.gen_fluents(
+                    &*self.widget_declaration.widget,
+                    &widget_stmt,
+                    state_stream,
+                );
+                widget.state_fluent_overrides.gen_fluents(
                     &*self.widget_declaration.widget,
                     &widget_stmt,
                     state_stream,

@@ -128,14 +128,14 @@ mod gen {
             }
             if force_update {
                 let widget = &mut self.widget;
+                let value = ::gui::gui_core::Colour::rgba8(206u8, 212u8, 218u8, 255u8);
+                widget.set_border_colour(value, handle_ref);
                 let value = false;
                 widget.set_disabled(value, handle_ref);
                 let value = ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8, 255u8);
-                widget.set_clicked_colour(value, handle_ref);
-                let value = ::gui::gui_core::Colour::rgba8(206u8, 212u8, 218u8, 255u8);
-                widget.set_border_colour(value, handle_ref);
-                let value = ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8, 255u8);
                 widget.set_hover_colour(value, handle_ref);
+                let value = ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8, 255u8);
+                widget.set_clicked_colour(value, handle_ref);
                 let value = ::gui::gui_core::Colour::rgba8(241u8, 243u8, 245u8, 255u8);
                 widget.set_disabled_colour(value, handle_ref);
                 if self.state == State::Green {
@@ -154,28 +154,37 @@ mod gen {
                     widget.set_background_colour(value, handle_ref);
                 }
                 let widget = &mut self.widget.get_widget();
-                let value = 14f32;
-                widget.set_size(value, handle_ref);
                 let value = ::gui::gui_core::Colour::rgba8(33u8, 37u8, 41u8, 255u8);
                 widget.set_colour(value, handle_ref);
+                let value = 14f32;
+                widget.set_size(value, handle_ref);
             }
             if self.state == State::Green {
                 if force_update {
-                    let value = get_bundle_message("TrafficLight-SwitchText-text", None);
+                    let value = get_bundle_message(
+                        "TrafficLight-SwitchText-Green-text",
+                        None,
+                    );
                     let widget = &mut self.widget.get_widget();
                     widget.set_text(value, handle_ref);
                 }
             }
             if self.state == State::Yellow {
                 if force_update {
-                    let value = get_bundle_message("TrafficLight-SwitchText-text", None);
+                    let value = get_bundle_message(
+                        "TrafficLight-SwitchText-Yellow-text",
+                        None,
+                    );
                     let widget = &mut self.widget.get_widget();
                     widget.set_text(value, handle_ref);
                 }
             }
             if self.state == State::Red {
                 if force_update {
-                    let value = get_bundle_message("TrafficLight-SwitchText-text", None);
+                    let value = get_bundle_message(
+                        "TrafficLight-SwitchText-Red-text",
+                        None,
+                    );
                     let widget = &mut self.widget.get_widget();
                     widget.set_text(value, handle_ref);
                 }
