@@ -83,7 +83,8 @@ impl<'a> Widget<'a> {
                 .map(|ws| WidgetSet::new(component_name, ws, states, component_id))
                 .transpose()?,
             child_type: None,
-            fully_state_overridden: state_overrides.len() == states.len(),
+            fully_state_overridden: !state_overrides.is_empty()
+                && state_overrides.len() == states.len(),
             handler,
             state_overrides,
             fallback: WidgetProperties {
@@ -244,6 +245,11 @@ impl<'a> Widget<'a> {
         let mut func_stream = TokenStream::new();
         func(&mut func_stream);
         if func_stream.is_empty() {
+            return;
+        }
+
+        if self.state_overrides.is_empty() {
+            stream.extend(func_stream);
             return;
         }
 

@@ -208,6 +208,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     render_handle.unwrap()
                 }
 
+                #[allow(unused_mut)]
                 fn update_vars<'a>(
                     &mut self,
                     mut force_update: bool,
