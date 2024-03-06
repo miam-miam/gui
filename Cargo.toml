@@ -6,7 +6,7 @@ members = [
     "gui-widget",
     "gui-build",
     #    "examples/**",
-    #    "examples/shello",
+    "examples/traffic_light",
     "examples/counter",
     "examples/testbed",
     "examples/testbuild"
