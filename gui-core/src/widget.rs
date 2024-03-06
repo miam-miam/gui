@@ -1,6 +1,7 @@
 pub use crate::handles::{EventHandle, Handle, RenderHandle, ResizeHandle, UpdateHandle};
 use crate::layout::LayoutConstraints;
 use crate::parse::fluent::Fluent;
+use crate::parse::var::Name;
 use crate::parse::WidgetDeclaration;
 use crate::ToComponent;
 use dyn_clone::DynClone;
@@ -112,8 +113,9 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
         handle: &Ident,
         stream: &mut TokenStream,
     );
-    fn get_fluents(&self) -> Vec<(&'static str, &Fluent)>;
-    fn get_vars(&self) -> Vec<(&'static str, &str)>;
+    fn get_statics(&self) -> Vec<(&'static str, TokenStream)>;
+    fn get_fluents(&self) -> Vec<(&'static str, Fluent)>;
+    fn get_vars(&self) -> Vec<(&'static str, Name)>;
     fn has_handler(&self) -> bool;
     fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>>;
     fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>>;

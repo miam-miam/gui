@@ -1,7 +1,7 @@
 mod component;
 mod fluent;
+mod tokenstream;
 mod widget;
-mod widget_set;
 
 use anyhow::{anyhow, bail, Context};
 use gui_core::parse::{GUIDeclaration, WidgetDeclaration};
@@ -24,16 +24,17 @@ pub fn build<P: AsRef<Path>>(path: P) {
 
 fn build_path(path: &Path) -> anyhow::Result<()> {
     let file = File::open(path).context("Failed to open GUI configuration file")?;
-    let out_dir = env::var_os("OUT_DIR").ok_or_else(|| anyhow!("could not find OUT_DIR env"))?;
-    let path = Path::new(&out_dir);
+    let out_dir_env =
+        env::var_os("OUT_DIR").ok_or_else(|| anyhow!("could not find OUT_DIR env"))?;
+    let out_dir = Path::new(&out_dir_env);
     let mut ser: GUIDeclaration =
         serde_yaml::from_reader(file).context("Failed to parse file GUI configuration file")?;
 
     combine_styles(&mut ser).context("Failed to combine styles")?;
 
     for component in ser.components.iter_mut() {
-        component::create_component(path, component)
-            .with_context(|| format!("Failed to create component {}", component.name))?;
+        component::create_component(out_dir, component)
+            .with_context(|| format!("Failed to create component {}", component.name.as_str()))?;
     }
 
     println!("cargo:rerun-if-changed={}", path.display());
@@ -82,17 +83,23 @@ fn combine_style(
 }
 
 fn add_info_to_env(static_gui: &GUIDeclaration) {
-    let components = static_gui.components.iter().map(|c| &c.name).format(",");
+    let components = static_gui
+        .components
+        .iter()
+        .map(|c| c.name.as_str())
+        .format(",");
     println!("cargo:rustc-env=GUI_COMPONENTS={components}");
     for component in &static_gui.components {
+        let state_name = (component.states.len() > 1).then_some("state").into_iter();
         let variables = component
             .variables
             .iter()
             .map(|v| v.get_name().as_str())
+            .chain(state_name)
             .format(",");
         println!(
             "cargo:rustc-env=GUI_COMPONENT_{}={variables}",
-            component.name
+            component.name.as_str()
         );
     }
 }

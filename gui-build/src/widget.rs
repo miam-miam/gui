@@ -1,23 +1,36 @@
+mod common;
+mod iter;
+mod overridden_widget;
+mod widget_set;
+
 use crate::fluent::FluentIdent;
-use crate::widget_set::WidgetSet;
+use crate::widget::common::{Fluents, Statics, Variables};
+use crate::widget::overridden_widget::WidgetProperties;
 use anyhow::anyhow;
-use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, WidgetDeclaration};
+use gui_core::parse::{
+    ComponentDeclaration, NormalVariableDeclaration, StateDeclaration, WidgetDeclaration,
+};
 use gui_core::widget::WidgetID;
+use iter::WidgetIter;
 use itertools::Itertools;
+use overridden_widget::OverriddenWidget;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 use std::cmp::max_by_key;
 use std::sync::atomic::{AtomicU32, Ordering};
+use widget_set::WidgetSet;
 
 #[derive(Clone, Debug)]
 pub struct Widget<'a> {
     pub widget_type_name: &'static str,
     pub widget_declaration: &'a WidgetDeclaration,
+    pub state_overrides: Vec<OverriddenWidget<'a>>,
+    pub fully_state_overridden: bool,
+    pub shared_overrides: WidgetProperties,
+    pub fallback: WidgetProperties,
     pub child_widgets: Option<WidgetSet<'a>>,
     pub child_type: Option<Ident>,
     pub handler: Option<Ident>,
-    pub fluents: Vec<FluentIdent<'a>>,
-    pub variables: Vec<(&'static str, &'a str)>,
     pub id: WidgetID,
 }
 
@@ -27,13 +40,14 @@ impl<'a> Widget<'a> {
         Self::new_inner(
             component.name.as_str(),
             &component.child,
+            &component.states[..],
             COMPONENT_COUNTER.fetch_add(1, Ordering::Relaxed),
         )
     }
-
     pub fn new_inner(
         component_name: &str,
         widget_declaration: &'a WidgetDeclaration,
+        states: &'a [StateDeclaration],
         component_id: u32,
     ) -> anyhow::Result<Self> {
         let widget = widget_declaration.widget.as_ref();
@@ -49,34 +63,37 @@ impl<'a> Widget<'a> {
         } else {
             None
         };
-        let fluents = widget
-            .get_fluents()
-            .into_iter()
-            .map(|(prop, fluent)| {
-                FluentIdent::new(
-                    prop,
-                    fluent,
-                    component_name,
-                    widget_declaration.name.as_deref(),
-                    widget_type_name,
-                )
-            })
-            .collect();
+        let fluents = Fluents::new(
+            widget,
+            component_name,
+            widget_declaration.name.as_deref(),
+            widget_type_name,
+        );
 
         static WIDGET_COUNTER: AtomicU32 = AtomicU32::new(0);
         let id = WidgetID::new(component_id, WIDGET_COUNTER.fetch_add(1, Ordering::Relaxed));
+        let mut state_overrides =
+            OverriddenWidget::new(component_name, widget_declaration, states)?;
+        let shared_overrides = WidgetProperties::remove_common_properties(&mut state_overrides[..]);
         Ok(Self {
             widget_type_name,
             widget_declaration,
             child_widgets: widget
                 .widgets()
-                .map(|ws| WidgetSet::new(component_name, ws, component_id))
+                .map(|ws| WidgetSet::new(component_name, ws, states, component_id))
                 .transpose()?,
             child_type: None,
+            fully_state_overridden: !state_overrides.is_empty()
+                && state_overrides.len() == states.len(),
             handler,
-            fluents,
-            variables: widget.get_vars(),
+            state_overrides,
+            fallback: WidgetProperties {
+                statics: Statics::new(widget),
+                fluents,
+                variables: Variables(widget.get_vars()),
+            },
             id,
+            shared_overrides,
         })
     }
 
@@ -92,16 +109,11 @@ impl<'a> Widget<'a> {
         stream
     }
 
-    pub fn contains_fluents(&self) -> bool {
-        !self.fluents.is_empty()
-            || self
-                .child_widgets
-                .as_ref()
-                .is_some_and(|s| s.widgets.iter().any(|(_, w)| w.contains_fluents()))
-    }
-
-    pub fn push_fluents(&'a self, container: &mut Vec<FluentIdent<'a>>) {
-        container.extend_from_slice(&self.fluents[..]);
+    pub fn push_fluents(&'a self, container: &mut Vec<FluentIdent>) {
+        container.extend_from_slice(&self.fallback.fluents.0[..]);
+        for ow in &self.state_overrides {
+            container.extend_from_slice(&ow.state_fluent_overrides.0[..]);
+        }
         for (_, child) in self.child_widgets.iter().flat_map(|s| &s.widgets) {
             child.push_fluents(container);
         }
@@ -113,41 +125,40 @@ impl<'a> Widget<'a> {
         widget_stmt: &TokenStream,
         stream: &mut TokenStream,
     ) {
-        let widget_ident = Ident::new("widget", Span::call_site());
-        let value_ident = Ident::new("value", Span::call_site());
-        let handle_ident = Ident::new("handle_ref", Span::call_site());
-        let string_var_name: &str = &var.name;
-
-        let mut update_stream = TokenStream::new();
-
-        for (prop, _var) in self
-            .variables
-            .iter()
-            .filter(|(_p, v)| *v == var.name.as_str())
-        {
-            self.widget_declaration.widget.on_property_update(
-                prop,
-                &widget_ident,
-                &value_ident,
-                &handle_ident,
-                &mut update_stream,
+        self.gen_if_correct_state(stream, |var_stream| {
+            self.fallback.variables.gen_variables(
+                &*self.widget_declaration.widget,
+                widget_stmt,
+                &var.name,
+                var_stream,
             );
-        }
+            self.fallback
+                .fluents
+                .gen_fluent_arg_update(&var.name, var_stream);
+        });
 
-        if !update_stream.is_empty() {
-            stream.extend(quote!(let widget = #widget_stmt; #update_stream));
-        }
-
-        for fluent in self
+        self.shared_overrides.variables.gen_variables(
+            &*self.widget_declaration.widget,
+            widget_stmt,
+            &var.name,
+            stream,
+        );
+        self.shared_overrides
             .fluents
-            .iter()
-            .filter(|f| f.fluent.vars.contains(&var.name))
-        {
-            let fluent_ident = &fluent.ident;
-            let prop = Ident::new(fluent.property, Span::call_site());
-            stream.extend(quote! {
-                #prop = true;
-                self.#fluent_ident.set(#string_var_name, #value_ident);
+            .gen_fluent_arg_update(&var.name, stream);
+
+        for widget in &self.state_overrides {
+            widget.gen_if_correct_state(stream, |var_stream| {
+                widget.variables.gen_variables(
+                    &*self.widget_declaration.widget,
+                    widget_stmt,
+                    &var.name,
+                    var_stream,
+                );
+                widget.fluents.gen_fluent_arg_update(&var.name, var_stream);
+                widget
+                    .state_fluent_overrides
+                    .gen_fluent_arg_update(&var.name, var_stream);
             });
         }
 
@@ -173,35 +184,33 @@ impl<'a> Widget<'a> {
 
     pub fn gen_fluent_update(&self, widget_stmt: Option<&TokenStream>, stream: &mut TokenStream) {
         let widget_stmt = widget_stmt.map_or_else(|| quote! {&mut self.widget}, Clone::clone);
-        let widget = Ident::new("widget", Span::call_site());
-        let value = Ident::new("value", Span::call_site());
-        let handle_ident = Ident::new("handle_ref", Span::call_site());
 
-        for fluent in &self.fluents {
-            let property_ident = (!fluent.fluent.vars.is_empty()).then_some(&fluent.property_ident);
-            let property_iter = property_ident.iter();
-            let fluent_name = &fluent.name;
-            let fluent_arg = &fluent.ident;
-            let mut on_property_update = TokenStream::new();
+        self.gen_if_correct_state(stream, |fluent_stream| {
+            self.fallback.fluents.gen_fluents(
+                &*self.widget_declaration.widget,
+                &widget_stmt,
+                fluent_stream,
+            )
+        });
 
-            let arg = if fluent.fluent.vars.is_empty() {
-                quote! {None}
-            } else {
-                quote! {Some(&self.#fluent_arg)}
-            };
-            self.widget_declaration.widget.on_property_update(
-                fluent.property,
-                &widget,
-                &value,
-                &handle_ident,
-                &mut on_property_update,
-            );
-            stream.extend(quote! {
-                if force_update #(|| #property_iter)* {
-                    let value = get_bundle_message(#fluent_name, #arg);
-                    let #widget = #widget_stmt;
-                    #on_property_update
-                }
+        self.shared_overrides.fluents.gen_fluents(
+            &*self.widget_declaration.widget,
+            &widget_stmt,
+            stream,
+        );
+
+        for widget in &self.state_overrides {
+            widget.gen_if_correct_state(stream, |state_stream| {
+                widget.fluents.gen_fluents(
+                    &*self.widget_declaration.widget,
+                    &widget_stmt,
+                    state_stream,
+                );
+                widget.state_fluent_overrides.gen_fluents(
+                    &*self.widget_declaration.widget,
+                    &widget_stmt,
+                    state_stream,
+                )
             });
         }
 
@@ -225,6 +234,68 @@ impl<'a> Widget<'a> {
     pub fn gen_widget_set(&self, stream: &mut TokenStream) {
         if let Some(set) = &self.child_widgets {
             set.gen_widget_set(stream)
+        }
+    }
+
+    fn gen_if_correct_state(&self, stream: &mut TokenStream, func: impl FnOnce(&mut TokenStream)) {
+        if self.fully_state_overridden {
+            return;
+        }
+
+        let mut func_stream = TokenStream::new();
+        func(&mut func_stream);
+        if func_stream.is_empty() {
+            return;
+        }
+
+        if self.state_overrides.is_empty() {
+            stream.extend(func_stream);
+            return;
+        }
+
+        let idents = self
+            .state_overrides
+            .iter()
+            .map(|o| format_ident!("{}", o.state_name));
+
+        stream.extend(quote! {
+            if #(self.state != State::#idents)&&* {
+                #func_stream
+            }
+        })
+    }
+
+    pub fn gen_statics(&self, widget_stmt: Option<&TokenStream>, stream: &mut TokenStream) {
+        let widget_stmt = widget_stmt.map_or_else(|| quote! {&mut self.widget}, Clone::clone);
+
+        self.gen_if_correct_state(stream, |static_stream| {
+            self.fallback.statics.gen_statics(
+                &*self.widget_declaration.widget,
+                &widget_stmt,
+                static_stream,
+            )
+        });
+
+        self.shared_overrides.statics.gen_statics(
+            &*self.widget_declaration.widget,
+            &widget_stmt,
+            stream,
+        );
+
+        for widget in &self.state_overrides {
+            widget.gen_if_correct_state(stream, |static_stream| {
+                widget.statics.gen_statics(
+                    &*self.widget_declaration.widget,
+                    &widget_stmt,
+                    static_stream,
+                )
+            });
+        }
+
+        if let Some(ws) = &self.child_widgets {
+            for (get_stmt, w) in ws.gen_widget_gets(&widget_stmt) {
+                w.gen_statics(Some(&get_stmt), stream);
+            }
         }
     }
 
@@ -291,103 +362,5 @@ impl<'a> Widget<'a> {
 
     pub fn iter<'b>(&'b self) -> WidgetIter<'a, 'b> {
         WidgetIter::new(self)
-    }
-}
-
-pub struct WidgetIter<'a, 'b> {
-    widget: Option<&'b Widget<'a>>,
-    to_visit: Vec<&'b Widget<'a>>,
-}
-
-impl<'a, 'b> WidgetIter<'a, 'b> {
-    fn new(widget: &'b Widget<'a>) -> Self {
-        Self {
-            widget: Some(widget),
-            to_visit: vec![],
-        }
-    }
-}
-
-impl<'a, 'b> Iterator for WidgetIter<'a, 'b> {
-    type Item = &'b Widget<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(Some(ws)) = &self.widget.map(|w| &w.child_widgets) {
-            self.to_visit.extend(ws.widgets.iter().map(|(_, w)| w));
-        }
-        let widget = self.widget;
-        self.widget = self.to_visit.pop();
-        widget
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::Widget;
-    use gui_core::parse::ComponentDeclaration;
-    use itertools::Itertools;
-
-    #[test]
-    fn test_iter() -> anyhow::Result<()> {
-        let declaration: ComponentDeclaration = serde_yaml::from_str(
-            r#"
-name: Test
-child:
-  widget: VStack
-  properties:
-    children:
-      - name: One
-        widget: Text
-        properties:
-          text: a
-
-      - name: Two
-        widget: HStack
-        properties:
-          children:
-            - name: TwoA
-              widget: Text
-              properties:
-                text: a
-            - name: TwoB
-              widget: Text
-              properties:
-                text: a
-
-      - name: Three
-        widget: Button
-        properties:
-          child:
-            name: Four
-            widget: Text
-            properties:
-              text: a
-
-      - name: Five
-        widget: Button
-        properties:
-          child:
-            name: Six
-            widget: Button
-            properties:
-              child:
-                name: Seven
-                widget: Text
-                properties:
-                  text: a
-        "#,
-        )?;
-        let tree = Widget::new(&declaration)?;
-        let mut v = tree
-            .iter()
-            .filter_map(|w| w.widget_declaration.name.as_ref().map(|s| s.as_str()))
-            .collect_vec();
-        let mut slice = [
-            "One", "Two", "TwoA", "TwoB", "Three", "Four", "Five", "Six", "Seven",
-        ];
-        slice.sort();
-        v.sort();
-        assert_eq!(v, slice);
-        Ok(())
     }
 }

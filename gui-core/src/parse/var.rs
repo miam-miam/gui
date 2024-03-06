@@ -1,7 +1,7 @@
 use proc_macro2::Ident;
 use serde::de::{Error, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer};
-use std::fmt::Formatter;
+use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
 use std::str::FromStr;
 use syn::__private::Span;
@@ -36,6 +36,12 @@ impl Name {
             ));
         }
         Ok(())
+    }
+}
+
+impl Display for Name {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.0, f)
     }
 }
 

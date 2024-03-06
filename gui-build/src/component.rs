@@ -1,8 +1,10 @@
 use crate::fluent;
 use crate::fluent::FluentIdent;
 use crate::widget::Widget;
-use anyhow::Context;
-use gui_core::parse::{ComponentDeclaration, NormalVariableDeclaration, VariableDeclaration};
+use anyhow::{bail, Context};
+use gui_core::parse::{
+    ComponentDeclaration, NormalVariableDeclaration, StateDeclaration, VariableDeclaration,
+};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 use std::fs;
@@ -10,7 +12,7 @@ use std::path::Path;
 use std::str::FromStr;
 
 pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> anyhow::Result<()> {
-    let component_holder = format_ident!("{}Holder", component.name);
+    let component_holder = format_ident!("{}Holder", *component.name);
 
     let normal_variables: Vec<&NormalVariableDeclaration> = component
         .variables
@@ -26,12 +28,10 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let mut widget_set = TokenStream::new();
     widget_tree.gen_widget_set(&mut widget_set);
 
-    let bundle_func = widget_tree
-        .contains_fluents()
-        .then(fluent::gen_bundle_function);
-
     let mut fluents = vec![];
     widget_tree.push_fluents(&mut fluents);
+
+    let bundle_func = (!fluents.is_empty()).then(|| fluent::gen_bundle_function(&component.name));
 
     create_bundle(out_dir, &component.name, &fluents[..])
         .context("Failed to create fluent bundle")?;
@@ -52,6 +52,9 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         .filter(|f| !f.fluent.vars.is_empty())
         .map(|fluent| &fluent.property_ident)
         .collect();
+
+    let mut statics_update: TokenStream = TokenStream::new();
+    widget_tree.gen_statics(None, &mut statics_update);
 
     let mut prop_update: TokenStream = TokenStream::new();
     widget_tree.gen_fluent_update(None, &mut prop_update);
@@ -76,10 +79,12 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         .iter()
         .map(|n| Ident::new(&n.name, Span::call_site()));
 
+    let state_declaration = create_state(component.states.as_slice())?;
+
     let mut struct_handlers = TokenStream::new();
     widget_tree.gen_handler_structs(&mut struct_handlers)?;
 
-    let rs_path = Path::new(&out_dir).join(format!("{}.rs", component.name));
+    let rs_path = Path::new(&out_dir).join(format!("{}.rs", component.name.as_str()));
 
     let widget_type = widget_tree.gen_widget_type();
     let widget_init = widget_tree.gen_widget_init();
@@ -111,8 +116,25 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         Some(quote!(#name => Some(#id),))
     });
 
+    let check_state = state_declaration.as_ref().map(|_| {
+        quote! {
+            if force_update || <CompStruct as Update<state>>::is_updated(&self.comp_struct) {
+                let new_state = <CompStruct as Update<state>>::value(&self.comp_struct);
+                if self.state != new_state {
+                    self.state = new_state;
+                    force_update = true;
+                }
+            }
+        }
+    });
+    let state_type = state_declaration.as_ref().map(|_| quote! {state: State,});
+    let state_init = state_declaration
+        .as_ref()
+        .map(|_| quote! {state: Default::default(),});
+
     let gen_module = quote! {
         #[allow(clippy::suspicious_else_formatting)]
+        #[allow(clippy::collapsible_if)]
         mod gen {
             use super::__private_CompStruct as CompStruct;
             use std::any::Any;
@@ -120,6 +142,8 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             use gui::gui_core::glazier::kurbo::Rect;
             use gui::gui_core::widget::{Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle, WidgetEvent, Handle};
             use gui::gui_core::{Component, LayoutConstraints, Size, ToComponent, ToHandler, Update, Variable};
+
+            #state_declaration
 
             #widget_set
 
@@ -133,6 +157,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             pub struct #component_holder {
                 comp_struct: CompStruct,
                 widget: #widget_type,
+                #state_type
                 #( #fluent_arg_idents: FluentArgs<'static> ),*
             }
 
@@ -144,6 +169,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     #component_holder {
                         widget: #widget_init,
                         comp_struct: self,
+                        #state_init
                         #( #fluent_arg_idents: FluentArgs::new() ),*
                     }
                 }
@@ -182,15 +208,20 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     render_handle.unwrap()
                 }
 
+                #[allow(unused_mut)]
                 fn update_vars<'a>(
                     &mut self,
-                    force_update: bool,
+                    mut force_update: bool,
                     handle: &'a mut Handle,
                     global_positions: &'a [Rect],
                 ) -> bool {
                     let mut update_handle = UpdateHandle::new(handle, global_positions);
                     let handle_ref = &mut update_handle;
                     #( let mut #fluent_properties = false; )*
+                    #check_state
+                    if force_update {
+                        #statics_update
+                    }
                     #if_update
                     #prop_update
                     #( <CompStruct as Update<#var_names>>::reset(&mut self.comp_struct); )*
@@ -299,4 +330,32 @@ fn create_bundle(
     }
     fs::write(ftl_path, bundle)?;
     Ok(())
+}
+
+fn create_state(states: &[StateDeclaration]) -> anyhow::Result<Option<TokenStream>> {
+    if states.is_empty() {
+        return Ok(None);
+    }
+
+    if states.len() == 1 {
+        let name = &states[0].name;
+        bail!("Cannot have a singular state but found state {name}.");
+    }
+
+    let names = states.iter().map(|s| format_ident!("{}", s.name.as_str()));
+
+    Ok(Some(quote! {
+        #[allow(non_camel_case_types)]
+        #[derive(Default, Copy, Clone, Eq, PartialEq)]
+        pub(crate) enum State {
+            #[default]
+            #(#names),*
+        }
+        #[allow(non_camel_case_types)]
+        pub(crate) struct state;
+
+        impl Variable for state {
+            type VarType = State;
+        }
+    }))
 }

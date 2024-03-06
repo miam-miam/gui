@@ -51,7 +51,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install pkg-config clang libwayland-dev libxkbcommon-x11-dev libvulkan-dev mold
-          
+
       - name: install llvmpipe and lavapipe (sofware based renderers)
         shell: bash
         run: |
@@ -80,4 +80,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-screenshots
-          path: examples/testbed/screenshots/**
+          path: examples/*/screenshots/**

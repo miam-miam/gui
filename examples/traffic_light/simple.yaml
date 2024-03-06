@@ -1,7 +1,11 @@
+styles:
+  - widget: Text
+    properties:
+      size: 25
 components:
   - name: TrafficLight # Names for components must be unique
     variables:
-      - name: hover_colour
+      - name: light_colour
         type: ::gui::gui_core::Colour
       - name: count
         type: u32
@@ -11,8 +15,8 @@ components:
           - name: Switch
             widget: Button
             properties:
-              hover_colour:
-                variable: hover_colour
+              clicked_colour: green
+              hover_colour: green
               background_colour: green
           - name: SwitchText
             widget: Text
@@ -24,6 +28,7 @@ components:
           - name: Switch
             widget: Button
             properties:
+              clicked_colour: yellow
               hover_colour: yellow
               background_colour: yellow
           - name: SwitchText
@@ -36,6 +41,7 @@ components:
           - name: Switch
             widget: Button
             properties:
+              clicked_colour: red
               hover_colour: red
               background_colour: red
           - name: SwitchText
@@ -44,11 +50,21 @@ components:
               text: Go Green {$count}
 
     child:
-      name: Switch
-      widget: Button
+      name: VStack
+      widget: VStack
       properties:
-        child:
-          name: SwitchText
-          widget: Text
-          properties:
-            text: Next
+        children:
+          - name: Light
+            widget: Text
+            properties:
+              text: The light
+              colour:
+                variable: light_colour
+          - name: Switch
+            widget: Button
+            properties:
+              child:
+                name: SwitchText
+                widget: Text
+                properties:
+                  text: Next
