@@ -31,6 +31,7 @@ impl ToTokens for EqTokenStream {
     }
 }
 
+#[allow(dead_code)]
 impl EqTokenStream {
     pub fn get(&self) -> &TokenStream {
         &self.0

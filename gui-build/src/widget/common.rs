@@ -1,5 +1,5 @@
-use crate::eq_tokenstream::EqTokenStream;
 use crate::fluent::FluentIdent;
+use crate::tokenstream::EqTokenStream;
 use gui_core::parse::var::Name;
 use gui_core::widget::WidgetBuilder;
 use itertools::Itertools;
@@ -142,7 +142,7 @@ impl Fluents {
     pub fn gen_fluent_arg_update(&self, var_name: &Name, fluent_stream: &mut TokenStream) {
         let (_, value_ident, _) = gen_idents();
 
-        for fluent in self.0.iter().filter(|f| f.fluent.vars.contains(&var_name)) {
+        for fluent in self.0.iter().filter(|f| f.fluent.vars.contains(var_name)) {
             let fluent_ident = &fluent.ident;
             let prop = Ident::new(fluent.property, Span::call_site());
             let string_var_name: &str = var_name;

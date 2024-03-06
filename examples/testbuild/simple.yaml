@@ -1,11 +1,18 @@
 components:
   - name: TrafficLight # Names for components must be unique
+    variables:
+      - name: hover_colour
+        type: ::gui::gui_core::Colour
+      - name: count
+        type: u32
     states:
       - name: Green
         overrides:
           - name: Switch
             widget: Button
             properties:
+              hover_colour:
+                variable: hover_colour
               background_colour: green
           - name: SwitchText
             widget: Text
@@ -17,6 +24,7 @@ components:
           - name: Switch
             widget: Button
             properties:
+              hover_colour: yellow
               background_colour: yellow
           - name: SwitchText
             widget: Text
@@ -28,12 +36,12 @@ components:
           - name: Switch
             widget: Button
             properties:
+              hover_colour: red
               background_colour: red
           - name: SwitchText
             widget: Text
             properties:
-              text: Go Green
-
+              text: Go Green {$count}
 
     child:
       name: Switch

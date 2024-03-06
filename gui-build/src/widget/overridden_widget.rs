@@ -8,6 +8,7 @@ use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use std::collections::HashSet;
+use std::hash::Hash;
 
 #[derive(Clone, Debug, Default)]
 pub struct WidgetProperties {
@@ -17,30 +18,46 @@ pub struct WidgetProperties {
 }
 
 impl WidgetProperties {
+    fn get_intersection<'a, T: Eq + Hash + Clone + 'a>(
+        iter: impl Iterator<Item = HashSet<&'a T>>,
+    ) -> HashSet<T> {
+        iter.reduce(|acc, w| acc.intersection(&w).copied().collect())
+            .map_or_else(HashSet::default, |h| {
+                h.into_iter().cloned().collect::<HashSet<T>>()
+            })
+    }
+
     #[allow(clippy::mutable_key_type)]
     pub fn remove_common_properties(widgets: &mut [OverriddenWidget]) -> Self {
-        let common_statics = widgets
-            .iter()
-            .map(|w| w.statics.0.iter().collect::<HashSet<_>>())
-            .reduce(|acc, w| acc.intersection(&w).copied().collect())
-            .map_or_else(HashSet::default, |h| {
-                h.into_iter().cloned().collect::<HashSet<(_, _)>>()
-            });
+        let common_statics =
+            Self::get_intersection(widgets.iter().map(|w| w.statics.0.iter().collect()));
+
+        let common_fluents =
+            Self::get_intersection(widgets.iter().map(|w| w.fluents.0.iter().collect()));
+
+        let common_variables =
+            Self::get_intersection(widgets.iter().map(|w| w.variables.0.iter().collect()));
 
         for w in widgets.iter_mut() {
-            w.statics = Statics(
-                w.statics
-                    .0
-                    .iter()
-                    .filter(|s| !common_statics.contains(*s))
-                    .cloned()
-                    .collect(),
-            )
+            w.statics.0.retain(|s| !common_statics.contains(s));
+            w.fluents.0.retain(|f| !common_fluents.contains(f));
+            w.variables.0.retain(|v| !common_variables.contains(v));
         }
-
+        // Sort by property to prevent generated code from changing on each compile
         Self {
-            statics: Statics(common_statics.into_iter().collect()),
-            ..Default::default()
+            statics: Statics(common_statics.into_iter().sorted_by_key(|s| s.0).collect()),
+            fluents: Fluents(
+                common_fluents
+                    .into_iter()
+                    .sorted_by_key(|f| f.property)
+                    .collect(),
+            ),
+            variables: Variables(
+                common_variables
+                    .into_iter()
+                    .sorted_by_key(|v| v.0)
+                    .collect(),
+            ),
         }
     }
 }

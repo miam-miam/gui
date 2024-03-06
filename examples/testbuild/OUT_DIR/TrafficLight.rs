@@ -1,4 +1,5 @@
 #[allow(clippy::suspicious_else_formatting)]
+#[allow(clippy::collapsible_if)]
 mod gen {
     use super::__private_CompStruct as CompStruct;
     use std::any::Any;
@@ -49,6 +50,16 @@ mod gen {
         let pattern = message.value().expect("Value exists.");
         bundle.format_pattern(pattern, args, &mut errors)
     }
+    #[allow(non_camel_case_types)]
+    pub(crate) struct hover_colour;
+    impl Variable for hover_colour {
+        type VarType = ::gui::gui_core::Colour;
+    }
+    #[allow(non_camel_case_types)]
+    pub(crate) struct count;
+    impl Variable for count {
+        type VarType = u32;
+    }
     pub(crate) struct Switch;
     impl ToHandler for Switch {
         type BaseHandler = CompStruct;
@@ -58,6 +69,7 @@ mod gen {
         comp_struct: CompStruct,
         widget: ::gui::gui_widget::Button<Switch, CompStruct, ::gui::gui_widget::Text>,
         state: State,
+        TrafficLight_SwitchText_Red_text: FluentArgs<'static>,
     }
     #[automatically_derived]
     impl ToComponent for CompStruct {
@@ -70,6 +82,7 @@ mod gen {
                 ),
                 comp_struct: self,
                 state: Default::default(),
+                TrafficLight_SwitchText_Red_text: FluentArgs::new(),
             }
         }
         fn largest_id(&self) -> WidgetID {
@@ -117,6 +130,7 @@ mod gen {
         ) -> bool {
             let mut update_handle = UpdateHandle::new(handle, global_positions);
             let handle_ref = &mut update_handle;
+            let mut text = false;
             if force_update
                 || <CompStruct as Update<state>>::is_updated(&self.comp_struct)
             {
@@ -130,12 +144,10 @@ mod gen {
                 let widget = &mut self.widget;
                 let value = ::gui::gui_core::Colour::rgba8(206u8, 212u8, 218u8, 255u8);
                 widget.set_border_colour(value, handle_ref);
-                let value = false;
-                widget.set_disabled(value, handle_ref);
-                let value = ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8, 255u8);
-                widget.set_hover_colour(value, handle_ref);
                 let value = ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8, 255u8);
                 widget.set_clicked_colour(value, handle_ref);
+                let value = false;
+                widget.set_disabled(value, handle_ref);
                 let value = ::gui::gui_core::Colour::rgba8(241u8, 243u8, 245u8, 255u8);
                 widget.set_disabled_colour(value, handle_ref);
                 if self.state == State::Green {
@@ -147,17 +159,41 @@ mod gen {
                     let widget = &mut self.widget;
                     let value = ::gui::gui_core::Colour::rgba8(255u8, 255u8, 0u8, 255u8);
                     widget.set_background_colour(value, handle_ref);
+                    let value = ::gui::gui_core::Colour::rgba8(255u8, 255u8, 0u8, 255u8);
+                    widget.set_hover_colour(value, handle_ref);
                 }
                 if self.state == State::Red {
                     let widget = &mut self.widget;
                     let value = ::gui::gui_core::Colour::rgba8(255u8, 0u8, 0u8, 255u8);
                     widget.set_background_colour(value, handle_ref);
+                    let value = ::gui::gui_core::Colour::rgba8(255u8, 0u8, 0u8, 255u8);
+                    widget.set_hover_colour(value, handle_ref);
                 }
                 let widget = &mut self.widget.get_widget();
                 let value = ::gui::gui_core::Colour::rgba8(33u8, 37u8, 41u8, 255u8);
                 widget.set_colour(value, handle_ref);
                 let value = 14f32;
                 widget.set_size(value, handle_ref);
+            }
+            if force_update
+                || <CompStruct as Update<hover_colour>>::is_updated(&self.comp_struct)
+            {
+                let value = <CompStruct as Update<
+                    hover_colour,
+                >>::value(&self.comp_struct);
+                if self.state == State::Green {
+                    let widget = &mut self.widget;
+                    widget.set_hover_colour(value, handle_ref);
+                }
+            }
+            if force_update
+                || <CompStruct as Update<count>>::is_updated(&self.comp_struct)
+            {
+                let value = <CompStruct as Update<count>>::value(&self.comp_struct);
+                if self.state == State::Red {
+                    text = true;
+                    self.TrafficLight_SwitchText_Red_text.set("count", value);
+                }
             }
             if self.state == State::Green {
                 if force_update {
@@ -180,15 +216,17 @@ mod gen {
                 }
             }
             if self.state == State::Red {
-                if force_update {
+                if force_update || text {
                     let value = get_bundle_message(
                         "TrafficLight-SwitchText-Red-text",
-                        None,
+                        Some(&self.TrafficLight_SwitchText_Red_text),
                     );
                     let widget = &mut self.widget.get_widget();
                     widget.set_text(value, handle_ref);
                 }
             }
+            <CompStruct as Update<hover_colour>>::reset(&mut self.comp_struct);
+            <CompStruct as Update<count>>::reset(&mut self.comp_struct);
             update_handle.unwrap()
         }
         fn resize<'a>(

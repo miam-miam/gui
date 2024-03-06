@@ -1,6 +1,6 @@
 mod component;
-mod eq_tokenstream;
 mod fluent;
+mod tokenstream;
 mod widget;
 
 use anyhow::{anyhow, bail, Context};
