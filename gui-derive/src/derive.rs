@@ -10,6 +10,7 @@ pub struct Derive {
     component_ident: Ident,
     component: String,
     vars_to_gen: Vec<(String, Ident)>,
+    components_to_gen: Vec<(String, Ident)>,
 }
 
 impl Parse for Derive {
@@ -32,27 +33,39 @@ impl Parse for Derive {
                     .into();
 
                 if let Fields::Named(fields) = s.fields {
-                    let env = env::var(format!("GUI_COMPONENT_{component}")).unwrap();
-                    let component_vars: HashSet<&str> = env.split(',').collect();
+                    let env_vars = env::var(format!("GUI_COMPONENT_{component}_VAR")).unwrap();
+                    let component_vars: HashSet<&str> = env_vars.split(',').collect();
+                    let env_component =
+                        env::var(format!("GUI_COMPONENT_{component}_COMPONENT")).unwrap();
+                    let components: HashSet<&str> = env_component.split(',').collect();
 
-                    let vars_to_gen: Vec<(String, Ident)> = fields
+                    let fields_iter = fields
                         .named
                         .iter()
                         .filter_map(|f| f.ident.as_ref())
-                        .map(|i| (format!("{i}"), i.clone()))
+                        .map(|i| (format!("{i}"), i.clone()));
+
+                    let vars_to_gen = fields_iter
+                        .clone()
                         .filter(|(s, _i)| component_vars.contains(s.as_str()))
+                        .collect();
+
+                    let components_to_gen = fields_iter
+                        .filter(|(s, _i)| components.contains(s.as_str()))
                         .collect();
 
                     Ok(Self {
                         component_ident: input.ident,
                         component,
                         vars_to_gen,
+                        components_to_gen,
                     })
                 } else {
                     Ok(Self {
                         component_ident: input.ident,
                         component,
                         vars_to_gen: vec![],
+                        components_to_gen: vec![],
                     })
                 }
             }
@@ -90,10 +103,22 @@ impl ToTokens for Derive {
             }
         });
 
+        let gen_components = self.components_to_gen.iter().map(|(c_name, ident)| {
+            let comp_ident = Ident::new(c_name, ident.span());
+            quote! {
+                impl ::gui::ComponentHolder<gen::#comp_ident> for #component_ident {
+                    fn comp_holder(&mut self) -> &mut ::gui::CompHolder<<gen::#comp_ident as ::gui::gui_core::Variable>::VarType> {
+                        &mut self.#ident
+                    }
+                }
+            }
+        });
+
         tokens.extend(quote! {
             use #component_ident as __private_CompStruct;
             include!(concat!(env!("OUT_DIR"), #component_file));
             #(#gen_vars)*
+            #(#gen_components)*
         })
     }
 }

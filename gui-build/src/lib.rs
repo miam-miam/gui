@@ -83,23 +83,28 @@ fn combine_style(
 }
 
 fn add_info_to_env(static_gui: &GUIDeclaration) {
-    let components = static_gui
-        .components
-        .iter()
-        .map(|c| c.name.as_str())
-        .format(",");
+    let components = static_gui.components.iter().map(|c| &c.name).format(",");
     println!("cargo:rustc-env=GUI_COMPONENTS={components}");
     for component in &static_gui.components {
         let state_name = (component.states.len() > 1).then_some("state").into_iter();
-        let variables = component
+        let normal_variables = component
             .variables
             .iter()
-            .map(|v| v.get_name().as_str())
+            .filter_map(|v| v.get_normal().map(|n| n.name.as_str()))
             .chain(state_name)
             .format(",");
+        let component_variables = component
+            .variables
+            .iter()
+            .filter_map(|v| v.get_component().map(|c| c.name.as_str()))
+            .format(",");
         println!(
-            "cargo:rustc-env=GUI_COMPONENT_{}={variables}",
-            component.name.as_str()
+            "cargo:rustc-env=GUI_COMPONENT_{}_VAR={normal_variables}",
+            component.name
+        );
+        println!(
+            "cargo:rustc-env=GUI_COMPONENT_{}_COMPONENT={component_variables}",
+            component.name
         );
     }
 }

@@ -1,5 +1,5 @@
 use gui::gui_widget::button::ButtonHandler;
-use gui::{ToComponent, Update, Updateable};
+use gui::{type_registry, ToComponent, Update, Updateable};
 
 #[derive(ToComponent, Default)]
 struct Counter {
@@ -26,6 +26,8 @@ impl ButtonHandler<gen::DecrementBtn> for Counter {
         *self.count.invalidate() -= 1;
     }
 }
+
+type_registry!();
 
 fn main() {
     gui::run(Counter::default())

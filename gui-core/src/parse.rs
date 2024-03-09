@@ -56,6 +56,30 @@ impl VariableDeclaration {
             VariableDeclaration::Components(c) => &c.name,
         }
     }
+
+    pub fn get_normal(&self) -> Option<&NormalVariableDeclaration> {
+        if let VariableDeclaration::Normal(n) = self {
+            Some(n)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_component(&self) -> Option<&ComponentVariableDeclaration> {
+        if let VariableDeclaration::Component(c) = self {
+            Some(c)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_components(&self) -> Option<&ComponentsVariableDeclaration> {
+        if let VariableDeclaration::Components(c) = self {
+            Some(c)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]

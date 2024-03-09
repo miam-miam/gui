@@ -1,6 +1,6 @@
 use gui::gui_core::Colour;
 use gui::gui_widget::button::ButtonHandler;
-use gui::{ToComponent, Updateable};
+use gui::{type_registry, ToComponent, Updateable};
 
 #[derive(ToComponent, Default)]
 struct TrafficLight {
@@ -25,6 +25,8 @@ impl ButtonHandler<gen::Switch> for TrafficLight {
         }
     }
 }
+
+type_registry!();
 
 fn main() {
     gui::run(TrafficLight::default())

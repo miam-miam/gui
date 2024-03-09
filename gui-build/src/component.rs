@@ -13,6 +13,7 @@ use std::str::FromStr;
 
 pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> anyhow::Result<()> {
     let component_holder = format_ident!("{}Holder", *component.name);
+    let component_name = format_ident!("{}", *component.name);
 
     let normal_variables: Vec<&NormalVariableDeclaration> = component
         .variables
@@ -141,7 +142,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             use gui::gui_core::vello::SceneBuilder;
             use gui::gui_core::glazier::kurbo::Rect;
             use gui::gui_core::widget::{Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle, WidgetEvent, Handle};
-            use gui::gui_core::{Component, LayoutConstraints, Size, ToComponent, ToHandler, Update, Variable};
+            use gui::gui_core::{Component, ComponentTypeInfo, LayoutConstraints, Size, ToComponent, ToHandler, Update, Variable};
 
             #state_declaration
 
@@ -152,6 +153,10 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             #struct_vars
 
             #struct_handlers
+
+            impl ComponentTypeInfo for crate::__gui_private::#component_name {
+                type ToComponent = CompStruct;
+            }
 
             #[allow(non_snake_case)]
             pub struct #component_holder {

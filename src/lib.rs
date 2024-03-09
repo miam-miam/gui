@@ -19,7 +19,7 @@ pub use gui_core;
 use gui_core::layout::LayoutConstraints;
 pub use unic_langid::langid;
 
-pub use gui_derive::ToComponent;
+pub use gui_derive::{type_registry, ToComponent};
 
 pub use gui_widget;
 

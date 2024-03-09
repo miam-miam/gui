@@ -94,3 +94,7 @@ pub trait Update<T: Variable> {
     fn value(&self) -> T::VarType;
     fn reset(&mut self) {}
 }
+
+pub trait ComponentTypeInfo {
+    type ToComponent: ToComponent;
+}
