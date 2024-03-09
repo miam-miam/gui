@@ -9,12 +9,14 @@ use gui_core::glazier::{
 use gui_core::vello::peniko::Color;
 use gui_core::vello::util::{RenderContext, RenderSurface};
 use gui_core::vello::{RenderParams, Renderer, RendererOptions, Scene, SceneFragment};
+pub use gui_core::CompHolder;
 use gui_core::{Component, SceneBuilder, ToComponent};
 use std::any::Any;
 use tracing_subscriber::EnvFilter;
 
 pub use fluent_bundle::concurrent::FluentBundle;
 pub use fluent_bundle::{FluentArgs, FluentMessage, FluentResource};
+#[doc(hidden)]
 pub use gui_core;
 use gui_core::layout::LayoutConstraints;
 pub use unic_langid::langid;

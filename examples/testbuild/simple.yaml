@@ -1,4 +1,14 @@
 components:
+  - name: Holder
+    variables:
+      - name: light
+        component: TrafficLight
+    child:
+      name: Text
+      widget: Text
+      properties:
+        text: "Test"
+
   - name: TrafficLight # Names for components must be unique
     variables:
       - name: hover_colour

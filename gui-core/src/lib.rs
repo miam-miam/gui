@@ -2,21 +2,22 @@ pub mod common;
 pub mod parse;
 pub mod widget;
 
+mod comp_holder;
 mod handles;
 pub mod layout;
-
-pub use layout::LayoutConstraints;
-pub use parse::colour::Colour;
-pub use parse::var::Var;
-use std::any::Any;
-pub use vello::kurbo::Size;
 
 pub use glazier;
 pub use glazier::kurbo::Point;
 use glazier::kurbo::Rect;
+pub use layout::LayoutConstraints;
 pub use parley;
+pub use parse::colour::Colour;
+pub use parse::var::Var;
+use std::any::Any;
 pub use vello;
+pub use vello::kurbo::Size;
 
+pub use crate::comp_holder::CompHolder;
 use crate::handles::Handle;
 use crate::widget::{WidgetEvent, WidgetID};
 pub use parley::font::FontContext;
@@ -97,4 +98,11 @@ pub trait Update<T: Variable> {
 
 pub trait ComponentTypeInfo {
     type ToComponent: ToComponent;
+}
+
+pub trait ComponentHolder<T: Variable>
+where
+    T::VarType: ToComponent,
+{
+    fn comp_holder(&mut self) -> &mut CompHolder<T::VarType>;
 }

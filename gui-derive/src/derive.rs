@@ -106,7 +106,7 @@ impl ToTokens for Derive {
         let gen_components = self.components_to_gen.iter().map(|(c_name, ident)| {
             let comp_ident = Ident::new(c_name, ident.span());
             quote! {
-                impl ::gui::ComponentHolder<gen::#comp_ident> for #component_ident {
+                impl ::gui::gui_core::ComponentHolder<gen::#comp_ident> for #component_ident {
                     fn comp_holder(&mut self) -> &mut ::gui::CompHolder<<gen::#comp_ident as ::gui::gui_core::Variable>::VarType> {
                         &mut self.#ident
                     }
