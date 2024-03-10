@@ -1,6 +1,5 @@
 use crate::widget::Widget;
 use anyhow::bail;
-use gui_core::parse::var::Name;
 use gui_core::parse::{ComponentVariableDeclaration, VariableDeclaration};
 use gui_core::widget::WidgetID;
 use itertools::Itertools;
@@ -11,9 +10,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 struct ComponentVar {
     type_stream: TokenStream,
-    comp_name: String,
     holder_ident: Ident,
-    name: Name,
     name_ident: Ident,
     id: WidgetID,
 }
@@ -26,9 +23,7 @@ impl ComponentVar {
         let name_ident = format_ident!("{}", *comp.name);
         Self {
             type_stream,
-            comp_name: comp.component.clone(),
             holder_ident,
-            name: comp.name.clone(),
             name_ident,
             id,
         }
