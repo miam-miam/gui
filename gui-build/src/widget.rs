@@ -4,7 +4,7 @@ mod overridden_widget;
 mod widget_set;
 
 use crate::fluent::FluentIdent;
-use crate::widget::common::{Fluents, Statics, Variables};
+use crate::widget::common::{Components, Fluents, Statics, Variables};
 use crate::widget::overridden_widget::WidgetProperties;
 use anyhow::anyhow;
 use gui_core::parse::{
@@ -31,6 +31,7 @@ pub struct Widget<'a> {
     pub child_widgets: Option<WidgetSet<'a>>,
     pub child_type: Option<Ident>,
     pub handler: Option<Ident>,
+    pub components: Components,
     pub id: WidgetID,
 }
 
@@ -70,14 +71,14 @@ impl<'a> Widget<'a> {
             widget_type_name,
         );
 
-        static WIDGET_COUNTER: AtomicU32 = AtomicU32::new(0);
-        let id = WidgetID::new(component_id, WIDGET_COUNTER.fetch_add(1, Ordering::Relaxed));
+        let id = WidgetID::next(component_id);
         let mut state_overrides =
             OverriddenWidget::new(component_name, widget_declaration, states)?;
         let shared_overrides = WidgetProperties::remove_common_properties(&mut state_overrides[..]);
         Ok(Self {
             widget_type_name,
             widget_declaration,
+            components: Components::new(widget, component_id),
             child_widgets: widget
                 .widgets()
                 .map(|ws| WidgetSet::new(component_name, ws, states, component_id))
@@ -281,6 +282,9 @@ impl<'a> Widget<'a> {
             &widget_stmt,
             stream,
         );
+
+        self.components
+            .gen_components(&*self.widget_declaration.widget, &widget_stmt, stream);
 
         for widget in &self.state_overrides {
             widget.gen_if_correct_state(stream, |static_stream| {

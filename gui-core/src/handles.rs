@@ -1,5 +1,5 @@
 use crate::widget::{Widget, WidgetEvent, WidgetID};
-use crate::{LayoutConstraints, Point, Size, ToComponent};
+use crate::{LayoutConstraints, MultiComponent, Point, Size, ToComponent};
 use glazier::kurbo::{Affine, Rect};
 use glazier::{Cursor, WindowHandle};
 use parley::FontContext;
@@ -63,13 +63,14 @@ impl<'a> UpdateHandle<'a> {
     }
 }
 
-pub struct RenderHandle<'a, T> {
+pub struct RenderHandle<'a, T: ToComponent> {
     handle: &'a mut Handle,
     global_positions: &'a mut [Rect],
     resize: bool,
     active_widget: &'a mut Option<WidgetID>,
     hovered_widgets: &'a [WidgetID],
     comp_struct: &'a mut T,
+    held_components: &'a mut T::HeldComponents,
 }
 
 impl<'a, T: ToComponent> RenderHandle<'a, T> {
@@ -79,6 +80,7 @@ impl<'a, T: ToComponent> RenderHandle<'a, T> {
         active_widget: &'a mut Option<WidgetID>,
         hovered_widgets: &'a [WidgetID],
         comp_struct: &'a mut T,
+        held_components: &'a mut T::HeldComponents,
     ) -> Self {
         Self {
             handle,
@@ -87,6 +89,7 @@ impl<'a, T: ToComponent> RenderHandle<'a, T> {
             hovered_widgets,
             resize: false,
             comp_struct,
+            held_components,
         }
     }
 
@@ -128,6 +131,17 @@ impl<'a, T: ToComponent> RenderHandle<'a, T> {
         }
     }
 
+    pub fn render_component(&mut self, scene: &mut SceneBuilder, component_id: WidgetID) {
+        self.held_components.render(
+            component_id,
+            scene,
+            self.handle,
+            self.global_positions,
+            self.active_widget,
+            self.hovered_widgets,
+        );
+    }
+
     pub fn is_active(&self, id: WidgetID) -> bool {
         self.active_widget == &Some(id)
     }
@@ -146,10 +160,11 @@ impl<'a, T: ToComponent> RenderHandle<'a, T> {
     }
 }
 
-pub struct ResizeHandle<'a, T> {
+pub struct ResizeHandle<'a, T: ToComponent> {
     handle: &'a mut Handle,
     local_positions: &'a mut [Rect],
     comp_struct: &'a mut T,
+    held_components: &'a mut T::HeldComponents,
 }
 
 impl<'a, T: ToComponent> ResizeHandle<'a, T> {
@@ -157,11 +172,13 @@ impl<'a, T: ToComponent> ResizeHandle<'a, T> {
         handle: &'a mut Handle,
         local_positions: &'a mut [Rect],
         comp_struct: &'a mut T,
+        held_components: &'a mut T::HeldComponents,
     ) -> Self {
         Self {
             handle,
             comp_struct,
             local_positions,
+            held_components,
         }
     }
     pub fn get_fcx(&mut self) -> &mut FontContext {
@@ -183,12 +200,26 @@ impl<'a, T: ToComponent> ResizeHandle<'a, T> {
         s
     }
 
+    pub fn layout_component(
+        &mut self,
+        component_id: WidgetID,
+        constraints: LayoutConstraints,
+    ) -> Size {
+        let s = self.held_components.resize(
+            component_id,
+            constraints,
+            self.handle,
+            self.local_positions,
+        );
+        s
+    }
+
     pub fn get_handler(&mut self) -> &mut T {
         self.comp_struct
     }
 }
 
-pub struct EventHandle<'a, T> {
+pub struct EventHandle<'a, T: ToComponent> {
     handle: &'a mut Handle,
     global_positions: &'a [Rect],
     resize: bool,
@@ -196,6 +227,7 @@ pub struct EventHandle<'a, T> {
     hovered_widgets: &'a mut Vec<WidgetID>,
     events_to_propagate: Vec<(WidgetID, WidgetEvent<'static>)>,
     comp_struct: &'a mut T,
+    held_components: &'a mut T::HeldComponents,
 }
 
 impl<'a, T: ToComponent> EventHandle<'a, T> {
@@ -205,6 +237,7 @@ impl<'a, T: ToComponent> EventHandle<'a, T> {
         active_widget: &'a mut Option<WidgetID>,
         hovered_widgets: &'a mut Vec<WidgetID>,
         comp_struct: &'a mut T,
+        held_components: &'a mut T::HeldComponents,
     ) -> Self {
         Self {
             handle,
@@ -214,6 +247,7 @@ impl<'a, T: ToComponent> EventHandle<'a, T> {
             hovered_widgets,
             events_to_propagate: vec![],
             comp_struct,
+            held_components,
         }
     }
     pub fn get_fcx(&mut self) -> &mut FontContext {
@@ -268,6 +302,17 @@ impl<'a, T: ToComponent> EventHandle<'a, T> {
 
             w.event(event.clone(), self);
         }
+    }
+
+    pub fn propagate_component_event(&mut self, component_id: WidgetID, event: WidgetEvent) {
+        self.held_components.propagate_event(
+            component_id,
+            event,
+            self.handle,
+            self.global_positions,
+            self.active_widget,
+            self.hovered_widgets,
+        );
     }
 
     pub fn unwrap(self) -> (bool, Vec<(WidgetID, WidgetEvent<'static>)>) {

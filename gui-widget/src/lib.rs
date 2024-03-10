@@ -1,4 +1,5 @@
 pub mod button;
+mod comp_holder;
 mod hvstack;
 mod text;
 
@@ -7,6 +8,8 @@ pub use button::Button;
 pub use text::Text;
 
 pub use hvstack::HVStack;
+
+pub use comp_holder::CompHolder;
 
 #[cfg(test)]
 mod tests {

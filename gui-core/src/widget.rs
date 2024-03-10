@@ -1,7 +1,7 @@
 pub use crate::handles::{EventHandle, Handle, RenderHandle, ResizeHandle, UpdateHandle};
 use crate::layout::LayoutConstraints;
 use crate::parse::fluent::Fluent;
-use crate::parse::var::Name;
+use crate::parse::var::{ComponentVar, Name};
 use crate::parse::WidgetDeclaration;
 use crate::ToComponent;
 use dyn_clone::DynClone;
@@ -10,6 +10,7 @@ use glazier::PointerEvent;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use std::any::Any;
+use std::sync::atomic::{AtomicU32, Ordering};
 use vello::kurbo::Size;
 use vello::SceneBuilder;
 
@@ -41,6 +42,11 @@ impl WidgetID {
 
     pub fn component_id(&self) -> u32 {
         self.component_id
+    }
+
+    pub fn next(component_id: u32) -> Self {
+        static WIDGET_COUNTER: AtomicU32 = AtomicU32::new(0);
+        WidgetID::new(component_id, WIDGET_COUNTER.fetch_add(1, Ordering::Relaxed))
     }
 }
 
@@ -116,7 +122,12 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
     fn get_statics(&self) -> Vec<(&'static str, TokenStream)>;
     fn get_fluents(&self) -> Vec<(&'static str, Fluent)>;
     fn get_vars(&self) -> Vec<(&'static str, Name)>;
-    fn has_handler(&self) -> bool;
+    fn get_components(&self) -> Vec<(&'static str, ComponentVar)> {
+        vec![]
+    }
+    fn has_handler(&self) -> bool {
+        false
+    }
     fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>>;
     fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>>;
 }

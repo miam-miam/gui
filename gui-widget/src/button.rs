@@ -357,10 +357,6 @@ impl WidgetBuilder for ButtonBuilder {
         array
     }
 
-    fn has_handler(&self) -> bool {
-        true
-    }
-
     fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
         Some(self.child.iter_mut().collect())
     }

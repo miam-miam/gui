@@ -28,7 +28,7 @@ pub struct NormalVariableDeclaration {
     pub var_type: String,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ComponentVariableDeclaration {
     pub name: Name,
     pub component: String,

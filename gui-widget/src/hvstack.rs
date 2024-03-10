@@ -223,10 +223,6 @@ impl WidgetBuilder for HStackBuilder {
         array
     }
 
-    fn has_handler(&self) -> bool {
-        false
-    }
-
     fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
         Some(self.children.iter_mut().collect())
     }
@@ -314,10 +310,6 @@ impl WidgetBuilder for VStackBuilder {
             array.push(("spacing", v.clone()));
         }
         array
-    }
-
-    fn has_handler(&self) -> bool {
-        false
     }
 
     fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {

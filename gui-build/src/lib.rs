@@ -1,4 +1,5 @@
 mod component;
+mod component_var;
 mod fluent;
 mod tokenstream;
 mod widget;

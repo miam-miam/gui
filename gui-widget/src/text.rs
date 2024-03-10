@@ -196,10 +196,6 @@ impl WidgetBuilder for TextBuilder {
         array
     }
 
-    fn has_handler(&self) -> bool {
-        false
-    }
-
     fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
         None
     }

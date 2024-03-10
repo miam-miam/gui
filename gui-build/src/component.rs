@@ -1,11 +1,15 @@
+use crate::component_var::ComponentVars;
 use crate::fluent;
 use crate::fluent::FluentIdent;
 use crate::widget::Widget;
 use anyhow::{bail, Context};
-use gui_core::parse::{ComponentDeclaration, StateDeclaration};
+use gui_core::parse::var::{ComponentVar, Name};
+use gui_core::parse::{ComponentDeclaration, ComponentVariableDeclaration, StateDeclaration};
+use gui_core::widget::WidgetID;
 use itertools::Itertools;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::str::FromStr;
@@ -20,29 +24,9 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         .filter_map(|v| v.get_normal())
         .collect_vec();
 
-    let component_variables = component
-        .variables
-        .iter()
-        .filter_map(|c| c.get_component())
-        .collect_vec();
-
-    let component_idents = component_variables
-        .iter()
-        .map(|c| format_ident!("{}_holder", *c.name))
-        .collect_vec();
-    let component_names = component_variables
-        .iter()
-        .map(|c| format_ident!("{}", *c.name))
-        .collect_vec();
-    let component_types = component_variables
-        .iter()
-        .map(|c| {
-            let comp_name = format_ident!("{}", *c.component);
-            quote! {<crate::__gui_private::#comp_name as ComponentTypeInfo>}
-        })
-        .collect_vec();
-
     let widget_tree = Widget::new(component)?;
+
+    let component_vars = ComponentVars::new(&component.variables[..], &widget_tree)?;
 
     let mut widget_set = TokenStream::new();
     widget_tree.gen_widget_set(&mut widget_set);
@@ -94,22 +78,6 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
         })
         .collect();
 
-    let struct_components: TokenStream = component_variables
-        .iter()
-        .zip_eq(component_types.iter())
-        .map(|(n, component_type)| {
-            let name = Ident::new(&n.name, Span::call_site());
-            quote! {
-                #[allow(non_camel_case_types)]
-                pub(crate) struct #name;
-
-                impl Variable for #name {
-                    type VarType = #component_type::ToComponent;
-                }
-            }
-        })
-        .collect();
-
     let var_names = normal_variables
         .iter()
         .map(|n| Ident::new(&n.name, Span::call_site()));
@@ -118,6 +86,8 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
 
     let mut struct_handlers = TokenStream::new();
     widget_tree.gen_handler_structs(&mut struct_handlers)?;
+    let comp_var_structs = component_vars.gen_comp_var_structs();
+    let multi_comp = component_vars.gen_multi_comp();
 
     let rs_path = Path::new(&out_dir).join(format!("{}.rs", component.name.as_str()));
 
@@ -186,12 +156,13 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
 
             #struct_handlers
 
-            #struct_components
+            #comp_var_structs
 
             impl ComponentTypeInfo for crate::__gui_private::#component_name {
                 type ToComponent = CompStruct;
             }
 
+            #multi_comp
 
             #bundle_func
 
@@ -200,25 +171,22 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                 comp_struct: CompStruct,
                 widget: #widget_type,
                 #state_type
+                multi_comp: MultiComponent,
                 #( #fluent_arg_idents: FluentArgs<'static> ),*
-                #( #component_idents: <#component_types::ToComponent as ToComponent>::Component),*
             }
 
             #[automatically_derived]
             impl ToComponent for CompStruct {
                 type Component = #component_holder;
+                type HeldComponents = MultiComponent;
 
                 fn to_component_holder(mut self) -> Self::Component {
-                    #(
-                        let comp_holder = <CompStruct as ComponentHolder<#component_names>>::comp_holder(&mut self);
-                        let #component_idents = comp_holder.take().expect("Component is initialised.").to_component_holder();
-                    )*
                     #component_holder {
                         widget: #widget_init,
+                        multi_comp: MultiComponent::new(&mut self),
                         comp_struct: self,
                         #state_init
                         #( #fluent_arg_idents: FluentArgs::new() ),*
-                        #(#component_idents),*
                     }
                 }
 
