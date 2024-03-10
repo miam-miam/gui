@@ -113,11 +113,11 @@ impl ComponentVars {
         );
 
         quote! {
-            pub struct MultiComponent {
+            pub struct MultiComponentHolder {
                 #( #component_idents: <#component_types::ToComponent as ToComponent>::Component),*
             }
 
-            impl MultiComponent {
+            impl MultiComponentHolder {
                 pub fn new(comp: &mut CompStruct) -> Self {
                     #(
                         let comp_holder = <CompStruct as ComponentHolder<#component_names>>::comp_holder(comp);
@@ -129,7 +129,7 @@ impl ComponentVars {
                 }
             }
 
-            impl MultiComponentHolder for MultiComponent {
+            impl MultiComponent for MultiComponentHolder {
                 fn render(
                     &mut self,
                     comp_id: WidgetID,
@@ -195,7 +195,7 @@ impl ComponentVars {
             })
         });
         quote! {
-            match id.widget_id() {
+            match comp_id.widget_id() {
                 #(#guards)*
                 _ => #default
             }

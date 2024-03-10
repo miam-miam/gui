@@ -74,7 +74,7 @@ impl WidgetBuilder for CompHolderBuilder {
     fn name(&self) -> &'static str {
         "CompHolder"
     }
-    fn combine(&mut self, rhs: &dyn WidgetBuilder) {}
+    fn combine(&mut self, _rhs: &dyn WidgetBuilder) {}
 
     fn create_widget(&self, id: WidgetID, _widget: Option<&TokenStream>, stream: &mut TokenStream) {
         stream.extend(quote! {

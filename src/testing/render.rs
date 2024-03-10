@@ -59,9 +59,9 @@ impl<T: ToComponent> TestHarness<T> {
 
         let mut sb = SceneBuilder::for_scene(&mut self.window_state.scene);
         let mut fragment = SceneFragment::new();
-        let component = SceneBuilder::for_fragment(&mut fragment);
+        let mut component = SceneBuilder::for_fragment(&mut fragment);
         self.window_state.component.render(
-            component,
+            &mut component,
             &mut self.window_state.handle,
             &mut self.window_state.global_positions[..],
             &mut self.window_state.active_widget,

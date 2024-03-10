@@ -2,17 +2,17 @@
 #[allow(clippy::collapsible_if)]
 mod gen {
     use super::__private_CompStruct as CompStruct;
-    use gui::gui_core::glazier::kurbo::Rect;
+    use std::any::Any;
     use gui::gui_core::vello::SceneBuilder;
+    use gui::gui_core::glazier::kurbo::Rect;
     use gui::gui_core::widget::{
-        EventHandle, Handle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetEvent,
-        WidgetID,
+        Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle,
+        WidgetEvent, Handle,
     };
     use gui::gui_core::{
-        Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, Size, ToComponent,
-        ToHandler, Update, Variable,
+        Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, Size,
+        ToComponent, ToHandler, Update, Variable,
     };
-    use std::any::Any;
     enum WidgetSet0 {
         W0(::gui::gui_widget::Text),
         W1(::gui::gui_widget::CompHolder),
@@ -40,13 +40,21 @@ mod gen {
                 WidgetSet0::W1(_) => WidgetID::new(0u32, 2u32),
             }
         }
-        fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<CompStruct>) {
+        fn render(
+            &mut self,
+            scene: &mut SceneBuilder,
+            handle: &mut RenderHandle<CompStruct>,
+        ) {
             match self {
                 WidgetSet0::W0(w) => {
-                    <::gui::gui_widget::Text as Widget<CompStruct>>::render(w, scene, handle)
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::render(w, scene, handle)
                 }
                 WidgetSet0::W1(w) => {
-                    <::gui::gui_widget::CompHolder as Widget<CompStruct>>::render(w, scene, handle)
+                    <::gui::gui_widget::CompHolder as Widget<
+                        CompStruct,
+                    >>::render(w, scene, handle)
                 }
             }
         }
@@ -57,22 +65,28 @@ mod gen {
         ) -> Size {
             match self {
                 WidgetSet0::W0(w) => {
-                    <::gui::gui_widget::Text as Widget<CompStruct>>::resize(w, constraints, handle)
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::resize(w, constraints, handle)
                 }
-                WidgetSet0::W1(w) => <::gui::gui_widget::CompHolder as Widget<CompStruct>>::resize(
-                    w,
-                    constraints,
-                    handle,
-                ),
+                WidgetSet0::W1(w) => {
+                    <::gui::gui_widget::CompHolder as Widget<
+                        CompStruct,
+                    >>::resize(w, constraints, handle)
+                }
             }
         }
         fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<CompStruct>) {
             match self {
                 WidgetSet0::W0(w) => {
-                    <::gui::gui_widget::Text as Widget<CompStruct>>::event(w, event, handle)
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::event(w, event, handle)
                 }
                 WidgetSet0::W1(w) => {
-                    <::gui::gui_widget::CompHolder as Widget<CompStruct>>::event(w, event, handle)
+                    <::gui::gui_widget::CompHolder as Widget<
+                        CompStruct,
+                    >>::event(w, event, handle)
                 }
             }
         }
@@ -109,13 +123,16 @@ mod gen {
             hovered_widgets: &[WidgetID],
         ) -> bool {
             match id.widget_id() {
-                3u32 => self.light_holder.render(
-                    scene,
-                    handle,
-                    global_positions,
-                    active_widget,
-                    hovered_widgets,
-                ),
+                3u32 => {
+                    self.light_holder
+                        .render(
+                            scene,
+                            handle,
+                            global_positions,
+                            active_widget,
+                            hovered_widgets,
+                        )
+                }
                 _ => false,
             }
         }
@@ -127,9 +144,9 @@ mod gen {
             global_positions: &[Rect],
         ) -> bool {
             match id.widget_id() {
-                3u32 => self
-                    .light_holder
-                    .update_vars(force_update, handle, global_positions),
+                3u32 => {
+                    self.light_holder.update_vars(force_update, handle, global_positions)
+                }
                 _ => false,
             }
         }
@@ -141,9 +158,7 @@ mod gen {
             local_positions: &mut [Rect],
         ) -> Size {
             match id.widget_id() {
-                3u32 => self
-                    .light_holder
-                    .resize(constraints, handle, local_positions),
+                3u32 => self.light_holder.resize(constraints, handle, local_positions),
                 _ => Size::ZERO,
             }
         }
@@ -157,13 +172,16 @@ mod gen {
             hovered_widgets: &mut Vec<WidgetID>,
         ) -> bool {
             match id.widget_id() {
-                3u32 => self.light_holder.propagate_event(
-                    event,
-                    handle,
-                    global_positions,
-                    active_widget,
-                    hovered_widgets,
-                ),
+                3u32 => {
+                    self.light_holder
+                        .propagate_event(
+                            event,
+                            handle,
+                            global_positions,
+                            active_widget,
+                            hovered_widgets,
+                        )
+                }
                 _ => false,
             }
         }
@@ -178,35 +196,40 @@ mod gen {
             hovered_widgets: &mut Vec<WidgetID>,
         ) -> bool {
             match id.widget_id() {
-                3u32 => self.light_holder.event(
-                    id,
-                    event,
-                    handle,
-                    global_positions,
-                    active_widget,
-                    hovered_widgets,
-                ),
+                3u32 => {
+                    self.light_holder
+                        .event(
+                            id,
+                            event,
+                            handle,
+                            global_positions,
+                            active_widget,
+                            hovered_widgets,
+                        )
+                }
                 _ => false,
             }
         }
     }
-    use gui::{FluentArgs, FluentBundle, FluentResource};
+    use gui::{FluentBundle, FluentArgs, FluentResource};
     use std::borrow::Cow;
-    fn get_bundle_message<'a>(message: &'a str, args: Option<&'a FluentArgs<'_>>) -> Cow<'a, str> {
-        use gui::langid;
+    fn get_bundle_message<'a>(
+        message: &'a str,
+        args: Option<&'a FluentArgs<'_>>,
+    ) -> Cow<'a, str> {
         use std::sync::OnceLock;
+        use gui::langid;
         static BUNDLE: OnceLock<FluentBundle<FluentResource>> = OnceLock::new();
         const FTL_STRING: &str = include_str!(concat!(env!("OUT_DIR"), "/Holder.ftl"));
         let mut errors = vec![];
-        let bundle = BUNDLE.get_or_init(|| {
-            let mut bundle = FluentBundle::new_concurrent(vec![langid!("en-GB")]);
-            let resource =
-                FluentResource::try_new(FTL_STRING.to_string()).expect("FTL string is valid.");
-            bundle
-                .add_resource(resource)
-                .expect("No identifiers are overlapping.");
-            bundle
-        });
+        let bundle = BUNDLE
+            .get_or_init(|| {
+                let mut bundle = FluentBundle::new_concurrent(vec![langid!("en-GB")]);
+                let resource = FluentResource::try_new(FTL_STRING.to_string())
+                    .expect("FTL string is valid.");
+                bundle.add_resource(resource).expect("No identifiers are overlapping.");
+                bundle
+            });
         let message = bundle.get_message(message).expect("Message exists.");
         let pattern = message.value().expect("Value exists.");
         bundle.format_pattern(pattern, args, &mut errors)
@@ -226,10 +249,10 @@ mod gen {
                 widget: ::gui::gui_widget::HVStack::new_horizontal(
                     WidgetID::new(0u32, 0u32),
                     vec![
-                        WidgetSet0::W0(::gui::gui_widget::Text::new(WidgetID::new(0u32, 1u32))),
-                        WidgetSet0::W1(::gui::gui_widget::CompHolder::new(WidgetID::new(
-                            0u32, 2u32,
-                        ))),
+                        WidgetSet0::W0(::gui::gui_widget::Text::new(WidgetID::new(0u32,
+                        1u32))),
+                        WidgetSet0::W1(::gui::gui_widget::CompHolder::new(WidgetID::new(0u32,
+                        2u32)))
                     ],
                 ),
                 multi_comp: MultiComponent::new(&mut self),
@@ -308,8 +331,11 @@ mod gen {
             handle: &'a mut Handle,
             local_positions: &'a mut [Rect],
         ) -> Size {
-            let mut resize_handle =
-                ResizeHandle::new(handle, local_positions, &mut self.comp_struct);
+            let mut resize_handle = ResizeHandle::new(
+                handle,
+                local_positions,
+                &mut self.comp_struct,
+            );
             self.widget.resize(constraints, &mut resize_handle)
         }
         fn propagate_event<'a>(
@@ -330,14 +356,16 @@ mod gen {
             self.widget.event(event, &mut event_handle);
             let (mut resize, events) = event_handle.unwrap();
             for (id, e) in events {
-                if self.event(
-                    id,
-                    e,
-                    handle,
-                    global_positions,
-                    active_widget,
-                    hovered_widgets,
-                ) {
+                if self
+                    .event(
+                        id,
+                        e,
+                        handle,
+                        global_positions,
+                        active_widget,
+                        hovered_widgets,
+                    )
+                {
                     resize = true;
                 }
             }
@@ -386,14 +414,16 @@ mod gen {
             }
             let (mut resize, events) = event_handle.unwrap();
             for (id, e) in events {
-                if self.event(
-                    id,
-                    e,
-                    handle,
-                    global_positions,
-                    active_widget,
-                    hovered_widgets,
-                ) {
+                if self
+                    .event(
+                        id,
+                        e,
+                        handle,
+                        global_positions,
+                        active_widget,
+                        hovered_widgets,
+                    )
+                {
                     resize = true;
                 }
             }

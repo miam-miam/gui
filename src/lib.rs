@@ -157,9 +157,9 @@ impl<C: Component> WindowState<C> {
 
             let mut sb = SceneBuilder::for_scene(&mut self.scene);
             let mut fragment = SceneFragment::new();
-            let component = SceneBuilder::for_fragment(&mut fragment);
+            let mut component = SceneBuilder::for_fragment(&mut fragment);
             self.component.render(
-                component,
+                &mut component,
                 &mut self.handle,
                 &mut self.global_positions[..],
                 &mut self.active_widget,

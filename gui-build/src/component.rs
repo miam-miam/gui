@@ -146,7 +146,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             use gui::gui_core::vello::SceneBuilder;
             use gui::gui_core::glazier::kurbo::Rect;
             use gui::gui_core::widget::{Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle, WidgetEvent, Handle};
-            use gui::gui_core::{Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, Size, ToComponent, ToHandler, Update, Variable};
+            use gui::gui_core::{Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, MultiComponent, Size, ToComponent, ToHandler, Update, Variable};
 
             #state_declaration
 
@@ -171,19 +171,19 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                 comp_struct: CompStruct,
                 widget: #widget_type,
                 #state_type
-                multi_comp: MultiComponent,
+                multi_comp: MultiComponentHolder,
                 #( #fluent_arg_idents: FluentArgs<'static> ),*
             }
 
             #[automatically_derived]
             impl ToComponent for CompStruct {
                 type Component = #component_holder;
-                type HeldComponents = MultiComponent;
+                type HeldComponents = MultiComponentHolder;
 
                 fn to_component_holder(mut self) -> Self::Component {
                     #component_holder {
                         widget: #widget_init,
-                        multi_comp: MultiComponent::new(&mut self),
+                        multi_comp: MultiComponentHolder::new(&mut self),
                         comp_struct: self,
                         #state_init
                         #( #fluent_arg_idents: FluentArgs::new() ),*
@@ -213,14 +213,14 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             impl Component for #component_holder {
                 fn render<'a>(
                     &mut self,
-                    mut scene: SceneBuilder,
+                    scene: &mut SceneBuilder,
                     handle: &'a mut Handle,
                     global_positions: &'a mut [Rect],
                     active_widget: &'a mut Option<WidgetID>,
                     hovered_widgets: &'a [WidgetID],
                 ) -> bool {
-                    let mut render_handle = RenderHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct);
-                    self.widget.render(&mut scene, &mut render_handle);
+                    let mut render_handle = RenderHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct, &mut self.multi_comp);
+                    self.widget.render(scene, &mut render_handle);
                     render_handle.unwrap()
                 }
 
@@ -250,7 +250,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     handle: &'a mut Handle,
                     local_positions: &'a mut [Rect],
                 ) -> Size {
-                    let mut resize_handle = ResizeHandle::new(handle, local_positions, &mut self.comp_struct);
+                    let mut resize_handle = ResizeHandle::new(handle, local_positions, &mut self.comp_struct, &mut self.multi_comp);
                     self.widget.resize(constraints, &mut resize_handle)
                 }
 
@@ -262,7 +262,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     active_widget: &'a mut Option<WidgetID>,
                     hovered_widgets: &'a mut Vec<WidgetID>,
                 ) -> bool {
-                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct);
+                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct, &mut self.multi_comp);
                     self.widget.event(event, &mut event_handle);
                     let (mut resize, events) = event_handle.unwrap();
                     for (id, e) in events {
@@ -298,7 +298,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     active_widget: &'a mut Option<WidgetID>,
                     hovered_widgets: &'a mut Vec<WidgetID>,
                 ) -> bool {
-                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct);
+                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct, &mut self.multi_comp);
                     let handle_ref = &mut event_handle;
                     match (id.component_id(), id.widget_id()) {
                         #(#event_match_arms)*

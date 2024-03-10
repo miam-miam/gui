@@ -229,6 +229,7 @@ impl WidgetBuilder for ButtonBuilder {
     fn name(&self) -> &'static str {
         "Button"
     }
+
     fn combine(&mut self, rhs: &dyn WidgetBuilder) {
         if let Some(other) = rhs.as_any().downcast_ref::<Self>() {
             if let Some(s) = &other.disabled {
@@ -251,7 +252,6 @@ impl WidgetBuilder for ButtonBuilder {
             }
         }
     }
-
     fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream) {
         stream.extend(quote! {
             ::gui::gui_widget::Button::new(#id, #widget)
@@ -355,6 +355,10 @@ impl WidgetBuilder for ButtonBuilder {
             array.push(("border_colour", v.clone()));
         }
         array
+    }
+
+    fn has_handler(&self) -> bool {
+        true
     }
 
     fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
