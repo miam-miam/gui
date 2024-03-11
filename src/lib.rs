@@ -29,7 +29,6 @@ pub use gui_core::glazier::PointerButton;
 
 use gui_core::widget::{Handle, RuntimeID, WidgetEvent, WidgetID};
 pub use gui_core::Update;
-use itertools::Itertools;
 pub use testing::TestHarness;
 pub use update::Updateable;
 use wgpu::Maintain;
@@ -160,8 +159,14 @@ impl<C: Component> WindowState<C> {
         }
     }
 
-    fn send_component_event(&mut self, runtime_id: RuntimeID, widget_id: WidgetID, event: WidgetEvent) -> bool {
-        self.component.event(runtime_id, widget_id, event, &mut self.handle)
+    fn send_component_event(
+        &mut self,
+        runtime_id: RuntimeID,
+        widget_id: WidgetID,
+        event: WidgetEvent,
+    ) -> bool {
+        self.component
+            .event(runtime_id, widget_id, event, &mut self.handle)
     }
 
     fn propagate_component_event(&mut self, event: WidgetEvent) -> bool {
@@ -222,35 +227,21 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
             self.handle.window.set_cursor(&Cursor::Arrow);
         }
         let mouse_point = event.pos;
-        let un_hovered_widgets = self
-            .hovered_widgets
-            .iter()
-            .filter(|i| !self.global_positions[i.widget_id() as usize].contains(mouse_point))
-            .copied()
-            .collect_vec();
-
-        self.hovered_widgets = self
-            .hovered_widgets
-            .iter()
-            .copied()
-            .filter(|i| self.global_positions[i.widget_id() as usize].contains(mouse_point))
-            .collect_vec();
+        let un_hovered_widgets = self.handle.info.remove_un_hovered(mouse_point);
 
         let mut resize = false;
         for id in un_hovered_widgets.into_iter() {
-            if self.send_component_event(id, WidgetEvent::HoverChange) {
+            if self.send_component_event(id.0, id.1, WidgetEvent::HoverChange) {
                 resize = true;
             }
         }
 
-        let event_resize = if let Some(id) = self.active_widget {
-            self.send_component_event(id, WidgetEvent::PointerMove(event))
+        let event_resize = if let Some(id) = self.handle.info.get_active_widget() {
+            self.send_component_event(id.0, id.1, WidgetEvent::PointerMove(event))
         } else {
             self.propagate_component_event(WidgetEvent::PointerMove(event))
         };
-        let var_resize =
-            self.component
-                .update_vars(false, &mut self.handle, &self.global_positions[..]);
+        let var_resize = self.component.update_vars(false, &mut self.handle);
 
         if event_resize || var_resize || resize {
             self.resize();
@@ -266,8 +257,8 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
     }
 
     fn pointer_up(&mut self, event: &PointerEvent) {
-        let event_resize = if let Some(id) = self.active_widget {
-            self.send_component_event(id, WidgetEvent::PointerUp(event))
+        let event_resize = if let Some(id) = self.handle.info.get_active_widget() {
+            self.send_component_event(id.0, id.1, WidgetEvent::PointerUp(event))
         } else {
             self.propagate_component_event(WidgetEvent::PointerUp(event))
         };

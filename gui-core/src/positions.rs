@@ -1,5 +1,5 @@
 use crate::widget::{RuntimeID, WidgetID};
-use crate::Component;
+use crate::{Component, Point};
 use glazier::kurbo::Rect;
 use std::collections::HashMap;
 
@@ -87,5 +87,14 @@ impl WidgetInfo {
         } else {
             false
         }
+    }
+
+    pub fn remove_un_hovered(&mut self, mouse_point: Point) -> Vec<(RuntimeID, WidgetID)> {
+        let (hovered, un_hovered) = self
+            .hovered_widgets
+            .iter()
+            .partition(|i| self.get_rect(i.0, i.1).contains(mouse_point));
+        self.hovered_widgets = hovered;
+        un_hovered
     }
 }

@@ -1,6 +1,5 @@
 use crate::widget::Widget;
 use gui_core::parse::{StateDeclaration, WidgetDeclaration};
-use gui_core::widget::WidgetID;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};

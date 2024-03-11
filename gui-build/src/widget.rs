@@ -16,7 +16,6 @@ use itertools::Itertools;
 use overridden_widget::OverriddenWidget;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
-use std::cmp::max_by_key;
 use std::sync::atomic::{AtomicU32, Ordering};
 use widget_set::WidgetSet;
 

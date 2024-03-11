@@ -4,7 +4,7 @@ mod render;
 use crate::WindowState;
 use gui_core::glazier::kurbo::Rect;
 use gui_core::glazier::{PointerButton, PointerEvent, WinHandler};
-use gui_core::widget::WidgetID;
+use gui_core::widget::{RuntimeID, WidgetID};
 use gui_core::{Component, Point, Size, ToComponent};
 use image::io::Reader as ImageReader;
 use image::{ImageBuffer, Pixel, Rgba};
@@ -86,7 +86,11 @@ impl<T: ToComponent> TestHarness<T> {
     pub fn set_size<S: Into<Size>>(&mut self, size: S) -> Size {
         self.window_state.size = size.into();
         self.window_state.resize();
-        self.window_state.global_positions[0].size()
+        self.window_state
+            .handle
+            .info
+            .get_rect(Default::default(), Default::default())
+            .size()
     }
 
     fn create_screenshot_paths(&self, source_file_name: &str, message: &str) -> (PathBuf, PathBuf) {
@@ -159,37 +163,58 @@ impl<T: ToComponent> TestHarness<T> {
         }
     }
 
-    pub fn get_id(&self, name: &str) -> Option<WidgetID> {
+    pub fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)> {
         self.window_state.component.get_id(name)
     }
 
-    pub fn get_local_rect(&self, id: WidgetID) -> Rect {
+    pub fn get_local_rect(&self, runtime_id: RuntimeID, widget_id: WidgetID) -> Rect {
         Rect::from_origin_size(
             (0.0, 0.0),
-            self.window_state.global_positions[id.widget_id() as usize].size(),
+            self.window_state
+                .handle
+                .info
+                .get_rect(runtime_id, widget_id)
+                .size(),
         )
     }
 
-    fn get_global_point(&self, id: WidgetID, local_pos: Point) -> Point {
-        (self.window_state.global_positions[id.widget_id() as usize]
+    fn get_global_point(
+        &self,
+        runtime_id: RuntimeID,
+        widget_id: WidgetID,
+        local_pos: Point,
+    ) -> Point {
+        (self
+            .window_state
+            .handle
+            .info
+            .get_rect(runtime_id, widget_id)
             .origin()
             .to_vec2()
             + local_pos.to_vec2())
         .to_point()
     }
 
-    pub fn simulate_pointer_down_up(&mut self, button: PointerButton, local_pos: Option<WidgetID>) {
+    pub fn simulate_pointer_down_up(
+        &mut self,
+        button: PointerButton,
+        local_pos: Option<(RuntimeID, WidgetID)>,
+    ) {
         self.simulate_pointer_down(button, local_pos);
         self.simulate_pointer_up(button, local_pos);
     }
 
-    pub fn simulate_pointer_down(&mut self, button: PointerButton, local_pos: Option<WidgetID>) {
+    pub fn simulate_pointer_down(
+        &mut self,
+        button: PointerButton,
+        local_pos: Option<(RuntimeID, WidgetID)>,
+    ) {
         let pos = local_pos.map_or_else(
             || {
                 self.last_mouse_pos
                     .unwrap_or_else(|| self.window_state.size.to_rect().center())
             },
-            |id| self.window_state.global_positions[id.widget_id() as usize].center(),
+            |id| self.window_state.handle.info.get_rect(id.0, id.1).center(),
         );
         let mut pointer_event = PointerEvent {
             pos,
@@ -205,13 +230,17 @@ impl<T: ToComponent> TestHarness<T> {
         self.window_state.pointer_down(&pointer_event);
     }
 
-    pub fn simulate_pointer_up(&mut self, button: PointerButton, local_pos: Option<WidgetID>) {
+    pub fn simulate_pointer_up(
+        &mut self,
+        button: PointerButton,
+        local_pos: Option<(RuntimeID, WidgetID)>,
+    ) {
         let pos = local_pos.map_or_else(
             || {
                 self.last_mouse_pos
                     .unwrap_or_else(|| self.window_state.size.to_rect().center())
             },
-            |id| self.window_state.global_positions[id.widget_id() as usize].center(),
+            |id| self.window_state.handle.info.get_rect(id.0, id.1).center(),
         );
         let mut pointer_event = PointerEvent {
             pos,
@@ -227,10 +256,15 @@ impl<T: ToComponent> TestHarness<T> {
         self.window_state.pointer_up(&pointer_event);
     }
 
-    pub fn simulate_pointer_move(&mut self, id: WidgetID, local_pos: Option<Point>) {
-        let pos = local_pos.unwrap_or_else(|| self.get_local_rect(id).center());
+    pub fn simulate_pointer_move(
+        &mut self,
+        runtime_id: RuntimeID,
+        widget_id: WidgetID,
+        local_pos: Option<Point>,
+    ) {
+        let pos = local_pos.unwrap_or_else(|| self.get_local_rect(runtime_id, widget_id).center());
         let pointer_event = PointerEvent {
-            pos: self.get_global_point(id, pos),
+            pos: self.get_global_point(runtime_id, widget_id, pos),
             ..PointerEvent::default()
         };
         self.last_mouse_pos = Some(pointer_event.pos);
