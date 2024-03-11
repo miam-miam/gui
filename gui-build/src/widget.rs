@@ -303,17 +303,6 @@ impl<'a> Widget<'a> {
         }
     }
 
-    pub fn get_largest_id(&self) -> WidgetID {
-        max_by_key(
-            self.id,
-            self.child_widgets
-                .as_ref()
-                .and_then(|s| s.largest_id())
-                .unwrap_or_default(),
-            |i| i.widget_id(),
-        )
-    }
-
     pub fn gen_widget_id_to_widget(
         &self,
         widget_stmt: Option<&TokenStream>,

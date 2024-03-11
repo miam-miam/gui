@@ -91,8 +91,6 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let widget_type = widget_tree.gen_widget_type();
     let widget_init = widget_tree.gen_widget_init();
 
-    let largest_id = widget_tree.get_largest_id();
-
     let mut id_to_widgets = vec![];
     widget_tree.gen_widget_id_to_widget(None, &mut id_to_widgets);
     let event_match_arms = id_to_widgets.iter().map(|(id, widget_get)| {
@@ -187,10 +185,6 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     }
                 }
 
-                fn largest_id(&self) -> WidgetID {
-                    #largest_id
-                }
-
                 fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
                     match (id.component_id(), id.widget_id()) {
                         #(#parent_match_arms)*
@@ -270,9 +264,6 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     resize
                 }
 
-                fn largest_id(&self) -> WidgetID {
-                    self.comp_struct.largest_id()
-                }
 
                 fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
                     self.comp_struct.get_parent(id)

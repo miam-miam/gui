@@ -2,17 +2,17 @@
 #[allow(clippy::collapsible_if)]
 mod gen {
     use super::__private_CompStruct as CompStruct;
-    use std::any::Any;
-    use gui::gui_core::vello::SceneBuilder;
     use gui::gui_core::glazier::kurbo::Rect;
+    use gui::gui_core::vello::SceneBuilder;
     use gui::gui_core::widget::{
-        Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle,
-        WidgetEvent, Handle,
+        EventHandle, Handle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetEvent,
+        WidgetID,
     };
     use gui::gui_core::{
-        Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, Size,
-        ToComponent, ToHandler, Update, Variable,
+        Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, Size, ToComponent,
+        ToHandler, Update, Variable,
     };
+    use std::any::Any;
     #[allow(non_camel_case_types)]
     #[derive(Default, Copy, Clone, Eq, PartialEq)]
     pub(crate) enum State {
@@ -113,27 +113,23 @@ mod gen {
             }
         }
     }
-    use gui::{FluentBundle, FluentArgs, FluentResource};
+    use gui::{FluentArgs, FluentBundle, FluentResource};
     use std::borrow::Cow;
-    fn get_bundle_message<'a>(
-        message: &'a str,
-        args: Option<&'a FluentArgs<'_>>,
-    ) -> Cow<'a, str> {
-        use std::sync::OnceLock;
+    fn get_bundle_message<'a>(message: &'a str, args: Option<&'a FluentArgs<'_>>) -> Cow<'a, str> {
         use gui::langid;
+        use std::sync::OnceLock;
         static BUNDLE: OnceLock<FluentBundle<FluentResource>> = OnceLock::new();
-        const FTL_STRING: &str = include_str!(
-            concat!(env!("OUT_DIR"), "/TrafficLight.ftl")
-        );
+        const FTL_STRING: &str = include_str!(concat!(env!("OUT_DIR"), "/TrafficLight.ftl"));
         let mut errors = vec![];
-        let bundle = BUNDLE
-            .get_or_init(|| {
-                let mut bundle = FluentBundle::new_concurrent(vec![langid!("en-GB")]);
-                let resource = FluentResource::try_new(FTL_STRING.to_string())
-                    .expect("FTL string is valid.");
-                bundle.add_resource(resource).expect("No identifiers are overlapping.");
-                bundle
-            });
+        let bundle = BUNDLE.get_or_init(|| {
+            let mut bundle = FluentBundle::new_concurrent(vec![langid!("en-GB")]);
+            let resource =
+                FluentResource::try_new(FTL_STRING.to_string()).expect("FTL string is valid.");
+            bundle
+                .add_resource(resource)
+                .expect("No identifiers are overlapping.");
+            bundle
+        });
         let message = bundle.get_message(message).expect("Message exists.");
         let pattern = message.value().expect("Value exists.");
         bundle.format_pattern(pattern, args, &mut errors)
@@ -161,9 +157,6 @@ mod gen {
                 state: Default::default(),
                 TrafficLight_SwitchText_Red_text: FluentArgs::new(),
             }
-        }
-        fn largest_id(&self) -> WidgetID {
-            WidgetID::new(1u32, 5u32)
         }
         fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
             match (id.component_id(), id.widget_id()) {
@@ -209,9 +202,7 @@ mod gen {
             let mut update_handle = UpdateHandle::new(handle, global_positions);
             let handle_ref = &mut update_handle;
             let mut text = false;
-            if force_update
-                || <CompStruct as Update<state>>::is_updated(&self.comp_struct)
-            {
+            if force_update || <CompStruct as Update<state>>::is_updated(&self.comp_struct) {
                 let new_state = <CompStruct as Update<state>>::value(&self.comp_struct);
                 if self.state != new_state {
                     self.state = new_state;
@@ -253,20 +244,14 @@ mod gen {
                 let value = 14f32;
                 widget.set_size(value, handle_ref);
             }
-            if force_update
-                || <CompStruct as Update<hover_colour>>::is_updated(&self.comp_struct)
-            {
-                let value = <CompStruct as Update<
-                    hover_colour,
-                >>::value(&self.comp_struct);
+            if force_update || <CompStruct as Update<hover_colour>>::is_updated(&self.comp_struct) {
+                let value = <CompStruct as Update<hover_colour>>::value(&self.comp_struct);
                 if self.state == State::Green {
                     let widget = &mut self.widget;
                     widget.set_hover_colour(value, handle_ref);
                 }
             }
-            if force_update
-                || <CompStruct as Update<count>>::is_updated(&self.comp_struct)
-            {
+            if force_update || <CompStruct as Update<count>>::is_updated(&self.comp_struct) {
                 let value = <CompStruct as Update<count>>::value(&self.comp_struct);
                 if self.state == State::Red {
                     text = true;
@@ -275,20 +260,14 @@ mod gen {
             }
             if self.state == State::Green {
                 if force_update {
-                    let value = get_bundle_message(
-                        "TrafficLight-SwitchText-Green-text",
-                        None,
-                    );
+                    let value = get_bundle_message("TrafficLight-SwitchText-Green-text", None);
                     let widget = &mut self.widget.get_widget();
                     widget.set_text(value, handle_ref);
                 }
             }
             if self.state == State::Yellow {
                 if force_update {
-                    let value = get_bundle_message(
-                        "TrafficLight-SwitchText-Yellow-text",
-                        None,
-                    );
+                    let value = get_bundle_message("TrafficLight-SwitchText-Yellow-text", None);
                     let widget = &mut self.widget.get_widget();
                     widget.set_text(value, handle_ref);
                 }
@@ -313,11 +292,8 @@ mod gen {
             handle: &'a mut Handle,
             local_positions: &'a mut [Rect],
         ) -> Size {
-            let mut resize_handle = ResizeHandle::new(
-                handle,
-                local_positions,
-                &mut self.comp_struct,
-            );
+            let mut resize_handle =
+                ResizeHandle::new(handle, local_positions, &mut self.comp_struct);
             self.widget.resize(constraints, &mut resize_handle)
         }
         fn propagate_event<'a>(
@@ -338,23 +314,18 @@ mod gen {
             self.widget.event(event, &mut event_handle);
             let (mut resize, events) = event_handle.unwrap();
             for (id, e) in events {
-                if self
-                    .event(
-                        id,
-                        e,
-                        handle,
-                        global_positions,
-                        active_widget,
-                        hovered_widgets,
-                    )
-                {
+                if self.event(
+                    id,
+                    e,
+                    handle,
+                    global_positions,
+                    active_widget,
+                    hovered_widgets,
+                ) {
                     resize = true;
                 }
             }
             resize
-        }
-        fn largest_id(&self) -> WidgetID {
-            self.comp_struct.largest_id()
         }
         fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
             self.comp_struct.get_parent(id)
@@ -393,16 +364,14 @@ mod gen {
             }
             let (mut resize, events) = event_handle.unwrap();
             for (id, e) in events {
-                if self
-                    .event(
-                        id,
-                        e,
-                        handle,
-                        global_positions,
-                        active_widget,
-                        hovered_widgets,
-                    )
-                {
+                if self.event(
+                    id,
+                    e,
+                    handle,
+                    global_positions,
+                    active_widget,
+                    hovered_widgets,
+                ) {
                     resize = true;
                 }
             }

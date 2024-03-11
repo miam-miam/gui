@@ -27,7 +27,7 @@ pub use gui_widget;
 
 pub use gui_core::glazier::PointerButton;
 
-use gui_core::widget::{Handle, WidgetEvent, WidgetID};
+use gui_core::widget::{Handle, RuntimeID, WidgetEvent, WidgetID};
 pub use gui_core::Update;
 use itertools::Itertools;
 pub use testing::TestHarness;
@@ -61,9 +61,6 @@ struct WindowState<C: Component + 'static> {
     surface: Option<RenderSurface>,
     scene: Scene,
     size: Size,
-    global_positions: Vec<Rect>,
-    active_widget: Option<WidgetID>,
-    hovered_widgets: Vec<WidgetID>,
     component: C,
 }
 
@@ -76,12 +73,6 @@ impl<C: Component> WindowState<C> {
             renderer: None,
             render,
             scene: Default::default(),
-            active_widget: None,
-            hovered_widgets: vec![],
-            global_positions: vec![
-                Rect::default();
-                component.largest_id().widget_id() as usize + 1
-            ],
             component,
             size: Size::new(WIDTH as f64, HEIGHT as f64),
         }
@@ -89,26 +80,16 @@ impl<C: Component> WindowState<C> {
 
     fn resize(&mut self) {
         let (max_width, max_height) = self.surface_size();
-        let mut local_positions =
-            vec![Rect::default(); self.component.largest_id().widget_id() as usize + 1];
+        self.handle.info.reset_positions();
         let size = self.component.resize(
             LayoutConstraints::new_max(Size::new(max_width as f64, max_height as f64)),
             &mut self.handle,
-            &mut local_positions[..],
         );
 
-        self.global_positions[0] =
-            Rect::from_center_size((max_width as f64 / 2.0, max_height as f64 / 2.0), size);
-
-        for (i, rect) in local_positions.into_iter().enumerate() {
-            if let Some(parent) = self.component.get_parent(WidgetID::new(
-                self.component.largest_id().component_id(),
-                i as u32,
-            )) {
-                let parent_rect = self.global_positions[parent.widget_id() as usize];
-                self.global_positions[i] = rect + parent_rect.origin().to_vec2();
-            }
-        }
+        self.handle.info.convert_to_global_positions(
+            Rect::from_center_size((max_width as f64 / 2.0, max_height as f64 / 2.0), size),
+            &self.component,
+        );
     }
 
     fn surface_size(&self) -> (u32, u32) {
@@ -158,17 +139,15 @@ impl<C: Component> WindowState<C> {
             let mut sb = SceneBuilder::for_scene(&mut self.scene);
             let mut fragment = SceneFragment::new();
             let mut component = SceneBuilder::for_fragment(&mut fragment);
-            self.component.render(
-                &mut component,
-                &mut self.handle,
-                &mut self.global_positions[..],
-                &mut self.active_widget,
-                &self.hovered_widgets[..],
-            );
+            self.component.render(&mut component, &mut self.handle);
             sb.append(
                 &fragment,
                 Some(Affine::translate(
-                    self.global_positions[0].origin().to_vec2(),
+                    self.handle
+                        .info
+                        .get_rect(RuntimeID::new(0), WidgetID::new(0))
+                        .origin()
+                        .to_vec2(),
                 )),
             );
 
@@ -181,33 +160,19 @@ impl<C: Component> WindowState<C> {
         }
     }
 
-    fn send_component_event(&mut self, id: WidgetID, event: WidgetEvent) -> bool {
-        self.component.event(
-            id,
-            event,
-            &mut self.handle,
-            &self.global_positions[..],
-            &mut self.active_widget,
-            &mut self.hovered_widgets,
-        )
+    fn send_component_event(&mut self, runtime_id: RuntimeID, widget_id: WidgetID, event: WidgetEvent) -> bool {
+        self.component.event(runtime_id, widget_id, event, &mut self.handle)
     }
 
     fn propagate_component_event(&mut self, event: WidgetEvent) -> bool {
-        self.component.propagate_event(
-            event,
-            &mut self.handle,
-            &self.global_positions[..],
-            &mut self.active_widget,
-            &mut self.hovered_widgets,
-        )
+        self.component.propagate_event(event, &mut self.handle)
     }
 }
 
 impl<C: Component + 'static> WinHandler for WindowState<C> {
     fn connect(&mut self, handle: &WindowHandle) {
         self.handle.window = handle.clone();
-        self.component
-            .update_vars(true, &mut self.handle, &self.global_positions[..]);
+        self.component.update_vars(true, &mut self.handle);
         self.resize();
         self.render();
     }
@@ -220,10 +185,7 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
     }
 
     fn prepare_paint(&mut self) {
-        if self
-            .component
-            .update_vars(false, &mut self.handle, &self.global_positions[..])
-        {
+        if self.component.update_vars(false, &mut self.handle) {
             self.resize();
         }
     }
@@ -297,9 +259,7 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
 
     fn pointer_down(&mut self, event: &PointerEvent) {
         let event_resize = self.propagate_component_event(WidgetEvent::PointerDown(event));
-        let var_resize =
-            self.component
-                .update_vars(false, &mut self.handle, &self.global_positions[..]);
+        let var_resize = self.component.update_vars(false, &mut self.handle);
         if event_resize || var_resize {
             self.resize();
         }
@@ -311,9 +271,7 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
         } else {
             self.propagate_component_event(WidgetEvent::PointerUp(event))
         };
-        let var_resize =
-            self.component
-                .update_vars(false, &mut self.handle, &self.global_positions[..]);
+        let var_resize = self.component.update_vars(false, &mut self.handle);
         if event_resize || var_resize {
             self.resize();
         }

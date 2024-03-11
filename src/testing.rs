@@ -76,11 +76,9 @@ impl<T: ToComponent> TestHarness<T> {
 
     fn init(&mut self, size: Size) {
         self.window_state.size = size;
-        self.window_state.component.update_vars(
-            true,
-            &mut self.window_state.handle,
-            &self.window_state.global_positions[..],
-        );
+        self.window_state
+            .component
+            .update_vars(true, &mut self.window_state.handle);
         self.window_state.resize();
     }
 
