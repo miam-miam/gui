@@ -69,7 +69,7 @@ impl<T: ToComponent> TestHarness<T> {
                 self.window_state
                     .handle
                     .info
-                    .get_rect(Default::default(), Default::default())
+                    .get_rect(self.window_state.component.id(), Default::default())
                     .origin()
                     .to_vec2(),
             )),

@@ -64,7 +64,7 @@ where
 impl<T: ToComponent> TestHarness<T> {
     pub fn new<S: Into<Size>>(component: T, size: S) -> Self {
         let mut harness = Self {
-            window_state: WindowState::new(component.to_component_holder(Default::default())),
+            window_state: WindowState::new(component.to_component_holder(RuntimeID::next())),
             report: TestReport::default(),
             image_buffer: vec![],
             last_mouse_pos: None,
@@ -89,7 +89,7 @@ impl<T: ToComponent> TestHarness<T> {
         self.window_state
             .handle
             .info
-            .get_rect(Default::default(), Default::default())
+            .get_rect(self.window_state.component.id(), Default::default())
             .size()
     }
 

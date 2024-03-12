@@ -47,7 +47,7 @@ where
     let window = WindowBuilder::new(app.clone())
         .size((WIDTH as f64, HEIGHT as f64).into())
         .handler(Box::new(WindowState::new(
-            component.to_component_holder(Default::default()),
+            component.to_component_holder(RuntimeID::next()),
         )))
         .build()
         .unwrap();

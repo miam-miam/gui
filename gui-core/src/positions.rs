@@ -15,18 +15,18 @@ impl WidgetInfo {
         self.pos_map.clear();
     }
     pub fn get_rect(&self, runtime_id: RuntimeID, widget_id: WidgetID) -> Rect {
-        *self
-            .pos_map
+        self.pos_map
             .get(&runtime_id)
             .and_then(|v| v.get(widget_id.id() as usize))
-            .expect("Position has already been set")
+            .copied()
+            .unwrap_or_default()
     }
 
     pub fn convert_to_global_positions<C: Component>(&mut self, rect: Rect, component: &C) {
         self.position_widget(RuntimeID::new(0), WidgetID::new(0), rect);
-
         let local_positions = self.pos_map.clone();
         self.reset_positions();
+        self.position_widget(RuntimeID::new(0), WidgetID::new(0), rect);
 
         for (runtime_id, positions) in local_positions.into_iter() {
             for (id, rect) in positions.into_iter().enumerate() {
@@ -40,6 +40,8 @@ impl WidgetInfo {
                         widget_id,
                         rect + parent_rect.origin().to_vec2(),
                     );
+                } else {
+                    eprintln!("Could not find parent for {runtime_id:?} {widget_id:?}");
                 }
             }
         }

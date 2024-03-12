@@ -4,7 +4,6 @@ mod gen {
     use super::__private_CompStruct as CompStruct;
     use std::any::Any;
     use gui::gui_core::vello::SceneBuilder;
-    use gui::gui_core::glazier::kurbo::Rect;
     use gui::gui_core::widget::{
         RuntimeID, Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle,
         UpdateHandle, WidgetEvent, Handle,
@@ -43,15 +42,12 @@ mod gen {
     impl ComponentTypeInfo for crate::__gui_private::TrafficLight {
         type ToComponent = CompStruct;
     }
-
     pub struct MultiComponentHolder {}
-
     impl MultiComponentHolder {
         pub fn new(comp: &mut CompStruct) -> Self {
             Self {}
         }
     }
-
     impl MultiComponent for MultiComponentHolder {
         fn render(
             &mut self,
@@ -100,23 +96,21 @@ mod gen {
             event: WidgetEvent,
             handle: &mut Handle,
         ) -> bool {
-            todo!()
+            false
         }
         fn get_parent(
             &self,
             runtime_id: RuntimeID,
             widget_id: WidgetID,
         ) -> Option<(RuntimeID, WidgetID)> {
-            todo!()
+            None
         }
         fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)> {
-            todo!()
+            None
         }
     }
-
     use gui::{FluentBundle, FluentArgs, FluentResource};
     use std::borrow::Cow;
-
     fn get_bundle_message<'a>(
         message: &'a str,
         args: Option<&'a FluentArgs<'_>>,
@@ -167,8 +161,8 @@ mod gen {
             }
         }
         fn get_parent(&self, widget_id: WidgetID) -> Option<WidgetID> {
-            match widget_id {
-                WidgetID::new(1u32) => Some(WidgetID::new(0u32)),
+            match widget_id.id() {
+                1u32 => Some(WidgetID::new(0u32)),
                 _ => None,
             }
         }
@@ -185,6 +179,7 @@ mod gen {
         fn render(&mut self, scene: &mut SceneBuilder, handle: &mut Handle) -> bool {
             let mut render_handle = RenderHandle::new(
                 handle,
+                self.runtime_id,
                 &mut self.comp_struct,
                 &mut self.multi_comp,
             );
@@ -193,7 +188,7 @@ mod gen {
         }
         #[allow(unused_mut)]
         fn update_vars(&mut self, mut force_update: bool, handle: &mut Handle) -> bool {
-            let mut update_handle = UpdateHandle::new(handle);
+            let mut update_handle = UpdateHandle::new(handle, self.runtime_id);
             let handle_ref = &mut update_handle;
             let mut text = false;
             if force_update
@@ -301,6 +296,7 @@ mod gen {
         ) -> Size {
             let mut resize_handle = ResizeHandle::new(
                 handle,
+                self.runtime_id,
                 &mut self.comp_struct,
                 &mut self.multi_comp,
             );
@@ -309,13 +305,14 @@ mod gen {
         fn propagate_event(&mut self, event: WidgetEvent, handle: &mut Handle) -> bool {
             let mut event_handle = EventHandle::new(
                 handle,
+                self.runtime_id,
                 &mut self.comp_struct,
                 &mut self.multi_comp,
             );
             self.widget.event(event, &mut event_handle);
             let (mut resize, events) = event_handle.unwrap();
-            for (id, e) in events {
-                if self.event(id.0, id.1, e, handle) {
+            for (runtime_id, widget_id, e) in events {
+                if self.event(runtime_id, widget_id, e, handle) {
                     resize = true;
                 }
             }
@@ -355,22 +352,23 @@ mod gen {
             }
             let mut event_handle = EventHandle::new(
                 handle,
+                self.runtime_id,
                 &mut self.comp_struct,
                 &mut self.multi_comp,
             );
             let handle_ref = &mut event_handle;
-            match (id.component_id(), id.widget_id()) {
-                (WidgetID::new(1u32)) => {
+            match widget_id.id() {
+                1u32 => {
                     self.widget.get_widget().event(event, handle_ref);
                 }
-                (WidgetID::new(0u32)) => {
+                0u32 => {
                     self.widget.event(event, handle_ref);
                 }
                 _ => {}
             }
             let (mut resize, events) = event_handle.unwrap();
-            for (id, e) in events {
-                if self.event(id.0, id.1, e, handle) {
+            for (runtime_id, widget_id, e) in events {
+                if self.event(runtime_id, widget_id, e, handle) {
                     resize = true;
                 }
             }

@@ -53,8 +53,8 @@ impl ComponentVars {
         }
         Ok(ComponentVars(
             component_map
-                .into_iter()
-                .map(|(_, comp_decl)| ComponentVar::new(comp_decl))
+                .into_values()
+                .map(ComponentVar::new)
                 .collect_vec(),
         ))
     }
@@ -70,6 +70,8 @@ impl ComponentVars {
         let resize = self.gen_match_multi(quote!(resize(constraints, handle)), quote!(Size::ZERO));
         let propagate_event =
             self.gen_match_multi(quote!(propagate_event(event, handle)), quote!(false));
+        let get_parent = self.gen_try_all_options(quote!(get_parent(runtime_id, widget_id)));
+        let get_id = self.gen_try_all_options(quote!(get_id(name)));
 
         quote! {
             pub struct MultiComponentHolder {
@@ -80,7 +82,7 @@ impl ComponentVars {
                 pub fn new(comp: &mut CompStruct) -> Self {
                     #(
                         let comp_holder = <CompStruct as ComponentHolder<#component_names>>::comp_holder(comp);
-                        let #component_idents = comp_holder.take().expect("Component is initialised.").to_component_holder();
+                        let #component_idents = comp_holder.take().expect("Component is initialised.").to_component_holder(RuntimeID::next());
                     )*
                     Self {
                         #(#component_idents),*
@@ -128,17 +130,18 @@ impl ComponentVars {
                     event: WidgetEvent,
                     handle: &mut Handle,
                 ) -> bool {
-                    todo!()
+                    #(let #component_idents = self.#component_idents.event(runtime_id, widget_id, event.clone(), handle);)*
+                    false #(|| #component_idents)*
                 }
                 fn get_parent(
                     &self,
                     runtime_id: RuntimeID,
                     widget_id: WidgetID,
                 ) -> Option<(RuntimeID, WidgetID)> {
-                    todo!()
+                    #get_parent
                 }
                 fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)> {
-                    todo!()
+                    #get_id
                 }
             }
         }
@@ -157,6 +160,22 @@ impl ComponentVars {
                 _ => #default
             }
         }
+    }
+
+    fn gen_try_all_options(&self, stream: TokenStream) -> TokenStream {
+        self.0.first().map_or_else(
+            || quote!(None),
+            |_| {
+                self.0
+                    .iter()
+                    .fold(None, |acc, c| {
+                        let holder_ident = &c.holder_ident;
+                        let acc = acc.map(|acc| quote!(.or_else(|| #acc))).unwrap_or_default();
+                        Some(quote!(self.#holder_ident . #stream #acc))
+                    })
+                    .expect("has first")
+            },
+        )
     }
 
     pub fn gen_comp_var_structs(&self) -> TokenStream {

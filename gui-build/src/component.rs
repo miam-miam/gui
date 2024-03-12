@@ -95,7 +95,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     widget_tree.gen_widget_id_to_widget(None, &mut id_to_widgets);
     let event_match_arms = id_to_widgets.iter().map(|(widget_id, widget_get)| {
         let id = widget_id.id();
-        quote!((#id) => {#widget_get.event(event, handle_ref);})
+        quote!(#id => {#widget_get.event(event, handle_ref);})
     });
 
     let mut parent_ids = vec![];
@@ -134,7 +134,6 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             use super::__private_CompStruct as CompStruct;
             use std::any::Any;
             use gui::gui_core::vello::SceneBuilder;
-            use gui::gui_core::glazier::kurbo::Rect;
             use gui::gui_core::widget::{RuntimeID, Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle, WidgetEvent, Handle};
             use gui::gui_core::{Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, MultiComponent, Size, ToComponent, ToHandler, Update, Variable};
 
@@ -292,7 +291,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     }
                     let mut event_handle = EventHandle::new(handle, self.runtime_id, &mut self.comp_struct, &mut self.multi_comp);
                     let handle_ref = &mut event_handle;
-                    match (widget_id.id()) {
+                    match widget_id.id() {
                         #(#event_match_arms)*
                         _ => {},
                     }
