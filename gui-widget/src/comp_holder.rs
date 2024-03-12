@@ -4,8 +4,8 @@ use gui_core::parse::fluent::Fluent;
 use gui_core::parse::var::{ComponentVar, Name};
 use gui_core::parse::WidgetDeclaration;
 use gui_core::widget::{
-    EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
-    WidgetID,
+    EventHandle, RenderHandle, ResizeHandle, RuntimeID, UpdateHandle, Widget, WidgetBuilder,
+    WidgetEvent, WidgetID,
 };
 use gui_core::{SceneBuilder, ToComponent};
 use proc_macro2::{Ident, TokenStream};
@@ -14,7 +14,7 @@ use serde::Deserialize;
 
 pub struct CompHolder {
     id: WidgetID,
-    child_id: Option<WidgetID>,
+    child_id: Option<RuntimeID>,
 }
 
 impl CompHolder {
@@ -22,7 +22,7 @@ impl CompHolder {
         CompHolder { id, child_id: None }
     }
 
-    pub fn set_child(&mut self, id: WidgetID, handle: &mut UpdateHandle) {
+    pub fn set_child(&mut self, id: RuntimeID, handle: &mut UpdateHandle) {
         self.child_id = Some(id);
         handle.resize();
     }

@@ -1,10 +1,10 @@
 use crate::fluent::FluentIdent;
 use crate::tokenstream::EqTokenStream;
 use gui_core::parse::var::Name;
-use gui_core::widget::{WidgetBuilder, WidgetID};
+use gui_core::widget::WidgetBuilder;
 use itertools::Itertools;
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::quote;
+use quote::{format_ident, quote};
 use std::hash::Hash;
 
 fn gen_idents() -> (Ident, Ident, Ident) {
@@ -185,15 +185,15 @@ impl Variables {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct Components(pub Vec<(&'static str, Name, WidgetID)>);
+pub struct Components(pub Vec<(&'static str, Name)>);
 
 impl Components {
-    pub fn new(builder: &dyn WidgetBuilder, component_id: u32) -> Self {
+    pub fn new(builder: &dyn WidgetBuilder) -> Self {
         Components(
             builder
                 .get_components()
                 .into_iter()
-                .map(|(p, s)| (p, s.unwrap(), WidgetID::next(component_id)))
+                .map(|(p, s)| (p, s.unwrap()))
                 .collect_vec(),
         )
     }
@@ -211,9 +211,10 @@ impl Components {
             })
         }
 
-        for (prop, _name, id) in &self.0 {
+        for (prop, name) in &self.0 {
+            let holder_ident = format_ident!("{name}_holder");
             components_stream.extend(quote! {
-                let value = #id;
+                let value = self.multi_comp.#holder_ident.id();
             });
             widget_builder.on_property_update(
                 prop,

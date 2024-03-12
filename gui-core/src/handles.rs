@@ -113,11 +113,11 @@ impl<'a, T: ToComponent> RenderHandle<'a, T> {
             let child_pos = self.handle.info.get_rect(self.runtime_id, id);
             let parent_origin = *parent_origin.get_or_insert_with(|| {
                 self.comp_struct
-                    .get_parent(self.runtime_id, id)
-                    .map_or_else(Point::default, |(parent_runtime, parent_widget)| {
+                    .get_parent(id)
+                    .map_or_else(Point::default, |parent_widget| {
                         self.handle
                             .info
-                            .get_rect(parent_runtime, parent_widget)
+                            .get_rect(self.runtime_id, parent_widget)
                             .origin()
                     })
             });
@@ -131,9 +131,8 @@ impl<'a, T: ToComponent> RenderHandle<'a, T> {
         }
     }
 
-    pub fn render_component(&mut self, scene: &mut SceneBuilder, component_id: WidgetID) {
-        self.held_components
-            .render(component_id, scene, self.handle);
+    pub fn render_component(&mut self, scene: &mut SceneBuilder, runtime_id: RuntimeID) {
+        self.held_components.render(runtime_id, scene, self.handle);
     }
 
     pub fn is_active(&self, id: WidgetID) -> bool {
@@ -198,12 +197,12 @@ impl<'a, T: ToComponent> ResizeHandle<'a, T> {
 
     pub fn layout_component(
         &mut self,
-        component_id: WidgetID,
+        runtime_id: RuntimeID,
         constraints: LayoutConstraints,
     ) -> Size {
         let s = self
             .held_components
-            .resize(component_id, constraints, self.handle);
+            .resize(runtime_id, constraints, self.handle);
         s
     }
 
@@ -216,8 +215,7 @@ pub struct EventHandle<'a, T: ToComponent> {
     handle: &'a mut Handle,
     runtime_id: RuntimeID,
     resize: bool,
-    // TODO fix to also use Runtime IDs
-    events_to_propagate: Vec<(WidgetID, WidgetEvent<'static>)>,
+    events_to_propagate: Vec<(RuntimeID, WidgetID, WidgetEvent<'static>)>,
     comp_struct: &'a mut T,
     held_components: &'a mut T::HeldComponents,
 }
@@ -292,12 +290,12 @@ impl<'a, T: ToComponent> EventHandle<'a, T> {
         }
     }
 
-    pub fn propagate_component_event(&mut self, component_id: WidgetID, event: WidgetEvent) {
+    pub fn propagate_component_event(&mut self, runtime_id: RuntimeID, event: WidgetEvent) {
         self.held_components
-            .propagate_event(component_id, event, self.handle);
+            .propagate_event(runtime_id, event, self.handle);
     }
 
-    pub fn unwrap(self) -> (bool, Vec<(WidgetID, WidgetEvent<'static>)>) {
+    pub fn unwrap(self) -> (bool, Vec<(RuntimeID, WidgetID, WidgetEvent<'static>)>) {
         (self.resize, self.events_to_propagate)
     }
 
@@ -308,7 +306,7 @@ impl<'a, T: ToComponent> EventHandle<'a, T> {
             }
             if !(active && old_id == (self.runtime_id, id)) {
                 self.events_to_propagate
-                    .push((old_id.1, WidgetEvent::ActiveChange));
+                    .push((old_id.0, old_id.1, WidgetEvent::ActiveChange));
             }
         }
         *self.handle.info.set_active_widget() = active.then_some((self.runtime_id, id));

@@ -93,21 +93,16 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
 
     let mut id_to_widgets = vec![];
     widget_tree.gen_widget_id_to_widget(None, &mut id_to_widgets);
-    let event_match_arms = id_to_widgets.iter().map(|(id, widget_get)| {
-        let component = id.component_id();
-        let widget = id.widget_id();
-        quote!((#component, #widget) => {#widget_get.event(event, handle_ref);})
+    let event_match_arms = id_to_widgets.iter().map(|(widget_id, widget_get)| {
+        let id = widget_id.id();
+        quote!((#id) => {#widget_get.event(event, handle_ref);})
     });
 
     let mut parent_ids = vec![];
     widget_tree.get_parent_ids(&mut parent_ids);
     let parent_match_arms = parent_ids.iter().map(|(parent, children)| {
-        let unwrapped_vals = children.iter().map(|id| {
-            let component = id.component_id();
-            let widget = id.widget_id();
-            quote!((#component, #widget))
-        });
-        quote!(#( #unwrapped_vals )|* => Some(#parent),)
+        let ids = children.iter().map(|id| id.id());
+        quote!(#( #ids )|* => Some(#parent),)
     });
 
     let named_match_arms = widget_tree.iter().filter_map(|w| {
@@ -140,7 +135,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             use std::any::Any;
             use gui::gui_core::vello::SceneBuilder;
             use gui::gui_core::glazier::kurbo::Rect;
-            use gui::gui_core::widget::{Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle, WidgetEvent, Handle};
+            use gui::gui_core::widget::{RuntimeID, Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle, WidgetEvent, Handle};
             use gui::gui_core::{Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, MultiComponent, Size, ToComponent, ToHandler, Update, Variable};
 
             #state_declaration
@@ -164,6 +159,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             #[allow(non_snake_case)]
             pub struct #component_holder {
                 comp_struct: CompStruct,
+                runtime_id: RuntimeID,
                 widget: #widget_type,
                 #state_type
                 multi_comp: MultiComponentHolder,
@@ -175,9 +171,10 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                 type Component = #component_holder;
                 type HeldComponents = MultiComponentHolder;
 
-                fn to_component_holder(mut self) -> Self::Component {
+                fn to_component_holder(mut self, runtime_id: RuntimeID) -> Self::Component {
                     #component_holder {
                         widget: #widget_init,
+                        runtime_id,
                         multi_comp: MultiComponentHolder::new(&mut self),
                         comp_struct: self,
                         #state_init
@@ -185,8 +182,11 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     }
                 }
 
-                fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
-                    match (id.component_id(), id.widget_id()) {
+                fn get_parent(
+                    &self,
+                    widget_id: WidgetID,
+                ) -> Option<WidgetID> {
+                    match widget_id.id() {
                         #(#parent_match_arms)*
                         _ => None,
                     }
@@ -202,27 +202,23 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
 
             #[automatically_derived]
             impl Component for #component_holder {
-                fn render<'a>(
+                fn render(
                     &mut self,
                     scene: &mut SceneBuilder,
-                    handle: &'a mut Handle,
-                    global_positions: &'a mut [Rect],
-                    active_widget: &'a mut Option<WidgetID>,
-                    hovered_widgets: &'a [WidgetID],
+                    handle: &mut Handle,
                 ) -> bool {
-                    let mut render_handle = RenderHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct, &mut self.multi_comp);
+                    let mut render_handle = RenderHandle::new(handle, self.runtime_id, &mut self.comp_struct, &mut self.multi_comp);
                     self.widget.render(scene, &mut render_handle);
                     render_handle.unwrap()
                 }
 
                 #[allow(unused_mut)]
-                fn update_vars<'a>(
+                fn update_vars(
                     &mut self,
                     mut force_update: bool,
-                    handle: &'a mut Handle,
-                    global_positions: &'a [Rect],
+                    handle: &mut Handle,
                 ) -> bool {
-                    let mut update_handle = UpdateHandle::new(handle, global_positions);
+                    let mut update_handle = UpdateHandle::new(handle, self.runtime_id);
                     let handle_ref = &mut update_handle;
                     #( let mut #fluent_properties = false; )*
                     #check_state
@@ -235,70 +231,81 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     update_handle.unwrap()
                 }
 
-                fn resize<'a>(
+                fn resize(
                     &mut self,
                     constraints: LayoutConstraints,
-                    handle: &'a mut Handle,
-                    local_positions: &'a mut [Rect],
+                    handle: &mut Handle,
                 ) -> Size {
-                    let mut resize_handle = ResizeHandle::new(handle, local_positions, &mut self.comp_struct, &mut self.multi_comp);
+                    let mut resize_handle = ResizeHandle::new(handle, self.runtime_id, &mut self.comp_struct, &mut self.multi_comp);
                     self.widget.resize(constraints, &mut resize_handle)
                 }
 
-                fn propagate_event<'a>(
+                fn propagate_event(
                     &mut self,
                     event: WidgetEvent,
-                    handle: &'a mut Handle,
-                    global_positions: &'a [Rect],
-                    active_widget: &'a mut Option<WidgetID>,
-                    hovered_widgets: &'a mut Vec<WidgetID>,
+                    handle: &mut Handle,
                 ) -> bool {
-                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct, &mut self.multi_comp);
+                    let mut event_handle = EventHandle::new(handle, self.runtime_id, &mut self.comp_struct, &mut self.multi_comp);
                     self.widget.event(event, &mut event_handle);
                     let (mut resize, events) = event_handle.unwrap();
-                    for (id, e) in events {
-                        if self.event(id, e, handle, global_positions, active_widget, hovered_widgets) {
+                    for (runtime_id, widget_id, e) in events {
+                        if self.event(runtime_id, widget_id, e, handle) {
                             resize = true;
                         }
                     }
                     resize
                 }
 
-
-                fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
-                    self.comp_struct.get_parent(id)
+                fn get_parent(
+                    &self,
+                    runtime_id: RuntimeID,
+                    widget_id: WidgetID,
+                ) -> Option<(RuntimeID, WidgetID)> {
+                    if runtime_id != self.runtime_id {
+                        self.multi_comp.get_parent(runtime_id, widget_id)
+                    } else {
+                        self.comp_struct.get_parent(widget_id).map(|id| (self.runtime_id, id))
+                    }
                 }
 
-                fn get_id(&self, name: &str) -> Option<WidgetID> {
+                fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)> {
                     self.comp_struct.get_id(name)
+                        .map_or_else(
+                            || self.multi_comp.get_id(name),
+                            |id| Some((self.runtime_id, id)),
+                        )
                 }
 
                 fn get_comp_struct(&mut self) -> &mut dyn Any {
                     &mut self.comp_struct
                 }
 
-                fn event<'a>(
+                fn event(
                     &mut self,
-                    id: WidgetID,
+                    runtime_id: RuntimeID,
+                    widget_id: WidgetID,
                     event: WidgetEvent,
-                    handle: &'a mut Handle,
-                    global_positions: &'a [Rect],
-                    active_widget: &'a mut Option<WidgetID>,
-                    hovered_widgets: &'a mut Vec<WidgetID>,
+                    handle: &mut Handle,
                 ) -> bool {
-                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct, &mut self.multi_comp);
+                    if runtime_id != self.runtime_id {
+                        return self.multi_comp.event(runtime_id, widget_id, event, handle);
+                    }
+                    let mut event_handle = EventHandle::new(handle, self.runtime_id, &mut self.comp_struct, &mut self.multi_comp);
                     let handle_ref = &mut event_handle;
-                    match (id.component_id(), id.widget_id()) {
+                    match (widget_id.id()) {
                         #(#event_match_arms)*
                         _ => {},
                     }
                     let (mut resize, events) = event_handle.unwrap();
-                    for (id, e) in events {
-                        if self.event(id, e, handle, global_positions, active_widget, hovered_widgets) {
+                    for (runtime_id, widget_id, e) in events {
+                        if self.event(runtime_id, widget_id, e, handle) {
                             resize = true;
                         }
                     }
                     resize
+                }
+                fn id(&self) -> RuntimeID {
+                    self.runtime_id
                 }
             }
         }

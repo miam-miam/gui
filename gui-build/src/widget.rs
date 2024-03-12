@@ -77,7 +77,7 @@ impl<'a> Widget<'a> {
         Ok(Self {
             widget_type_name,
             widget_declaration,
-            components: Components::new(widget, component_id),
+            components: Components::new(widget),
             child_widgets: widget
                 .widgets()
                 .map(|ws| WidgetSet::new(component_name, ws, states, component_id))

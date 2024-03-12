@@ -48,44 +48,56 @@ pub trait Component {
         event: WidgetEvent,
         handle: &mut Handle,
     ) -> bool;
+    fn id(&self) -> RuntimeID;
 }
 
 pub trait MultiComponent {
-    fn render(&mut self, comp_id: WidgetID, scene: &mut SceneBuilder, handle: &mut Handle) -> bool;
-    fn update_vars(&mut self, comp_id: WidgetID, force_update: bool, handle: &mut Handle) -> bool;
+    fn render(
+        &mut self,
+        runtime_id: RuntimeID,
+        scene: &mut SceneBuilder,
+        handle: &mut Handle,
+    ) -> bool;
+    fn update_vars(
+        &mut self,
+        runtime_id: RuntimeID,
+        force_update: bool,
+        handle: &mut Handle,
+    ) -> bool;
     fn resize(
         &mut self,
-        comp_id: WidgetID,
+        runtime_id: RuntimeID,
         constraints: LayoutConstraints,
         handle: &mut Handle,
     ) -> Size;
 
     fn propagate_event(
         &mut self,
-        comp_id: WidgetID,
+        runtime_id: RuntimeID,
         event: WidgetEvent,
         handle: &mut Handle,
     ) -> bool;
     fn event(
         &mut self,
-        comp_id: WidgetID,
         runtime_id: RuntimeID,
         widget_id: WidgetID,
         event: WidgetEvent,
         handle: &mut Handle,
     ) -> bool;
-}
-
-pub trait ToComponent {
-    type Component: Component;
-    type HeldComponents: MultiComponent;
-    fn to_component_holder(self) -> Self::Component;
     fn get_parent(
         &self,
         runtime_id: RuntimeID,
         widget_id: WidgetID,
     ) -> Option<(RuntimeID, WidgetID)>;
     fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)>;
+}
+
+pub trait ToComponent {
+    type Component: Component;
+    type HeldComponents: MultiComponent;
+    fn to_component_holder(self, runtime_id: RuntimeID) -> Self::Component;
+    fn get_parent(&self, id: WidgetID) -> Option<WidgetID>;
+    fn get_id(&self, name: &str) -> Option<WidgetID>;
 }
 
 pub trait Variable {

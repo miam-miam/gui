@@ -1,7 +1,6 @@
 use crate::widget::Widget;
 use anyhow::bail;
 use gui_core::parse::{ComponentVariableDeclaration, VariableDeclaration};
-use gui_core::widget::WidgetID;
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
@@ -12,11 +11,10 @@ struct ComponentVar {
     type_stream: TokenStream,
     holder_ident: Ident,
     name_ident: Ident,
-    id: WidgetID,
 }
 
 impl ComponentVar {
-    pub fn new(comp: &ComponentVariableDeclaration, id: WidgetID) -> Self {
+    pub fn new(comp: &ComponentVariableDeclaration) -> Self {
         let comp_name_ident = format_ident!("{}", *comp.component);
         let type_stream = quote!(<crate::__gui_private::#comp_name_ident as ComponentTypeInfo>);
         let holder_ident = format_ident!("{}_holder", *comp.name);
@@ -25,7 +23,6 @@ impl ComponentVar {
             type_stream,
             holder_ident,
             name_ident,
-            id,
         }
     }
 }
@@ -42,13 +39,13 @@ impl ComponentVars {
             .collect();
 
         let mut component_map = HashMap::new();
-        for (_, name, id) in widget_tree.iter().flat_map(|w| w.components.0.iter()) {
+        for (_, name) in widget_tree.iter().flat_map(|w| w.components.0.iter()) {
             match component_variables.get(name) {
                 None => {
                     bail!("Could not find variable {name} in component variables")
                 }
                 Some(&comp_decl) => {
-                    if component_map.insert(name, (id, comp_decl)).is_some() {
+                    if component_map.insert(name, comp_decl).is_some() {
                         bail!("Cannot have {name} component variable used multiple times.")
                     }
                 }
@@ -57,7 +54,7 @@ impl ComponentVars {
         Ok(ComponentVars(
             component_map
                 .into_iter()
-                .map(|(_, (id, comp_decl))| ComponentVar::new(comp_decl, *id))
+                .map(|(_, comp_decl)| ComponentVar::new(comp_decl))
                 .collect_vec(),
         ))
     }
@@ -67,45 +64,12 @@ impl ComponentVars {
         let component_names = self.0.iter().map(|c| &c.name_ident).collect_vec();
         let component_types = self.0.iter().map(|c| &c.type_stream).collect_vec();
 
-        let render = self.gen_match_multi(
-            quote!(render(
-                scene,
-                handle,
-                global_positions,
-                active_widget,
-                hovered_widgets
-            )),
-            quote!(false),
-        );
-        let update_vars = self.gen_match_multi(
-            quote!(update_vars(force_update, handle, global_positions)),
-            quote!(false),
-        );
-        let resize = self.gen_match_multi(
-            quote!(resize(constraints, handle, local_positions)),
-            quote!(Size::ZERO),
-        );
-        let propagate_event = self.gen_match_multi(
-            quote!(propagate_event(
-                event,
-                handle,
-                global_positions,
-                active_widget,
-                hovered_widgets
-            )),
-            quote!(false),
-        );
-        let event = self.gen_match_multi(
-            quote!(event(
-                id,
-                event,
-                handle,
-                global_positions,
-                active_widget,
-                hovered_widgets
-            )),
-            quote!(false),
-        );
+        let render = self.gen_match_multi(quote!(render(scene, handle)), quote!(false));
+        let update_vars =
+            self.gen_match_multi(quote!(update_vars(force_update, handle)), quote!(false));
+        let resize = self.gen_match_multi(quote!(resize(constraints, handle)), quote!(Size::ZERO));
+        let propagate_event =
+            self.gen_match_multi(quote!(propagate_event(event, handle)), quote!(false));
 
         quote! {
             pub struct MultiComponentHolder {
@@ -127,55 +91,54 @@ impl ComponentVars {
             impl MultiComponent for MultiComponentHolder {
                 fn render(
                     &mut self,
-                    comp_id: WidgetID,
+                    runtime_id: RuntimeID,
                     scene: &mut SceneBuilder,
                     handle: &mut Handle,
-                    global_positions: &mut [Rect],
-                    active_widget: &mut Option<WidgetID>,
-                    hovered_widgets: &[WidgetID],
                 ) -> bool {
                     #render
                 }
                 fn update_vars(
                     &mut self,
-                    comp_id: WidgetID,
+                    runtime_id: RuntimeID,
                     force_update: bool,
                     handle: &mut Handle,
-                    global_positions: &[Rect],
                 ) -> bool {
                     #update_vars
                 }
                 fn resize(
                     &mut self,
-                    comp_id: WidgetID,
+                    runtime_id: RuntimeID,
                     constraints: LayoutConstraints,
                     handle: &mut Handle,
-                    local_positions: &mut [Rect],
                 ) -> Size {
                     #resize
                 }
                 fn propagate_event(
                     &mut self,
-                    comp_id: WidgetID,
+                    runtime_id: RuntimeID,
                     event: WidgetEvent,
                     handle: &mut Handle,
-                    global_positions: &[Rect],
-                    active_widget: &mut Option<WidgetID>,
-                    hovered_widgets: &mut Vec<WidgetID>,
                 ) -> bool {
                     #propagate_event
                 }
                 fn event(
                     &mut self,
-                    comp_id: WidgetID,
-                    id: WidgetID,
+                    runtime_id: RuntimeID,
+                    widget_id: WidgetID,
                     event: WidgetEvent,
                     handle: &mut Handle,
-                    global_positions: &[Rect],
-                    active_widget: &mut Option<WidgetID>,
-                    hovered_widgets: &mut Vec<WidgetID>,
                 ) -> bool {
-                    #event
+                    todo!()
+                }
+                fn get_parent(
+                    &self,
+                    runtime_id: RuntimeID,
+                    widget_id: WidgetID,
+                ) -> Option<(RuntimeID, WidgetID)> {
+                    todo!()
+                }
+                fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)> {
+                    todo!()
                 }
             }
         }
@@ -184,13 +147,12 @@ impl ComponentVars {
     fn gen_match_multi(&self, stream: TokenStream, default: TokenStream) -> TokenStream {
         let guards = self.0.iter().map(|c| {
             let holder_ident = &c.holder_ident;
-            let widget_id = c.id.widget_id();
             Some(quote! {
-                #widget_id => self.#holder_ident.#stream,
+                id if id == self.#holder_ident.id() => self.#holder_ident.#stream,
             })
         });
         quote! {
-            match comp_id.widget_id() {
+            match runtime_id {
                 #(#guards)*
                 _ => #default
             }

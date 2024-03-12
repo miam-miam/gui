@@ -2,17 +2,17 @@
 #[allow(clippy::collapsible_if)]
 mod gen {
     use super::__private_CompStruct as CompStruct;
-    use gui::gui_core::glazier::kurbo::Rect;
+    use std::any::Any;
     use gui::gui_core::vello::SceneBuilder;
+    use gui::gui_core::glazier::kurbo::Rect;
     use gui::gui_core::widget::{
-        EventHandle, Handle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetEvent,
-        WidgetID,
+        RuntimeID, Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle,
+        UpdateHandle, WidgetEvent, Handle,
     };
     use gui::gui_core::{
-        Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, Size, ToComponent,
-        ToHandler, Update, Variable,
+        Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, MultiComponent,
+        Size, ToComponent, ToHandler, Update, Variable,
     };
-    use std::any::Any;
     #[allow(non_camel_case_types)]
     #[derive(Default, Copy, Clone, Eq, PartialEq)]
     pub(crate) enum State {
@@ -43,93 +43,99 @@ mod gen {
     impl ComponentTypeInfo for crate::__gui_private::TrafficLight {
         type ToComponent = CompStruct;
     }
-    pub struct MultiComponent {}
-    impl MultiComponent {
+
+    pub struct MultiComponentHolder {}
+
+    impl MultiComponentHolder {
         pub fn new(comp: &mut CompStruct) -> Self {
             Self {}
         }
     }
-    impl MultiComponentHolder for MultiComponent {
+
+    impl MultiComponent for MultiComponentHolder {
         fn render(
             &mut self,
-            comp_id: WidgetID,
+            runtime_id: RuntimeID,
             scene: &mut SceneBuilder,
             handle: &mut Handle,
-            global_positions: &mut [Rect],
-            active_widget: &mut Option<WidgetID>,
-            hovered_widgets: &[WidgetID],
         ) -> bool {
-            match id.widget_id() {
+            match runtime_id {
                 _ => false,
             }
         }
         fn update_vars(
             &mut self,
-            comp_id: WidgetID,
+            runtime_id: RuntimeID,
             force_update: bool,
             handle: &mut Handle,
-            global_positions: &[Rect],
         ) -> bool {
-            match id.widget_id() {
+            match runtime_id {
                 _ => false,
             }
         }
         fn resize(
             &mut self,
-            comp_id: WidgetID,
+            runtime_id: RuntimeID,
             constraints: LayoutConstraints,
             handle: &mut Handle,
-            local_positions: &mut [Rect],
         ) -> Size {
-            match id.widget_id() {
+            match runtime_id {
                 _ => Size::ZERO,
             }
         }
         fn propagate_event(
             &mut self,
-            comp_id: WidgetID,
+            runtime_id: RuntimeID,
             event: WidgetEvent,
             handle: &mut Handle,
-            global_positions: &[Rect],
-            active_widget: &mut Option<WidgetID>,
-            hovered_widgets: &mut Vec<WidgetID>,
         ) -> bool {
-            match id.widget_id() {
+            match runtime_id {
                 _ => false,
             }
         }
         fn event(
             &mut self,
-            comp_id: WidgetID,
-            id: WidgetID,
+            runtime_id: RuntimeID,
+            widget_id: WidgetID,
             event: WidgetEvent,
             handle: &mut Handle,
-            global_positions: &[Rect],
-            active_widget: &mut Option<WidgetID>,
-            hovered_widgets: &mut Vec<WidgetID>,
         ) -> bool {
-            match id.widget_id() {
-                _ => false,
-            }
+            todo!()
+        }
+        fn get_parent(
+            &self,
+            runtime_id: RuntimeID,
+            widget_id: WidgetID,
+        ) -> Option<(RuntimeID, WidgetID)> {
+            todo!()
+        }
+        fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)> {
+            todo!()
         }
     }
-    use gui::{FluentArgs, FluentBundle, FluentResource};
+
+    use gui::{FluentBundle, FluentArgs, FluentResource};
     use std::borrow::Cow;
-    fn get_bundle_message<'a>(message: &'a str, args: Option<&'a FluentArgs<'_>>) -> Cow<'a, str> {
-        use gui::langid;
+
+    fn get_bundle_message<'a>(
+        message: &'a str,
+        args: Option<&'a FluentArgs<'_>>,
+    ) -> Cow<'a, str> {
         use std::sync::OnceLock;
+        use gui::langid;
         static BUNDLE: OnceLock<FluentBundle<FluentResource>> = OnceLock::new();
-        const FTL_STRING: &str = include_str!(concat!(env!("OUT_DIR"), "/TrafficLight.ftl"));
+        const FTL_STRING: &str = include_str!(
+            concat!(env!("OUT_DIR"), "/TrafficLight.ftl")
+        );
         let mut errors = vec![];
-        let bundle = BUNDLE.get_or_init(|| {
-            let mut bundle = FluentBundle::new_concurrent(vec![langid!("en-GB")]);
-            let resource =
-                FluentResource::try_new(FTL_STRING.to_string()).expect("FTL string is valid.");
-            bundle
-                .add_resource(resource)
-                .expect("No identifiers are overlapping.");
-            bundle
-        });
+        let bundle = BUNDLE
+            .get_or_init(|| {
+                let mut bundle = FluentBundle::new_concurrent(vec![langid!("en-GB")]);
+                let resource = FluentResource::try_new(FTL_STRING.to_string())
+                    .expect("FTL string is valid.");
+                bundle.add_resource(resource).expect("No identifiers are overlapping.");
+                bundle
+            });
         let message = bundle.get_message(message).expect("Message exists.");
         let pattern = message.value().expect("Value exists.");
         bundle.format_pattern(pattern, args, &mut errors)
@@ -137,72 +143,62 @@ mod gen {
     #[allow(non_snake_case)]
     pub struct TrafficLightHolder {
         comp_struct: CompStruct,
+        runtime_id: RuntimeID,
         widget: ::gui::gui_widget::Button<Switch, CompStruct, ::gui::gui_widget::Text>,
         state: State,
-        multi_comp: MultiComponent,
+        multi_comp: MultiComponentHolder,
         TrafficLight_SwitchText_Red_text: FluentArgs<'static>,
     }
     #[automatically_derived]
     impl ToComponent for CompStruct {
         type Component = TrafficLightHolder;
-        type HeldComponents = MultiComponent;
-        fn to_component_holder(mut self) -> Self::Component {
+        type HeldComponents = MultiComponentHolder;
+        fn to_component_holder(mut self, runtime_id: RuntimeID) -> Self::Component {
             TrafficLightHolder {
                 widget: ::gui::gui_widget::Button::new(
-                    WidgetID::new(1u32, 4u32),
-                    ::gui::gui_widget::Text::new(WidgetID::new(1u32, 5u32)),
+                    WidgetID::new(0u32),
+                    ::gui::gui_widget::Text::new(WidgetID::new(1u32)),
                 ),
-                multi_comp: MultiComponent::new(&mut self),
+                runtime_id,
+                multi_comp: MultiComponentHolder::new(&mut self),
                 comp_struct: self,
                 state: Default::default(),
                 TrafficLight_SwitchText_Red_text: FluentArgs::new(),
             }
         }
-        fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
-            match (id.component_id(), id.widget_id()) {
-                (1u32, 5u32) => Some(WidgetID::new(1u32, 4u32)),
+        fn get_parent(&self, widget_id: WidgetID) -> Option<WidgetID> {
+            match widget_id {
+                WidgetID::new(1u32) => Some(WidgetID::new(0u32)),
                 _ => None,
             }
         }
         fn get_id(&self, name: &str) -> Option<WidgetID> {
             match name {
-                "Switch" => Some(WidgetID::new(1u32, 4u32)),
-                "SwitchText" => Some(WidgetID::new(1u32, 5u32)),
+                "Switch" => Some(WidgetID::new(0u32)),
+                "SwitchText" => Some(WidgetID::new(1u32)),
                 _ => None,
             }
         }
     }
     #[automatically_derived]
     impl Component for TrafficLightHolder {
-        fn render<'a>(
-            &mut self,
-            mut scene: SceneBuilder,
-            handle: &'a mut Handle,
-            global_positions: &'a mut [Rect],
-            active_widget: &'a mut Option<WidgetID>,
-            hovered_widgets: &'a [WidgetID],
-        ) -> bool {
+        fn render(&mut self, scene: &mut SceneBuilder, handle: &mut Handle) -> bool {
             let mut render_handle = RenderHandle::new(
                 handle,
-                global_positions,
-                active_widget,
-                hovered_widgets,
                 &mut self.comp_struct,
+                &mut self.multi_comp,
             );
-            self.widget.render(&mut scene, &mut render_handle);
+            self.widget.render(scene, &mut render_handle);
             render_handle.unwrap()
         }
         #[allow(unused_mut)]
-        fn update_vars<'a>(
-            &mut self,
-            mut force_update: bool,
-            handle: &'a mut Handle,
-            global_positions: &'a [Rect],
-        ) -> bool {
-            let mut update_handle = UpdateHandle::new(handle, global_positions);
+        fn update_vars(&mut self, mut force_update: bool, handle: &mut Handle) -> bool {
+            let mut update_handle = UpdateHandle::new(handle);
             let handle_ref = &mut update_handle;
             let mut text = false;
-            if force_update || <CompStruct as Update<state>>::is_updated(&self.comp_struct) {
+            if force_update
+                || <CompStruct as Update<state>>::is_updated(&self.comp_struct)
+            {
                 let new_state = <CompStruct as Update<state>>::value(&self.comp_struct);
                 if self.state != new_state {
                     self.state = new_state;
@@ -244,14 +240,20 @@ mod gen {
                 let value = 14f32;
                 widget.set_size(value, handle_ref);
             }
-            if force_update || <CompStruct as Update<hover_colour>>::is_updated(&self.comp_struct) {
-                let value = <CompStruct as Update<hover_colour>>::value(&self.comp_struct);
+            if force_update
+                || <CompStruct as Update<hover_colour>>::is_updated(&self.comp_struct)
+            {
+                let value = <CompStruct as Update<
+                    hover_colour,
+                >>::value(&self.comp_struct);
                 if self.state == State::Green {
                     let widget = &mut self.widget;
                     widget.set_hover_colour(value, handle_ref);
                 }
             }
-            if force_update || <CompStruct as Update<count>>::is_updated(&self.comp_struct) {
+            if force_update
+                || <CompStruct as Update<count>>::is_updated(&self.comp_struct)
+            {
                 let value = <CompStruct as Update<count>>::value(&self.comp_struct);
                 if self.state == State::Red {
                     text = true;
@@ -260,14 +262,20 @@ mod gen {
             }
             if self.state == State::Green {
                 if force_update {
-                    let value = get_bundle_message("TrafficLight-SwitchText-Green-text", None);
+                    let value = get_bundle_message(
+                        "TrafficLight-SwitchText-Green-text",
+                        None,
+                    );
                     let widget = &mut self.widget.get_widget();
                     widget.set_text(value, handle_ref);
                 }
             }
             if self.state == State::Yellow {
                 if force_update {
-                    let value = get_bundle_message("TrafficLight-SwitchText-Yellow-text", None);
+                    let value = get_bundle_message(
+                        "TrafficLight-SwitchText-Yellow-text",
+                        None,
+                    );
                     let widget = &mut self.widget.get_widget();
                     widget.set_text(value, handle_ref);
                 }
@@ -286,96 +294,90 @@ mod gen {
             <CompStruct as Update<count>>::reset(&mut self.comp_struct);
             update_handle.unwrap()
         }
-        fn resize<'a>(
+        fn resize(
             &mut self,
             constraints: LayoutConstraints,
-            handle: &'a mut Handle,
-            local_positions: &'a mut [Rect],
+            handle: &mut Handle,
         ) -> Size {
-            let mut resize_handle =
-                ResizeHandle::new(handle, local_positions, &mut self.comp_struct);
+            let mut resize_handle = ResizeHandle::new(
+                handle,
+                &mut self.comp_struct,
+                &mut self.multi_comp,
+            );
             self.widget.resize(constraints, &mut resize_handle)
         }
-        fn propagate_event<'a>(
-            &mut self,
-            event: WidgetEvent,
-            handle: &'a mut Handle,
-            global_positions: &'a [Rect],
-            active_widget: &'a mut Option<WidgetID>,
-            hovered_widgets: &'a mut Vec<WidgetID>,
-        ) -> bool {
+        fn propagate_event(&mut self, event: WidgetEvent, handle: &mut Handle) -> bool {
             let mut event_handle = EventHandle::new(
                 handle,
-                global_positions,
-                active_widget,
-                hovered_widgets,
                 &mut self.comp_struct,
+                &mut self.multi_comp,
             );
             self.widget.event(event, &mut event_handle);
             let (mut resize, events) = event_handle.unwrap();
             for (id, e) in events {
-                if self.event(
-                    id,
-                    e,
-                    handle,
-                    global_positions,
-                    active_widget,
-                    hovered_widgets,
-                ) {
+                if self.event(id.0, id.1, e, handle) {
                     resize = true;
                 }
             }
             resize
         }
-        fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
-            self.comp_struct.get_parent(id)
+        fn get_parent(
+            &self,
+            runtime_id: RuntimeID,
+            widget_id: WidgetID,
+        ) -> Option<(RuntimeID, WidgetID)> {
+            if runtime_id != self.runtime_id {
+                self.multi_comp.get_parent(runtime_id, widget_id)
+            } else {
+                self.comp_struct.get_parent(widget_id).map(|id| (self.runtime_id, id))
+            }
         }
-        fn get_id(&self, name: &str) -> Option<WidgetID> {
-            self.comp_struct.get_id(name)
+        fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)> {
+            self.comp_struct
+                .get_id(name)
+                .map_or_else(
+                    || self.multi_comp.get_id(name),
+                    |id| Some((self.runtime_id, id)),
+                )
         }
         fn get_comp_struct(&mut self) -> &mut dyn Any {
             &mut self.comp_struct
         }
-        fn event<'a>(
+        fn event(
             &mut self,
-            id: WidgetID,
+            runtime_id: RuntimeID,
+            widget_id: WidgetID,
             event: WidgetEvent,
-            handle: &'a mut Handle,
-            global_positions: &'a [Rect],
-            active_widget: &'a mut Option<WidgetID>,
-            hovered_widgets: &'a mut Vec<WidgetID>,
+            handle: &mut Handle,
         ) -> bool {
+            if runtime_id != self.runtime_id {
+                return self.multi_comp.event(runtime_id, widget_id, event, handle);
+            }
             let mut event_handle = EventHandle::new(
                 handle,
-                global_positions,
-                active_widget,
-                hovered_widgets,
                 &mut self.comp_struct,
+                &mut self.multi_comp,
             );
             let handle_ref = &mut event_handle;
             match (id.component_id(), id.widget_id()) {
-                (1u32, 5u32) => {
+                (WidgetID::new(1u32)) => {
                     self.widget.get_widget().event(event, handle_ref);
                 }
-                (1u32, 4u32) => {
+                (WidgetID::new(0u32)) => {
                     self.widget.event(event, handle_ref);
                 }
                 _ => {}
             }
             let (mut resize, events) = event_handle.unwrap();
             for (id, e) in events {
-                if self.event(
-                    id,
-                    e,
-                    handle,
-                    global_positions,
-                    active_widget,
-                    hovered_widgets,
-                ) {
+                if self.event(id.0, id.1, e, handle) {
                     resize = true;
                 }
             }
             resize
+        }
+        fn id(&self) -> RuntimeID {
+            self.runtime_id
         }
     }
 }
