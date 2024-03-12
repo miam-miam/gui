@@ -25,7 +25,8 @@ pub struct Text {
     text: String,
     colour: Colour,
     size: f32,
-    layout: Option<Layout<ParleyBrush>>,
+    // Use box to reduce struct size
+    layout: Option<Box<Layout<ParleyBrush>>>,
 }
 
 impl Text {
@@ -47,7 +48,7 @@ impl Text {
         layout_builder.push_default(&StyleProperty::Brush(ParleyBrush(Brush::Solid(
             self.colour.0,
         ))));
-        self.layout = Some(layout_builder.build());
+        self.layout = Some(Box::new(layout_builder.build()));
     }
 
     pub fn set_text(&mut self, text: Cow<'_, str>, handle: &mut UpdateHandle) {

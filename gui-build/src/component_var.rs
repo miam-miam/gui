@@ -78,6 +78,7 @@ impl ComponentVars {
                 #( #component_idents: <#component_types::ToComponent as ToComponent>::Component),*
             }
 
+            #[automatically_derived]
             impl MultiComponentHolder {
                 pub fn new(comp: &mut CompStruct) -> Self {
                     #(
@@ -90,6 +91,7 @@ impl ComponentVars {
                 }
             }
 
+            #[automatically_derived]
             impl MultiComponent for MultiComponentHolder {
                 fn render(
                     &mut self,
@@ -123,6 +125,7 @@ impl ComponentVars {
                 ) -> bool {
                     #propagate_event
                 }
+                #[allow(clippy::nonminimal_bool)]
                 fn event(
                     &mut self,
                     runtime_id: RuntimeID,

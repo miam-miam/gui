@@ -130,6 +130,8 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let gen_module = quote! {
         #[allow(clippy::suspicious_else_formatting)]
         #[allow(clippy::collapsible_if)]
+        #[allow(clippy::match_single_binding)]
+        #[allow(unused_imports)]
         mod gen {
             use super::__private_CompStruct as CompStruct;
             use std::any::Any;

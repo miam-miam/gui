@@ -192,6 +192,7 @@ impl<'a, T: ToComponent> ResizeHandle<'a, T> {
     ) -> Size {
         let s = child.resize(constraints, self);
         self.position_widget(Rect::from_origin_size(origin, s), child.id());
+        // TODO
         s
     }
 
@@ -203,6 +204,7 @@ impl<'a, T: ToComponent> ResizeHandle<'a, T> {
         let s = self
             .held_components
             .resize(runtime_id, constraints, self.handle);
+        // TODO
         s
     }
 
