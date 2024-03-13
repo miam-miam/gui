@@ -70,3 +70,4 @@ components:
           widget: Text
           properties:
             text: Next
+            size: 50

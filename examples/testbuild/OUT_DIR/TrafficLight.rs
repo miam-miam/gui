@@ -243,7 +243,7 @@ mod gen {
                 let widget = &mut self.widget.get_widget();
                 let value = ::gui::gui_core::Colour::rgba8(33u8, 37u8, 41u8, 255u8);
                 widget.set_colour(value, handle_ref);
-                let value = 14f32;
+                let value = 50f32;
                 widget.set_size(value, handle_ref);
             }
             if force_update

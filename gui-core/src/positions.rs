@@ -1,6 +1,7 @@
 use crate::widget::{RuntimeID, WidgetID};
 use crate::{Component, Point};
 use glazier::kurbo::Rect;
+use itertools::Itertools;
 use std::collections::HashMap;
 
 #[derive(Debug, Default, Clone)]
@@ -28,7 +29,7 @@ impl WidgetInfo {
         self.reset_positions();
         self.position_widget(RuntimeID::new(0), WidgetID::new(0), rect);
 
-        for (runtime_id, positions) in local_positions.into_iter() {
+        for (runtime_id, positions) in local_positions.into_iter().sorted_by_key(|(r, p)| *r) {
             for (id, rect) in positions.into_iter().enumerate() {
                 let widget_id = WidgetID::new(id as u32);
                 if let Some((runtime_parent, widget_parent)) =
@@ -40,8 +41,6 @@ impl WidgetInfo {
                         widget_id,
                         rect + parent_rect.origin().to_vec2(),
                     );
-                } else {
-                    eprintln!("Could not find parent for {runtime_id:?} {widget_id:?}");
                 }
             }
         }
