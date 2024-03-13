@@ -64,6 +64,7 @@ pub trait MultiComponent {
         force_update: bool,
         handle: &mut Handle,
     ) -> bool;
+    fn force_update_vars(&mut self, handle: &mut Handle) -> bool;
     fn resize(
         &mut self,
         runtime_id: RuntimeID,

@@ -132,7 +132,21 @@ impl<'a, T: ToComponent> RenderHandle<'a, T> {
     }
 
     pub fn render_component(&mut self, scene: &mut SceneBuilder, runtime_id: RuntimeID) {
-        self.held_components.render(runtime_id, scene, self.handle);
+        let comp_pos = self.handle.info.get_rect(runtime_id, Default::default());
+        let parent = self
+            .held_components
+            .get_parent(runtime_id, Default::default())
+            .expect("component has parent");
+        let parent_origin = self.handle.info.get_rect(parent.0, parent.1).origin();
+
+        let mut fragment = SceneFragment::new();
+        let mut builder = SceneBuilder::for_fragment(&mut fragment);
+        self.held_components
+            .render(runtime_id, &mut builder, self.handle);
+        scene.append(
+            &fragment,
+            Some(Affine::translate(comp_pos.origin() - parent_origin)),
+        );
     }
 
     pub fn is_active(&self, id: WidgetID) -> bool {
@@ -192,19 +206,23 @@ impl<'a, T: ToComponent> ResizeHandle<'a, T> {
     ) -> Size {
         let s = child.resize(constraints, self);
         self.position_widget(Rect::from_origin_size(origin, s), child.id());
-        // TODO
         s
     }
 
     pub fn layout_component(
         &mut self,
+        origin: Point,
         runtime_id: RuntimeID,
         constraints: LayoutConstraints,
     ) -> Size {
         let s = self
             .held_components
             .resize(runtime_id, constraints, self.handle);
-        // TODO
+        self.handle.info.position_widget(
+            runtime_id,
+            Default::default(),
+            Rect::from_origin_size(origin, s),
+        );
         s
     }
 

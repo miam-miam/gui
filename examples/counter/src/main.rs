@@ -51,7 +51,7 @@ mod test {
         harness.simulate_pointer_down_up(PointerButton::Primary, Some(decr_btn));
         assert_screenshot!(harness, "decrement_btn_cannot_be_pressed");
 
-        harness.simulate_pointer_move(incr_btn, None);
+        harness.simulate_pointer_move(incr_btn.0, incr_btn.1, None);
         assert_screenshot!(harness, "increment_btn_hovered");
 
         harness.simulate_pointer_down(PointerButton::Primary, None);
@@ -67,7 +67,7 @@ mod test {
 
         harness.simulate_pointer_down_up(PointerButton::Primary, Some(incr_btn));
         harness.simulate_pointer_down(PointerButton::Primary, Some(incr_btn));
-        harness.simulate_pointer_move(decr_btn, None);
+        harness.simulate_pointer_move(decr_btn.0, decr_btn.1, None);
         assert_screenshot!(harness, "decrement_btn_is_not_hovered");
 
         assert_eq!(*harness.get_component().count.get_value(), 1);

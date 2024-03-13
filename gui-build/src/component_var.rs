@@ -1,20 +1,23 @@
 use crate::widget::Widget;
 use anyhow::bail;
 use gui_core::parse::{ComponentVariableDeclaration, VariableDeclaration};
+use gui_core::widget::WidgetID;
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 use std::collections::HashMap;
+use std::iter;
 
 #[derive(Debug, Clone)]
 struct ComponentVar {
     type_stream: TokenStream,
     holder_ident: Ident,
     name_ident: Ident,
+    id: WidgetID,
 }
 
 impl ComponentVar {
-    pub fn new(comp: &ComponentVariableDeclaration) -> Self {
+    pub fn new(comp: &ComponentVariableDeclaration, id: WidgetID) -> Self {
         let comp_name_ident = format_ident!("{}", *comp.component);
         let type_stream = quote!(<crate::__gui_private::#comp_name_ident as ComponentTypeInfo>);
         let holder_ident = format_ident!("{}_holder", *comp.name);
@@ -23,6 +26,7 @@ impl ComponentVar {
             type_stream,
             holder_ident,
             name_ident,
+            id,
         }
     }
 }
@@ -39,13 +43,16 @@ impl ComponentVars {
             .collect();
 
         let mut component_map = HashMap::new();
-        for (_, name) in widget_tree.iter().flat_map(|w| w.components.0.iter()) {
+        for ((_, name), id) in widget_tree
+            .iter()
+            .flat_map(|w| w.components.0.iter().zip(iter::repeat(w.id)))
+        {
             match component_variables.get(name) {
                 None => {
                     bail!("Could not find variable {name} in component variables")
                 }
                 Some(&comp_decl) => {
-                    if component_map.insert(name, comp_decl).is_some() {
+                    if component_map.insert(name, (comp_decl, id)).is_some() {
                         bail!("Cannot have {name} component variable used multiple times.")
                     }
                 }
@@ -54,7 +61,7 @@ impl ComponentVars {
         Ok(ComponentVars(
             component_map
                 .into_values()
-                .map(ComponentVar::new)
+                .map(|(comp_decl, id)| ComponentVar::new(comp_decl, id))
                 .collect_vec(),
         ))
     }
@@ -72,20 +79,24 @@ impl ComponentVars {
             self.gen_match_multi(quote!(propagate_event(event, handle)), quote!(false));
         let get_parent = self.gen_try_all_options(quote!(get_parent(runtime_id, widget_id)));
         let get_id = self.gen_try_all_options(quote!(get_id(name)));
+        let get_parent_runtime = self.gen_get_parent_runtime();
 
         quote! {
             pub struct MultiComponentHolder {
+                #[allow(dead_code)]
+                parent_id: RuntimeID,
                 #( #component_idents: <#component_types::ToComponent as ToComponent>::Component),*
             }
 
             #[automatically_derived]
             impl MultiComponentHolder {
-                pub fn new(comp: &mut CompStruct) -> Self {
+                pub fn new(comp: &mut CompStruct, parent_id: RuntimeID) -> Self {
                     #(
                         let comp_holder = <CompStruct as ComponentHolder<#component_names>>::comp_holder(comp);
                         let #component_idents = comp_holder.take().expect("Component is initialised.").to_component_holder(RuntimeID::next());
                     )*
                     Self {
+                        parent_id,
                         #(#component_idents),*
                     }
                 }
@@ -108,6 +119,11 @@ impl ComponentVars {
                     handle: &mut Handle,
                 ) -> bool {
                     #update_vars
+                }
+                #[allow(clippy::nonminimal_bool)]
+                fn force_update_vars(&mut self, handle: &mut Handle) -> bool {
+                    #(let #component_idents = self.#component_idents.update_vars(true, handle);)*
+                    false #(|| #component_idents)*
                 }
                 fn resize(
                     &mut self,
@@ -141,6 +157,7 @@ impl ComponentVars {
                     runtime_id: RuntimeID,
                     widget_id: WidgetID,
                 ) -> Option<(RuntimeID, WidgetID)> {
+                    #get_parent_runtime
                     #get_parent
                 }
                 fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)> {
@@ -179,6 +196,31 @@ impl ComponentVars {
                     .expect("has first")
             },
         )
+    }
+
+    fn gen_get_parent_runtime(&self) -> TokenStream {
+        let result: TokenStream = self
+            .0
+            .iter()
+            .map(|c| {
+                let id = c.id;
+                let holder_ident = &c.holder_ident;
+                quote! {
+                    if self.#holder_ident.id() == runtime_id {
+                        return Some((self.parent_id, #id))
+                    }
+                }
+            })
+            .collect();
+        if result.is_empty() {
+            result
+        } else {
+            quote! {
+                if widget_id.id() == 0 {
+                    #result
+                }
+            }
+        }
     }
 
     pub fn gen_comp_var_structs(&self) -> TokenStream {

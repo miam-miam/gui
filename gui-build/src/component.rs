@@ -176,7 +176,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     #component_holder {
                         widget: #widget_init,
                         runtime_id,
-                        multi_comp: MultiComponentHolder::new(&mut self),
+                        multi_comp: MultiComponentHolder::new(&mut self, runtime_id),
                         comp_struct: self,
                         #state_init
                         #( #fluent_arg_idents: FluentArgs::new() ),*
@@ -219,6 +219,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     mut force_update: bool,
                     handle: &mut Handle,
                 ) -> bool {
+                    let need_multi_comp_resize = self.multi_comp.force_update_vars(handle);
                     let mut update_handle = UpdateHandle::new(handle, self.runtime_id);
                     let handle_ref = &mut update_handle;
                     #( let mut #fluent_properties = false; )*
@@ -229,7 +230,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     #if_update
                     #prop_update
                     #( <CompStruct as Update<#var_names>>::reset(&mut self.comp_struct); )*
-                    update_handle.unwrap()
+                    update_handle.unwrap() || need_multi_comp_resize
                 }
 
                 fn resize(

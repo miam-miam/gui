@@ -7,7 +7,7 @@ use gui_core::widget::{
     EventHandle, RenderHandle, ResizeHandle, RuntimeID, UpdateHandle, Widget, WidgetBuilder,
     WidgetEvent, WidgetID,
 };
-use gui_core::{SceneBuilder, ToComponent};
+use gui_core::{Point, SceneBuilder, ToComponent};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use serde::Deserialize;
@@ -41,7 +41,7 @@ impl<C: ToComponent> Widget<C> for CompHolder {
 
     fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<C>) -> Size {
         match self.child_id {
-            Some(child_id) => handle.layout_component(child_id, constraints),
+            Some(child_id) => handle.layout_component(Point::ZERO, child_id, constraints),
             None => Size::default(),
         }
     }
