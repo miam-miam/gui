@@ -4,7 +4,7 @@ use gui_core::parse::var::Name;
 use gui_core::widget::WidgetBuilder;
 use itertools::Itertools;
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::quote;
+use quote::{format_ident, quote};
 use std::hash::Hash;
 
 fn gen_idents() -> (Ident, Ident, Ident) {
@@ -180,6 +180,49 @@ impl Variables {
 
         if !update_stream.is_empty() {
             var_stream.extend(quote!(let widget = #widget_stmt; #update_stream));
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct Components(pub Vec<(&'static str, Name)>);
+
+impl Components {
+    pub fn new(builder: &dyn WidgetBuilder) -> Self {
+        Components(
+            builder
+                .get_components()
+                .into_iter()
+                .map(|(p, s)| (p, s.unwrap()))
+                .collect_vec(),
+        )
+    }
+
+    pub fn gen_components(
+        &self,
+        widget_builder: &dyn WidgetBuilder,
+        widget_stmt: &TokenStream,
+        components_stream: &mut TokenStream,
+    ) {
+        let (widget_ident, value_ident, handle_ident) = gen_idents();
+        if !self.0.is_empty() {
+            components_stream.extend(quote! {
+                let widget = #widget_stmt;
+            })
+        }
+
+        for (prop, name) in &self.0 {
+            let holder_ident = format_ident!("{name}_holder");
+            components_stream.extend(quote! {
+                let value = self.multi_comp.#holder_ident.id();
+            });
+            widget_builder.on_property_update(
+                prop,
+                &widget_ident,
+                &value_ident,
+                &handle_ident,
+                components_stream,
+            );
         }
     }
 }

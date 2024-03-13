@@ -28,7 +28,7 @@ pub struct NormalVariableDeclaration {
     pub var_type: String,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ComponentVariableDeclaration {
     pub name: Name,
     pub component: String,
@@ -54,6 +54,30 @@ impl VariableDeclaration {
             VariableDeclaration::Normal(v) => &v.name,
             VariableDeclaration::Component(c) => &c.name,
             VariableDeclaration::Components(c) => &c.name,
+        }
+    }
+
+    pub fn get_normal(&self) -> Option<&NormalVariableDeclaration> {
+        if let VariableDeclaration::Normal(n) = self {
+            Some(n)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_component(&self) -> Option<&ComponentVariableDeclaration> {
+        if let VariableDeclaration::Component(c) = self {
+            Some(c)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_components(&self) -> Option<&ComponentsVariableDeclaration> {
+        if let VariableDeclaration::Components(c) = self {
+            Some(c)
+        } else {
+            None
         }
     }
 }

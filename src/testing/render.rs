@@ -59,18 +59,19 @@ impl<T: ToComponent> TestHarness<T> {
 
         let mut sb = SceneBuilder::for_scene(&mut self.window_state.scene);
         let mut fragment = SceneFragment::new();
-        let component = SceneBuilder::for_fragment(&mut fragment);
-        self.window_state.component.render(
-            component,
-            &mut self.window_state.handle,
-            &mut self.window_state.global_positions[..],
-            &mut self.window_state.active_widget,
-            &self.window_state.hovered_widgets[..],
-        );
+        let mut component = SceneBuilder::for_fragment(&mut fragment);
+        self.window_state
+            .component
+            .render(&mut component, &mut self.window_state.handle);
         sb.append(
             &fragment,
             Some(Affine::translate(
-                self.window_state.global_positions[0].origin().to_vec2(),
+                self.window_state
+                    .handle
+                    .info
+                    .get_rect(self.window_state.component.id(), Default::default())
+                    .origin()
+                    .to_vec2(),
             )),
         );
 

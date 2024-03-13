@@ -4,7 +4,7 @@ mod overridden_widget;
 mod widget_set;
 
 use crate::fluent::FluentIdent;
-use crate::widget::common::{Fluents, Statics, Variables};
+use crate::widget::common::{Components, Fluents, Statics, Variables};
 use crate::widget::overridden_widget::WidgetProperties;
 use anyhow::anyhow;
 use gui_core::parse::{
@@ -16,7 +16,6 @@ use itertools::Itertools;
 use overridden_widget::OverriddenWidget;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
-use std::cmp::max_by_key;
 use std::sync::atomic::{AtomicU32, Ordering};
 use widget_set::WidgetSet;
 
@@ -31,6 +30,7 @@ pub struct Widget<'a> {
     pub child_widgets: Option<WidgetSet<'a>>,
     pub child_type: Option<Ident>,
     pub handler: Option<Ident>,
+    pub components: Components,
     pub id: WidgetID,
 }
 
@@ -70,14 +70,14 @@ impl<'a> Widget<'a> {
             widget_type_name,
         );
 
-        static WIDGET_COUNTER: AtomicU32 = AtomicU32::new(0);
-        let id = WidgetID::new(component_id, WIDGET_COUNTER.fetch_add(1, Ordering::Relaxed));
+        let id = WidgetID::next(component_id);
         let mut state_overrides =
             OverriddenWidget::new(component_name, widget_declaration, states)?;
         let shared_overrides = WidgetProperties::remove_common_properties(&mut state_overrides[..]);
         Ok(Self {
             widget_type_name,
             widget_declaration,
+            components: Components::new(widget),
             child_widgets: widget
                 .widgets()
                 .map(|ws| WidgetSet::new(component_name, ws, states, component_id))
@@ -282,6 +282,9 @@ impl<'a> Widget<'a> {
             stream,
         );
 
+        self.components
+            .gen_components(&*self.widget_declaration.widget, &widget_stmt, stream);
+
         for widget in &self.state_overrides {
             widget.gen_if_correct_state(stream, |static_stream| {
                 widget.statics.gen_statics(
@@ -297,17 +300,6 @@ impl<'a> Widget<'a> {
                 w.gen_statics(Some(&get_stmt), stream);
             }
         }
-    }
-
-    pub fn get_largest_id(&self) -> WidgetID {
-        max_by_key(
-            self.id,
-            self.child_widgets
-                .as_ref()
-                .and_then(|s| s.largest_id())
-                .unwrap_or_default(),
-            |i| i.widget_id(),
-        )
     }
 
     pub fn gen_widget_id_to_widget(

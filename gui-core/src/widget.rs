@@ -1,7 +1,7 @@
 pub use crate::handles::{EventHandle, Handle, RenderHandle, ResizeHandle, UpdateHandle};
 use crate::layout::LayoutConstraints;
 use crate::parse::fluent::Fluent;
-use crate::parse::var::Name;
+use crate::parse::var::{ComponentVar, Name};
 use crate::parse::WidgetDeclaration;
 use crate::ToComponent;
 use dyn_clone::DynClone;
@@ -10,37 +10,62 @@ use glazier::PointerEvent;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use std::any::Any;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Mutex;
 use vello::kurbo::Size;
 use vello::SceneBuilder;
 
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Default)]
-pub struct WidgetID {
-    component_id: u32,
-    widget_id: u32,
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Default, Hash)]
+pub struct RuntimeID(u32);
+
+impl ToTokens for RuntimeID {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let runtime_id = self.0;
+        tokens.extend(quote!(RuntimeID::new(#runtime_id)))
+    }
 }
+
+impl RuntimeID {
+    pub const fn new(runtime_id: u32) -> Self {
+        RuntimeID(runtime_id)
+    }
+    pub fn id(&self) -> u32 {
+        self.0
+    }
+
+    pub fn next() -> Self {
+        static WIDGET_COUNTER: AtomicU32 = AtomicU32::new(0);
+        RuntimeID(WIDGET_COUNTER.fetch_add(1, Ordering::Relaxed))
+    }
+}
+
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Default)]
+pub struct WidgetID(u32);
 
 impl ToTokens for WidgetID {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let component_id = self.component_id;
-        let widget_id = self.widget_id;
-        tokens.extend(quote!(WidgetID::new(#component_id, #widget_id)))
+        let widget_id = self.0;
+        tokens.extend(quote!(WidgetID::new(#widget_id)))
     }
 }
 
 impl WidgetID {
-    pub const fn new(component_id: u32, widget_id: u32) -> Self {
-        WidgetID {
-            component_id,
-            widget_id,
+    pub const fn new(widget_id: u32) -> Self {
+        WidgetID(widget_id)
+    }
+    pub fn id(&self) -> u32 {
+        self.0
+    }
+
+    pub fn next(component_id: u32) -> Self {
+        static WIDGET_COUNTER: Mutex<Vec<u32>> = Mutex::new(vec![]);
+        let mut array = WIDGET_COUNTER.lock().expect("Mutex is not poisoned");
+        if array.len() <= component_id as usize {
+            array.resize(component_id as usize + 1, 0);
         }
-    }
-
-    pub fn widget_id(&self) -> u32 {
-        self.widget_id
-    }
-
-    pub fn component_id(&self) -> u32 {
-        self.component_id
+        let id = array[component_id as usize];
+        array[component_id as usize] += 1;
+        WidgetID(id)
     }
 }
 
@@ -116,7 +141,12 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
     fn get_statics(&self) -> Vec<(&'static str, TokenStream)>;
     fn get_fluents(&self) -> Vec<(&'static str, Fluent)>;
     fn get_vars(&self) -> Vec<(&'static str, Name)>;
-    fn has_handler(&self) -> bool;
+    fn get_components(&self) -> Vec<(&'static str, ComponentVar)> {
+        vec![]
+    }
+    fn has_handler(&self) -> bool {
+        false
+    }
     fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>>;
     fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>>;
 }

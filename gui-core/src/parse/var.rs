@@ -14,6 +14,24 @@ pub enum Var<T> {
     Value(T),
 }
 
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum ComponentVar {
+    Variable(Name),
+}
+
+impl ComponentVar {
+    pub fn get_component_name(&self) -> &Name {
+        let Self::Variable(name) = self;
+        name
+    }
+
+    pub fn unwrap(self) -> Name {
+        let Self::Variable(name) = self;
+        name
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Name(String);
 

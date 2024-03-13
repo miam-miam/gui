@@ -1,10 +1,10 @@
+use crate::component_var::ComponentVars;
 use crate::fluent;
 use crate::fluent::FluentIdent;
 use crate::widget::Widget;
 use anyhow::{bail, Context};
-use gui_core::parse::{
-    ComponentDeclaration, NormalVariableDeclaration, StateDeclaration, VariableDeclaration,
-};
+use gui_core::parse::{ComponentDeclaration, StateDeclaration};
+use itertools::Itertools;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 use std::fs;
@@ -13,17 +13,17 @@ use std::str::FromStr;
 
 pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> anyhow::Result<()> {
     let component_holder = format_ident!("{}Holder", *component.name);
+    let component_name = format_ident!("{}", *component.name);
 
-    let normal_variables: Vec<&NormalVariableDeclaration> = component
+    let normal_variables = component
         .variables
         .iter()
-        .filter_map(|v| match v {
-            VariableDeclaration::Normal(n) => Some(n),
-            _ => None,
-        })
-        .collect();
+        .filter_map(|v| v.get_normal())
+        .collect_vec();
 
     let widget_tree = Widget::new(component)?;
+
+    let component_vars = ComponentVars::new(&component.variables[..], &widget_tree)?;
 
     let mut widget_set = TokenStream::new();
     widget_tree.gen_widget_set(&mut widget_set);
@@ -83,31 +83,26 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
 
     let mut struct_handlers = TokenStream::new();
     widget_tree.gen_handler_structs(&mut struct_handlers)?;
+    let comp_var_structs = component_vars.gen_comp_var_structs();
+    let multi_comp = component_vars.gen_multi_comp();
 
     let rs_path = Path::new(&out_dir).join(format!("{}.rs", component.name.as_str()));
 
     let widget_type = widget_tree.gen_widget_type();
     let widget_init = widget_tree.gen_widget_init();
 
-    let largest_id = widget_tree.get_largest_id();
-
     let mut id_to_widgets = vec![];
     widget_tree.gen_widget_id_to_widget(None, &mut id_to_widgets);
-    let event_match_arms = id_to_widgets.iter().map(|(id, widget_get)| {
-        let component = id.component_id();
-        let widget = id.widget_id();
-        quote!((#component, #widget) => {#widget_get.event(event, handle_ref);})
+    let event_match_arms = id_to_widgets.iter().map(|(widget_id, widget_get)| {
+        let id = widget_id.id();
+        quote!(#id => {#widget_get.event(event, handle_ref);})
     });
 
     let mut parent_ids = vec![];
     widget_tree.get_parent_ids(&mut parent_ids);
     let parent_match_arms = parent_ids.iter().map(|(parent, children)| {
-        let unwrapped_vals = children.iter().map(|id| {
-            let component = id.component_id();
-            let widget = id.widget_id();
-            quote!((#component, #widget))
-        });
-        quote!(#( #unwrapped_vals )|* => Some(#parent),)
+        let ids = children.iter().map(|id| id.id());
+        quote!(#( #ids )|* => Some(#parent),)
     });
 
     let named_match_arms = widget_tree.iter().filter_map(|w| {
@@ -135,51 +130,64 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
     let gen_module = quote! {
         #[allow(clippy::suspicious_else_formatting)]
         #[allow(clippy::collapsible_if)]
+        #[allow(clippy::match_single_binding)]
+        #[allow(unused_imports)]
         mod gen {
             use super::__private_CompStruct as CompStruct;
             use std::any::Any;
             use gui::gui_core::vello::SceneBuilder;
-            use gui::gui_core::glazier::kurbo::Rect;
-            use gui::gui_core::widget::{Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle, WidgetEvent, Handle};
-            use gui::gui_core::{Component, LayoutConstraints, Size, ToComponent, ToHandler, Update, Variable};
+            use gui::gui_core::widget::{RuntimeID, Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle, UpdateHandle, WidgetEvent, Handle};
+            use gui::gui_core::{Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, MultiComponent, Size, ToComponent, ToHandler, Update, Variable};
 
             #state_declaration
 
             #widget_set
 
-            #bundle_func
-
             #struct_vars
 
             #struct_handlers
 
+            #comp_var_structs
+
+            impl ComponentTypeInfo for crate::__gui_private::#component_name {
+                type ToComponent = CompStruct;
+            }
+
+            #multi_comp
+
+            #bundle_func
+
             #[allow(non_snake_case)]
             pub struct #component_holder {
                 comp_struct: CompStruct,
+                runtime_id: RuntimeID,
                 widget: #widget_type,
                 #state_type
+                multi_comp: MultiComponentHolder,
                 #( #fluent_arg_idents: FluentArgs<'static> ),*
             }
 
             #[automatically_derived]
             impl ToComponent for CompStruct {
                 type Component = #component_holder;
+                type HeldComponents = MultiComponentHolder;
 
-                fn to_component_holder(self) -> Self::Component {
+                fn to_component_holder(mut self, runtime_id: RuntimeID) -> Self::Component {
                     #component_holder {
                         widget: #widget_init,
+                        runtime_id,
+                        multi_comp: MultiComponentHolder::new(&mut self, runtime_id),
                         comp_struct: self,
                         #state_init
                         #( #fluent_arg_idents: FluentArgs::new() ),*
                     }
                 }
 
-                fn largest_id(&self) -> WidgetID {
-                    #largest_id
-                }
-
-                fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
-                    match (id.component_id(), id.widget_id()) {
+                fn get_parent(
+                    &self,
+                    widget_id: WidgetID,
+                ) -> Option<WidgetID> {
+                    match widget_id.id() {
                         #(#parent_match_arms)*
                         _ => None,
                     }
@@ -195,27 +203,24 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
 
             #[automatically_derived]
             impl Component for #component_holder {
-                fn render<'a>(
+                fn render(
                     &mut self,
-                    mut scene: SceneBuilder,
-                    handle: &'a mut Handle,
-                    global_positions: &'a mut [Rect],
-                    active_widget: &'a mut Option<WidgetID>,
-                    hovered_widgets: &'a [WidgetID],
+                    scene: &mut SceneBuilder,
+                    handle: &mut Handle,
                 ) -> bool {
-                    let mut render_handle = RenderHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct);
-                    self.widget.render(&mut scene, &mut render_handle);
+                    let mut render_handle = RenderHandle::new(handle, self.runtime_id, &mut self.comp_struct, &mut self.multi_comp);
+                    self.widget.render(scene, &mut render_handle);
                     render_handle.unwrap()
                 }
 
                 #[allow(unused_mut)]
-                fn update_vars<'a>(
+                fn update_vars(
                     &mut self,
                     mut force_update: bool,
-                    handle: &'a mut Handle,
-                    global_positions: &'a [Rect],
+                    handle: &mut Handle,
                 ) -> bool {
-                    let mut update_handle = UpdateHandle::new(handle, global_positions);
+                    let need_multi_comp_resize = self.multi_comp.force_update_vars(handle);
+                    let mut update_handle = UpdateHandle::new(handle, self.runtime_id);
                     let handle_ref = &mut update_handle;
                     #( let mut #fluent_properties = false; )*
                     #check_state
@@ -225,76 +230,84 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     #if_update
                     #prop_update
                     #( <CompStruct as Update<#var_names>>::reset(&mut self.comp_struct); )*
-                    update_handle.unwrap()
+                    update_handle.unwrap() || need_multi_comp_resize
                 }
 
-                fn resize<'a>(
+                fn resize(
                     &mut self,
                     constraints: LayoutConstraints,
-                    handle: &'a mut Handle,
-                    local_positions: &'a mut [Rect],
+                    handle: &mut Handle,
                 ) -> Size {
-                    let mut resize_handle = ResizeHandle::new(handle, local_positions, &mut self.comp_struct);
+                    let mut resize_handle = ResizeHandle::new(handle, self.runtime_id, &mut self.comp_struct, &mut self.multi_comp);
                     self.widget.resize(constraints, &mut resize_handle)
                 }
 
-                fn propagate_event<'a>(
+                fn propagate_event(
                     &mut self,
                     event: WidgetEvent,
-                    handle: &'a mut Handle,
-                    global_positions: &'a [Rect],
-                    active_widget: &'a mut Option<WidgetID>,
-                    hovered_widgets: &'a mut Vec<WidgetID>,
+                    handle: &mut Handle,
                 ) -> bool {
-                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct);
+                    let mut event_handle = EventHandle::new(handle, self.runtime_id, &mut self.comp_struct, &mut self.multi_comp);
                     self.widget.event(event, &mut event_handle);
                     let (mut resize, events) = event_handle.unwrap();
-                    for (id, e) in events {
-                        if self.event(id, e, handle, global_positions, active_widget, hovered_widgets) {
+                    for (runtime_id, widget_id, e) in events {
+                        if self.event(runtime_id, widget_id, e, handle) {
                             resize = true;
                         }
                     }
                     resize
                 }
 
-                fn largest_id(&self) -> WidgetID {
-                    self.comp_struct.largest_id()
+                fn get_parent(
+                    &self,
+                    runtime_id: RuntimeID,
+                    widget_id: WidgetID,
+                ) -> Option<(RuntimeID, WidgetID)> {
+                    if runtime_id != self.runtime_id {
+                        self.multi_comp.get_parent(runtime_id, widget_id)
+                    } else {
+                        self.comp_struct.get_parent(widget_id).map(|id| (self.runtime_id, id))
+                    }
                 }
 
-                fn get_parent(&self, id: WidgetID) -> Option<WidgetID> {
-                    self.comp_struct.get_parent(id)
-                }
-
-                fn get_id(&self, name: &str) -> Option<WidgetID> {
+                fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)> {
                     self.comp_struct.get_id(name)
+                        .map_or_else(
+                            || self.multi_comp.get_id(name),
+                            |id| Some((self.runtime_id, id)),
+                        )
                 }
 
                 fn get_comp_struct(&mut self) -> &mut dyn Any {
                     &mut self.comp_struct
                 }
 
-                fn event<'a>(
+                fn event(
                     &mut self,
-                    id: WidgetID,
+                    runtime_id: RuntimeID,
+                    widget_id: WidgetID,
                     event: WidgetEvent,
-                    handle: &'a mut Handle,
-                    global_positions: &'a [Rect],
-                    active_widget: &'a mut Option<WidgetID>,
-                    hovered_widgets: &'a mut Vec<WidgetID>,
+                    handle: &mut Handle,
                 ) -> bool {
-                    let mut event_handle = EventHandle::new(handle, global_positions, active_widget, hovered_widgets, &mut self.comp_struct);
+                    if runtime_id != self.runtime_id {
+                        return self.multi_comp.event(runtime_id, widget_id, event, handle);
+                    }
+                    let mut event_handle = EventHandle::new(handle, self.runtime_id, &mut self.comp_struct, &mut self.multi_comp);
                     let handle_ref = &mut event_handle;
-                    match (id.component_id(), id.widget_id()) {
+                    match widget_id.id() {
                         #(#event_match_arms)*
                         _ => {},
                     }
                     let (mut resize, events) = event_handle.unwrap();
-                    for (id, e) in events {
-                        if self.event(id, e, handle, global_positions, active_widget, hovered_widgets) {
+                    for (runtime_id, widget_id, e) in events {
+                        if self.event(runtime_id, widget_id, e, handle) {
                             resize = true;
                         }
                     }
                     resize
+                }
+                fn id(&self) -> RuntimeID {
+                    self.runtime_id
                 }
             }
         }

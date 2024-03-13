@@ -2,23 +2,24 @@ pub mod common;
 pub mod parse;
 pub mod widget;
 
+mod comp_holder;
 mod handles;
 pub mod layout;
-
-pub use layout::LayoutConstraints;
-pub use parse::colour::Colour;
-pub use parse::var::Var;
-use std::any::Any;
-pub use vello::kurbo::Size;
+mod positions;
 
 pub use glazier;
 pub use glazier::kurbo::Point;
-use glazier::kurbo::Rect;
+pub use layout::LayoutConstraints;
 pub use parley;
+pub use parse::colour::Colour;
+pub use parse::var::Var;
+use std::any::Any;
 pub use vello;
+pub use vello::kurbo::Size;
 
+pub use crate::comp_holder::CompHolder;
 use crate::handles::Handle;
-use crate::widget::{WidgetEvent, WidgetID};
+use crate::widget::{RuntimeID, WidgetEvent, WidgetID};
 pub use parley::font::FontContext;
 pub use vello::SceneBuilder;
 
@@ -28,55 +29,74 @@ struct TestBoxable {
 }
 
 pub trait Component {
-    fn render<'a>(
-        &mut self,
-        scene: SceneBuilder,
-        handle: &'a mut Handle,
-        global_positions: &'a mut [Rect],
-        active_widget: &'a mut Option<WidgetID>,
-        hovered_widgets: &'a [WidgetID],
-    ) -> bool;
-    fn update_vars<'a>(
-        &mut self,
-        force_update: bool,
-        handle: &'a mut Handle,
-        global_positions: &'a [Rect],
-    ) -> bool;
-    fn resize<'a>(
-        &mut self,
-        constraints: LayoutConstraints,
-        handle: &'a mut Handle,
-        local_positions: &'a mut [Rect],
-    ) -> Size;
-
-    fn propagate_event<'a>(
-        &mut self,
-        event: WidgetEvent,
-        handle: &'a mut Handle,
-        global_positions: &'a [Rect],
-        active_widget: &'a mut Option<WidgetID>,
-        hovered_widgets: &'a mut Vec<WidgetID>,
-    ) -> bool;
-    fn largest_id(&self) -> WidgetID;
-    fn get_parent(&self, id: WidgetID) -> Option<WidgetID>;
-    fn get_id(&self, name: &str) -> Option<WidgetID>;
+    fn render(&mut self, scene: &mut SceneBuilder, handle: &mut Handle) -> bool;
+    fn update_vars(&mut self, force_update: bool, handle: &mut Handle) -> bool;
+    fn resize(&mut self, constraints: LayoutConstraints, handle: &mut Handle) -> Size;
+    fn propagate_event(&mut self, event: WidgetEvent, handle: &mut Handle) -> bool;
+    fn get_parent(
+        &self,
+        runtime_id: RuntimeID,
+        widget_id: WidgetID,
+    ) -> Option<(RuntimeID, WidgetID)>;
+    fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)>;
     // Only used for the test harness.
     fn get_comp_struct(&mut self) -> &mut dyn Any;
-    fn event<'a>(
+    fn event(
         &mut self,
-        id: WidgetID,
+        runtime_id: RuntimeID,
+        widget_id: WidgetID,
         event: WidgetEvent,
-        handle: &'a mut Handle,
-        global_positions: &'a [Rect],
-        active_widget: &'a mut Option<WidgetID>,
-        hovered_widgets: &'a mut Vec<WidgetID>,
+        handle: &mut Handle,
     ) -> bool;
+    fn id(&self) -> RuntimeID;
+}
+
+pub trait MultiComponent {
+    fn render(
+        &mut self,
+        runtime_id: RuntimeID,
+        scene: &mut SceneBuilder,
+        handle: &mut Handle,
+    ) -> bool;
+    fn update_vars(
+        &mut self,
+        runtime_id: RuntimeID,
+        force_update: bool,
+        handle: &mut Handle,
+    ) -> bool;
+    fn force_update_vars(&mut self, handle: &mut Handle) -> bool;
+    fn resize(
+        &mut self,
+        runtime_id: RuntimeID,
+        constraints: LayoutConstraints,
+        handle: &mut Handle,
+    ) -> Size;
+
+    fn propagate_event(
+        &mut self,
+        runtime_id: RuntimeID,
+        event: WidgetEvent,
+        handle: &mut Handle,
+    ) -> bool;
+    fn event(
+        &mut self,
+        runtime_id: RuntimeID,
+        widget_id: WidgetID,
+        event: WidgetEvent,
+        handle: &mut Handle,
+    ) -> bool;
+    fn get_parent(
+        &self,
+        runtime_id: RuntimeID,
+        widget_id: WidgetID,
+    ) -> Option<(RuntimeID, WidgetID)>;
+    fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)>;
 }
 
 pub trait ToComponent {
     type Component: Component;
-    fn to_component_holder(self) -> Self::Component;
-    fn largest_id(&self) -> WidgetID;
+    type HeldComponents: MultiComponent;
+    fn to_component_holder(self, runtime_id: RuntimeID) -> Self::Component;
     fn get_parent(&self, id: WidgetID) -> Option<WidgetID>;
     fn get_id(&self, name: &str) -> Option<WidgetID>;
 }
@@ -93,4 +113,15 @@ pub trait Update<T: Variable> {
     fn is_updated(&self) -> bool;
     fn value(&self) -> T::VarType;
     fn reset(&mut self) {}
+}
+
+pub trait ComponentTypeInfo {
+    type ToComponent: ToComponent;
+}
+
+pub trait ComponentHolder<T: Variable>
+where
+    T::VarType: ToComponent,
+{
+    fn comp_holder(&mut self) -> &mut CompHolder<T::VarType>;
 }

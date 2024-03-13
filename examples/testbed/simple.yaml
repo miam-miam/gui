@@ -1,4 +1,22 @@
 components:
+  - name: Holder
+    variables:
+      - name: light
+        component: TrafficLight
+    child:
+      widget: HStack
+      properties:
+        children:
+          - name: Text
+            widget: Text
+            properties:
+              text: "Test"
+          - name: CompHolder
+            widget: CompHolder
+            properties:
+              component:
+                variable: light
+
   - name: TrafficLight # Names for components must be unique
     variables:
       - name: hover_colour
@@ -52,3 +70,4 @@ components:
           widget: Text
           properties:
             text: Next
+            size: 50
