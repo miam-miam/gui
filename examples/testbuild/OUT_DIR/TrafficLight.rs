@@ -4,16 +4,16 @@
 #[allow(unused_imports)]
 mod gen {
     use super::__private_CompStruct as CompStruct;
+    use std::any::Any;
     use gui::gui_core::vello::SceneBuilder;
     use gui::gui_core::widget::{
-        EventHandle, Handle, RenderHandle, ResizeHandle, RuntimeID, UpdateHandle, Widget,
-        WidgetEvent, WidgetID,
+        RuntimeID, Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle,
+        UpdateHandle, WidgetEvent, Handle,
     };
     use gui::gui_core::{
-        Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, MultiComponent, Size,
-        ToComponent, ToHandler, Update, Variable,
+        Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, MultiComponent,
+        Size, ToComponent, ToHandler, Update, Variable,
     };
-    use std::any::Any;
     #[allow(non_camel_case_types)]
     #[derive(Default, Copy, Clone, Eq, PartialEq)]
     pub(crate) enum State {
@@ -44,19 +44,16 @@ mod gen {
     impl ComponentTypeInfo for crate::__gui_private::TrafficLight {
         type ToComponent = CompStruct;
     }
-
     pub struct MultiComponentHolder {
         #[allow(dead_code)]
         parent_id: RuntimeID,
     }
-
     #[automatically_derived]
     impl MultiComponentHolder {
         pub fn new(comp: &mut CompStruct, parent_id: RuntimeID) -> Self {
             Self { parent_id }
         }
     }
-
     #[automatically_derived]
     impl MultiComponent for MultiComponentHolder {
         fn render(
@@ -79,7 +76,6 @@ mod gen {
                 _ => false,
             }
         }
-        #[allow(clippy::nonminimal_bool)]
         fn force_update_vars(&mut self, handle: &mut Handle) -> bool {
             false
         }
@@ -103,7 +99,6 @@ mod gen {
                 _ => false,
             }
         }
-        #[allow(clippy::nonminimal_bool)]
         fn event(
             &mut self,
             runtime_id: RuntimeID,
@@ -124,25 +119,27 @@ mod gen {
             None
         }
     }
-
-    use gui::{FluentArgs, FluentBundle, FluentResource};
+    use gui::{FluentBundle, FluentArgs, FluentResource};
     use std::borrow::Cow;
-
-    fn get_bundle_message<'a>(message: &'a str, args: Option<&'a FluentArgs<'_>>) -> Cow<'a, str> {
-        use gui::langid;
+    fn get_bundle_message<'a>(
+        message: &'a str,
+        args: Option<&'a FluentArgs<'_>>,
+    ) -> Cow<'a, str> {
         use std::sync::OnceLock;
+        use gui::langid;
         static BUNDLE: OnceLock<FluentBundle<FluentResource>> = OnceLock::new();
-        const FTL_STRING: &str = include_str!(concat!(env!("OUT_DIR"), "/TrafficLight.ftl"));
+        const FTL_STRING: &str = include_str!(
+            concat!(env!("OUT_DIR"), "/TrafficLight.ftl")
+        );
         let mut errors = vec![];
-        let bundle = BUNDLE.get_or_init(|| {
-            let mut bundle = FluentBundle::new_concurrent(vec![langid!("en-GB")]);
-            let resource =
-                FluentResource::try_new(FTL_STRING.to_string()).expect("FTL string is valid.");
-            bundle
-                .add_resource(resource)
-                .expect("No identifiers are overlapping.");
-            bundle
-        });
+        let bundle = BUNDLE
+            .get_or_init(|| {
+                let mut bundle = FluentBundle::new_concurrent(vec![langid!("en-GB")]);
+                let resource = FluentResource::try_new(FTL_STRING.to_string())
+                    .expect("FTL string is valid.");
+                bundle.add_resource(resource).expect("No identifiers are overlapping.");
+                bundle
+            });
         let message = bundle.get_message(message).expect("Message exists.");
         let pattern = message.value().expect("Value exists.");
         bundle.format_pattern(pattern, args, &mut errors)
@@ -205,7 +202,9 @@ mod gen {
             let mut update_handle = UpdateHandle::new(handle, self.runtime_id);
             let handle_ref = &mut update_handle;
             let mut text = false;
-            if force_update || <CompStruct as Update<state>>::is_updated(&self.comp_struct) {
+            if force_update
+                || <CompStruct as Update<state>>::is_updated(&self.comp_struct)
+            {
                 let new_state = <CompStruct as Update<state>>::value(&self.comp_struct);
                 if self.state != new_state {
                     self.state = new_state;
@@ -247,14 +246,20 @@ mod gen {
                 let value = 14f32;
                 widget.set_size(value, handle_ref);
             }
-            if force_update || <CompStruct as Update<hover_colour>>::is_updated(&self.comp_struct) {
-                let value = <CompStruct as Update<hover_colour>>::value(&self.comp_struct);
+            if force_update
+                || <CompStruct as Update<hover_colour>>::is_updated(&self.comp_struct)
+            {
+                let value = <CompStruct as Update<
+                    hover_colour,
+                >>::value(&self.comp_struct);
                 if self.state == State::Green {
                     let widget = &mut self.widget;
                     widget.set_hover_colour(value, handle_ref);
                 }
             }
-            if force_update || <CompStruct as Update<count>>::is_updated(&self.comp_struct) {
+            if force_update
+                || <CompStruct as Update<count>>::is_updated(&self.comp_struct)
+            {
                 let value = <CompStruct as Update<count>>::value(&self.comp_struct);
                 if self.state == State::Red {
                     text = true;
@@ -263,14 +268,20 @@ mod gen {
             }
             if self.state == State::Green {
                 if force_update {
-                    let value = get_bundle_message("TrafficLight-SwitchText-Green-text", None);
+                    let value = get_bundle_message(
+                        "TrafficLight-SwitchText-Green-text",
+                        None,
+                    );
                     let widget = &mut self.widget.get_widget();
                     widget.set_text(value, handle_ref);
                 }
             }
             if self.state == State::Yellow {
                 if force_update {
-                    let value = get_bundle_message("TrafficLight-SwitchText-Yellow-text", None);
+                    let value = get_bundle_message(
+                        "TrafficLight-SwitchText-Yellow-text",
+                        None,
+                    );
                     let widget = &mut self.widget.get_widget();
                     widget.set_text(value, handle_ref);
                 }
@@ -289,7 +300,11 @@ mod gen {
             <CompStruct as Update<count>>::reset(&mut self.comp_struct);
             update_handle.unwrap() || need_multi_comp_resize
         }
-        fn resize(&mut self, constraints: LayoutConstraints, handle: &mut Handle) -> Size {
+        fn resize(
+            &mut self,
+            constraints: LayoutConstraints,
+            handle: &mut Handle,
+        ) -> Size {
             let mut resize_handle = ResizeHandle::new(
                 handle,
                 self.runtime_id,
@@ -322,16 +337,16 @@ mod gen {
             if runtime_id != self.runtime_id {
                 self.multi_comp.get_parent(runtime_id, widget_id)
             } else {
-                self.comp_struct
-                    .get_parent(widget_id)
-                    .map(|id| (self.runtime_id, id))
+                self.comp_struct.get_parent(widget_id).map(|id| (self.runtime_id, id))
             }
         }
         fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)> {
-            self.comp_struct.get_id(name).map_or_else(
-                || self.multi_comp.get_id(name),
-                |id| Some((self.runtime_id, id)),
-            )
+            self.comp_struct
+                .get_id(name)
+                .map_or_else(
+                    || self.multi_comp.get_id(name),
+                    |id| Some((self.runtime_id, id)),
+                )
         }
         fn get_comp_struct(&mut self) -> &mut dyn Any {
             &mut self.comp_struct

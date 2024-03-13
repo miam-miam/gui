@@ -74,9 +74,15 @@ impl ComponentVars {
         let render = self.gen_match_multi(quote!(render(scene, handle)), quote!(false));
         let update_vars =
             self.gen_match_multi(quote!(update_vars(force_update, handle)), quote!(false));
+        let force_update_vars =
+            self.gen_for_each_comp(quote!(update_vars(true, handle)), quote!(false));
         let resize = self.gen_match_multi(quote!(resize(constraints, handle)), quote!(Size::ZERO));
         let propagate_event =
             self.gen_match_multi(quote!(propagate_event(event, handle)), quote!(false));
+        let event = self.gen_for_each_comp(
+            quote!(event(runtime_id, widget_id, event.clone(), handle)),
+            quote!(false),
+        );
         let get_parent = self.gen_try_all_options(quote!(get_parent(runtime_id, widget_id)));
         let get_id = self.gen_try_all_options(quote!(get_id(name)));
         let get_parent_runtime = self.gen_get_parent_runtime();
@@ -120,10 +126,8 @@ impl ComponentVars {
                 ) -> bool {
                     #update_vars
                 }
-                #[allow(clippy::nonminimal_bool)]
                 fn force_update_vars(&mut self, handle: &mut Handle) -> bool {
-                    #(let #component_idents = self.#component_idents.update_vars(true, handle);)*
-                    false #(|| #component_idents)*
+                    #force_update_vars
                 }
                 fn resize(
                     &mut self,
@@ -141,7 +145,6 @@ impl ComponentVars {
                 ) -> bool {
                     #propagate_event
                 }
-                #[allow(clippy::nonminimal_bool)]
                 fn event(
                     &mut self,
                     runtime_id: RuntimeID,
@@ -149,8 +152,7 @@ impl ComponentVars {
                     event: WidgetEvent,
                     handle: &mut Handle,
                 ) -> bool {
-                    #(let #component_idents = self.#component_idents.event(runtime_id, widget_id, event.clone(), handle);)*
-                    false #(|| #component_idents)*
+                    #event
                 }
                 fn get_parent(
                     &self,
@@ -220,6 +222,17 @@ impl ComponentVars {
                     #result
                 }
             }
+        }
+    }
+
+    fn gen_for_each_comp(&self, stream: TokenStream, default: TokenStream) -> TokenStream {
+        if self.0.is_empty() {
+            return default;
+        }
+        let component_idents = self.0.iter().map(|c| &c.holder_ident).collect_vec();
+        quote! {
+            #(let #component_idents = self.#component_idents.#stream;)*
+            #(#component_idents)||*
         }
     }
 

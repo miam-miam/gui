@@ -4,16 +4,16 @@
 #[allow(unused_imports)]
 mod gen {
     use super::__private_CompStruct as CompStruct;
+    use std::any::Any;
     use gui::gui_core::vello::SceneBuilder;
     use gui::gui_core::widget::{
-        EventHandle, Handle, RenderHandle, ResizeHandle, RuntimeID, UpdateHandle, Widget,
-        WidgetEvent, WidgetID,
+        RuntimeID, Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle,
+        UpdateHandle, WidgetEvent, Handle,
     };
     use gui::gui_core::{
-        Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, MultiComponent, Size,
-        ToComponent, ToHandler, Update, Variable,
+        Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, MultiComponent,
+        Size, ToComponent, ToHandler, Update, Variable,
     };
-    use std::any::Any;
     enum WidgetSet0 {
         W0(::gui::gui_widget::Text),
         W1(::gui::gui_widget::CompHolder),
@@ -41,13 +41,21 @@ mod gen {
                 WidgetSet0::W1(_) => WidgetID::new(2u32),
             }
         }
-        fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<CompStruct>) {
+        fn render(
+            &mut self,
+            scene: &mut SceneBuilder,
+            handle: &mut RenderHandle<CompStruct>,
+        ) {
             match self {
                 WidgetSet0::W0(w) => {
-                    <::gui::gui_widget::Text as Widget<CompStruct>>::render(w, scene, handle)
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::render(w, scene, handle)
                 }
                 WidgetSet0::W1(w) => {
-                    <::gui::gui_widget::CompHolder as Widget<CompStruct>>::render(w, scene, handle)
+                    <::gui::gui_widget::CompHolder as Widget<
+                        CompStruct,
+                    >>::render(w, scene, handle)
                 }
             }
         }
@@ -58,22 +66,28 @@ mod gen {
         ) -> Size {
             match self {
                 WidgetSet0::W0(w) => {
-                    <::gui::gui_widget::Text as Widget<CompStruct>>::resize(w, constraints, handle)
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::resize(w, constraints, handle)
                 }
-                WidgetSet0::W1(w) => <::gui::gui_widget::CompHolder as Widget<CompStruct>>::resize(
-                    w,
-                    constraints,
-                    handle,
-                ),
+                WidgetSet0::W1(w) => {
+                    <::gui::gui_widget::CompHolder as Widget<
+                        CompStruct,
+                    >>::resize(w, constraints, handle)
+                }
             }
         }
         fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<CompStruct>) {
             match self {
                 WidgetSet0::W0(w) => {
-                    <::gui::gui_widget::Text as Widget<CompStruct>>::event(w, event, handle)
+                    <::gui::gui_widget::Text as Widget<
+                        CompStruct,
+                    >>::event(w, event, handle)
                 }
                 WidgetSet0::W1(w) => {
-                    <::gui::gui_widget::CompHolder as Widget<CompStruct>>::event(w, event, handle)
+                    <::gui::gui_widget::CompHolder as Widget<
+                        CompStruct,
+                    >>::event(w, event, handle)
                 }
             }
         }
@@ -91,7 +105,6 @@ mod gen {
         parent_id: RuntimeID,
         light_holder: <<crate::__gui_private::TrafficLight as ComponentTypeInfo>::ToComponent as ToComponent>::Component,
     }
-
     #[automatically_derived]
     impl MultiComponentHolder {
         pub fn new(comp: &mut CompStruct, parent_id: RuntimeID) -> Self {
@@ -100,13 +113,9 @@ mod gen {
                 .take()
                 .expect("Component is initialised.")
                 .to_component_holder(RuntimeID::next());
-            Self {
-                parent_id,
-                light_holder,
-            }
+            Self { parent_id, light_holder }
         }
     }
-
     #[automatically_derived]
     impl MultiComponent for MultiComponentHolder {
         fn render(
@@ -116,7 +125,9 @@ mod gen {
             handle: &mut Handle,
         ) -> bool {
             match runtime_id {
-                id if id == self.light_holder.id() => self.light_holder.render(scene, handle),
+                id if id == self.light_holder.id() => {
+                    self.light_holder.render(scene, handle)
+                }
                 _ => false,
             }
         }
@@ -133,10 +144,9 @@ mod gen {
                 _ => false,
             }
         }
-        #[allow(clippy::nonminimal_bool)]
         fn force_update_vars(&mut self, handle: &mut Handle) -> bool {
             let light_holder = self.light_holder.update_vars(true, handle);
-            false || light_holder
+            light_holder
         }
         fn resize(
             &mut self,
@@ -145,7 +155,9 @@ mod gen {
             handle: &mut Handle,
         ) -> Size {
             match runtime_id {
-                id if id == self.light_holder.id() => self.light_holder.resize(constraints, handle),
+                id if id == self.light_holder.id() => {
+                    self.light_holder.resize(constraints, handle)
+                }
                 _ => Size::ZERO,
             }
         }
@@ -162,7 +174,6 @@ mod gen {
                 _ => false,
             }
         }
-        #[allow(clippy::nonminimal_bool)]
         fn event(
             &mut self,
             runtime_id: RuntimeID,
@@ -170,10 +181,10 @@ mod gen {
             event: WidgetEvent,
             handle: &mut Handle,
         ) -> bool {
-            let light_holder =
-                self.light_holder
-                    .event(runtime_id, widget_id, event.clone(), handle);
-            false || light_holder
+            let light_holder = self
+                .light_holder
+                .event(runtime_id, widget_id, event.clone(), handle);
+            light_holder
         }
         fn get_parent(
             &self,
@@ -191,25 +202,25 @@ mod gen {
             self.light_holder.get_id(name)
         }
     }
-
-    use gui::{FluentArgs, FluentBundle, FluentResource};
+    use gui::{FluentBundle, FluentArgs, FluentResource};
     use std::borrow::Cow;
-
-    fn get_bundle_message<'a>(message: &'a str, args: Option<&'a FluentArgs<'_>>) -> Cow<'a, str> {
-        use gui::langid;
+    fn get_bundle_message<'a>(
+        message: &'a str,
+        args: Option<&'a FluentArgs<'_>>,
+    ) -> Cow<'a, str> {
         use std::sync::OnceLock;
+        use gui::langid;
         static BUNDLE: OnceLock<FluentBundle<FluentResource>> = OnceLock::new();
         const FTL_STRING: &str = include_str!(concat!(env!("OUT_DIR"), "/Holder.ftl"));
         let mut errors = vec![];
-        let bundle = BUNDLE.get_or_init(|| {
-            let mut bundle = FluentBundle::new_concurrent(vec![langid!("en-GB")]);
-            let resource =
-                FluentResource::try_new(FTL_STRING.to_string()).expect("FTL string is valid.");
-            bundle
-                .add_resource(resource)
-                .expect("No identifiers are overlapping.");
-            bundle
-        });
+        let bundle = BUNDLE
+            .get_or_init(|| {
+                let mut bundle = FluentBundle::new_concurrent(vec![langid!("en-GB")]);
+                let resource = FluentResource::try_new(FTL_STRING.to_string())
+                    .expect("FTL string is valid.");
+                bundle.add_resource(resource).expect("No identifiers are overlapping.");
+                bundle
+            });
         let message = bundle.get_message(message).expect("Message exists.");
         let pattern = message.value().expect("Value exists.");
         bundle.format_pattern(pattern, args, &mut errors)
@@ -231,7 +242,7 @@ mod gen {
                     WidgetID::new(0u32),
                     vec![
                         WidgetSet0::W0(::gui::gui_widget::Text::new(WidgetID::new(1u32))),
-                        WidgetSet0::W1(::gui::gui_widget::CompHolder::new(WidgetID::new(2u32))),
+                        WidgetSet0::W1(::gui::gui_widget::CompHolder::new(WidgetID::new(2u32)))
                     ],
                 ),
                 runtime_id,
@@ -290,7 +301,11 @@ mod gen {
             }
             update_handle.unwrap() || need_multi_comp_resize
         }
-        fn resize(&mut self, constraints: LayoutConstraints, handle: &mut Handle) -> Size {
+        fn resize(
+            &mut self,
+            constraints: LayoutConstraints,
+            handle: &mut Handle,
+        ) -> Size {
             let mut resize_handle = ResizeHandle::new(
                 handle,
                 self.runtime_id,
@@ -323,16 +338,16 @@ mod gen {
             if runtime_id != self.runtime_id {
                 self.multi_comp.get_parent(runtime_id, widget_id)
             } else {
-                self.comp_struct
-                    .get_parent(widget_id)
-                    .map(|id| (self.runtime_id, id))
+                self.comp_struct.get_parent(widget_id).map(|id| (self.runtime_id, id))
             }
         }
         fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)> {
-            self.comp_struct.get_id(name).map_or_else(
-                || self.multi_comp.get_id(name),
-                |id| Some((self.runtime_id, id)),
-            )
+            self.comp_struct
+                .get_id(name)
+                .map_or_else(
+                    || self.multi_comp.get_id(name),
+                    |id| Some((self.runtime_id, id)),
+                )
         }
         fn get_comp_struct(&mut self) -> &mut dyn Any {
             &mut self.comp_struct
