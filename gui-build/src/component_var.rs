@@ -229,6 +229,10 @@ impl ComponentVars {
         if self.0.is_empty() {
             return default;
         }
+        if self.0.len() == 1 {
+            let component_ident = &self.0[0].holder_ident;
+            return quote!(self.#component_ident.#stream);
+        }
         let component_idents = self.0.iter().map(|c| &c.holder_ident).collect_vec();
         quote! {
             #(let #component_idents = self.#component_idents.#stream;)*

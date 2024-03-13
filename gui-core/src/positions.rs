@@ -29,7 +29,7 @@ impl WidgetInfo {
         self.reset_positions();
         self.position_widget(RuntimeID::new(0), WidgetID::new(0), rect);
 
-        for (runtime_id, positions) in local_positions.into_iter().sorted_by_key(|(r, p)| *r) {
+        for (runtime_id, positions) in local_positions.into_iter().sorted_by_key(|(r, _)| *r) {
             for (id, rect) in positions.into_iter().enumerate() {
                 let widget_id = WidgetID::new(id as u32);
                 if let Some((runtime_parent, widget_parent)) =
