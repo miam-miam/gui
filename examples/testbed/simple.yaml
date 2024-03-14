@@ -7,6 +7,10 @@ components:
       widget: HStack
       properties:
         children:
+          - name: Image
+            widget: Image
+            properties:
+              image: "./res/red_off.png"
           - name: Button
             widget: Button
             properties:
