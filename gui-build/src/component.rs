@@ -202,6 +202,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
             }
 
             impl #component_holder {
+                #[allow(dead_code)]
                 pub fn comp_struct(&mut self) -> &mut CompStruct {
                     &mut self.comp_struct
                 }
