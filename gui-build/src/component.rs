@@ -201,6 +201,13 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                 }
             }
 
+            impl #component_holder {
+                #[allow(dead_code)]
+                pub fn comp_struct(&mut self) -> &mut CompStruct {
+                    &mut self.comp_struct
+                }
+            }
+
             #[automatically_derived]
             impl Component for #component_holder {
                 fn render(
@@ -219,7 +226,8 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     mut force_update: bool,
                     handle: &mut Handle,
                 ) -> bool {
-                    let need_multi_comp_resize = self.multi_comp.force_update_vars(handle);
+                    self.multi_comp.get_messages(&mut self.comp_struct);
+                    let need_multi_comp_resize = self.multi_comp.update_all_vars(force_update, handle);
                     let mut update_handle = UpdateHandle::new(handle, self.runtime_id);
                     let handle_ref = &mut update_handle;
                     #( let mut #fluent_properties = false; )*

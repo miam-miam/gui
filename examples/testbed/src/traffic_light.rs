@@ -1,4 +1,4 @@
-use gui::gui_core::Colour;
+use gui::gui_core::{Colour, OnMessage};
 use gui::gui_widget::button::ButtonHandler;
 use gui::{ToComponent, Updateable};
 
@@ -9,19 +9,30 @@ pub struct TrafficLight {
     count: Updateable<u32>,
 }
 
+pub enum Message {
+    Next,
+}
+
 impl ButtonHandler<gen::Switch> for TrafficLight {
     fn on_press(&mut self) {
-        use gen::State;
-        let next = match self.state.value() {
-            State::Green => State::Yellow,
-            State::Yellow => State::Red,
-            State::Red => State::Green,
-        };
-        *self.state.invalidate() = next;
-        if next == State::Red {
-            *self.count.invalidate() += 1;
-            *self.hover_colour.invalidate() =
-                Colour::rgba8(255 - (self.count.value() * 10) as u8, 0, 0, 255)
+        self.on_message(Message::Next)
+    }
+}
+
+impl OnMessage for TrafficLight {
+    type Message = Message;
+
+    fn on_message(&mut self, message: Self::Message) {
+        match message {
+            Message::Next => {
+                use gen::State;
+                let next = match self.state.value() {
+                    State::Green => State::Yellow,
+                    State::Yellow => State::Red,
+                    State::Red => State::Green,
+                };
+                *self.state.invalidate() = next;
+            }
         }
     }
 }

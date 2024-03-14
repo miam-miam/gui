@@ -75,7 +75,7 @@ impl ComponentVars {
         let update_vars =
             self.gen_match_multi(quote!(update_vars(force_update, handle)), quote!(false));
         let force_update_vars =
-            self.gen_for_each_comp(quote!(update_vars(true, handle)), quote!(false));
+            self.gen_for_each_comp(quote!(update_vars(force_update, handle)), quote!(false));
         let resize = self.gen_match_multi(quote!(resize(constraints, handle)), quote!(Size::ZERO));
         let propagate_event =
             self.gen_match_multi(quote!(propagate_event(event, handle)), quote!(false));
@@ -106,6 +106,13 @@ impl ComponentVars {
                         #(#component_idents),*
                     }
                 }
+
+                pub fn get_messages(&mut self, comp: &mut CompStruct) {
+                    #(
+                        let comp_holder = <CompStruct as ComponentHolder<#component_names>>::comp_holder(comp);
+                        comp_holder.send_messages(self.#component_idents.comp_struct());
+                    )*
+                }
             }
 
             #[automatically_derived]
@@ -126,7 +133,7 @@ impl ComponentVars {
                 ) -> bool {
                     #update_vars
                 }
-                fn force_update_vars(&mut self, handle: &mut Handle) -> bool {
+                fn update_all_vars(&mut self, force_update: bool, handle: &mut Handle) -> bool {
                     #force_update_vars
                 }
                 fn resize(
