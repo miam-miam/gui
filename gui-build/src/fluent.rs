@@ -4,10 +4,10 @@ use quote::{format_ident, quote};
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct FluentIdent {
+    pub property: &'static str,
+    pub name: String,
     pub fluent: Fluent,
     pub ident: Ident,
-    pub name: String,
-    pub property: &'static str,
     pub property_ident: Ident,
 }
 

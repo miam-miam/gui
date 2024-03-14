@@ -127,12 +127,12 @@ impl<'a> OverriddenWidget<'a> {
             builder
                 .get_fluents()
                 .into_iter()
-                .filter(|(_, fluent)| {
+                .filter(|(prop, fluent)| {
                     !state_fluent_overrides
                         .0
                         .iter()
-                        .map(|f| &f.fluent)
-                        .contains(fluent)
+                        .map(|f| (&f.property, &f.fluent))
+                        .contains(&(prop, fluent))
                 })
                 .map(|(prop, fluent)| {
                     FluentIdent::new(

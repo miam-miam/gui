@@ -183,6 +183,7 @@ pub fn create_component(out_dir: &Path, component: &ComponentDeclaration) -> any
                     }
                 }
 
+                #[allow(clippy::manual_range_patterns)]
                 fn get_parent(
                     &self,
                     widget_id: WidgetID,
