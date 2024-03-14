@@ -64,7 +64,7 @@ pub trait MultiComponent {
         force_update: bool,
         handle: &mut Handle,
     ) -> bool;
-    fn force_update_vars(&mut self, handle: &mut Handle) -> bool;
+    fn update_all_vars(&mut self, force_update: bool, handle: &mut Handle) -> bool;
     fn resize(
         &mut self,
         runtime_id: RuntimeID,
@@ -101,6 +101,11 @@ pub trait ToComponent {
     fn get_id(&self, name: &str) -> Option<WidgetID>;
 }
 
+pub trait OnMessage {
+    type Message;
+    fn on_message(&mut self, message: Self::Message);
+}
+
 pub trait Variable {
     type VarType;
 }
@@ -121,7 +126,7 @@ pub trait ComponentTypeInfo {
 
 pub trait ComponentHolder<T: Variable>
 where
-    T::VarType: ToComponent,
+    T::VarType: ToComponent + OnMessage,
 {
     fn comp_holder(&mut self) -> &mut CompHolder<T::VarType>;
 }

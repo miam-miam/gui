@@ -7,10 +7,14 @@ components:
       widget: HStack
       properties:
         children:
-          - name: Text
-            widget: Text
+          - name: Button
+            widget: Button
             properties:
-              text: "Test"
+              child:
+                name: Text
+                widget: Text
+                properties:
+                  text: "Test"
           - name: CompHolder
             widget: CompHolder
             properties:
