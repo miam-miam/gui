@@ -4,16 +4,16 @@
 #[allow(unused_imports)]
 mod gen {
     use super::__private_CompStruct as CompStruct;
-    use std::any::Any;
     use gui::gui_core::vello::SceneBuilder;
     use gui::gui_core::widget::{
-        RuntimeID, Widget, WidgetID, RenderHandle, ResizeHandle, EventHandle,
-        UpdateHandle, WidgetEvent, Handle,
+        EventHandle, Handle, RenderHandle, ResizeHandle, RuntimeID, UpdateHandle, Widget,
+        WidgetEvent, WidgetID,
     };
     use gui::gui_core::{
-        Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, MultiComponent,
-        Size, ToComponent, ToHandler, Update, Variable,
+        Component, ComponentHolder, ComponentTypeInfo, LayoutConstraints, MultiComponent, Size,
+        ToComponent, ToHandler, Update, Variable,
     };
+    use std::any::Any;
     #[allow(non_camel_case_types)]
     #[derive(Default, Copy, Clone, Eq, PartialEq)]
     pub(crate) enum State {
@@ -67,26 +67,16 @@ mod gen {
                 WidgetSet1::W2(_) => WidgetID::new(3u32),
             }
         }
-        fn render(
-            &mut self,
-            scene: &mut SceneBuilder,
-            handle: &mut RenderHandle<CompStruct>,
-        ) {
+        fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<CompStruct>) {
             match self {
                 WidgetSet1::W0(w) => {
-                    <::gui::gui_widget::ImageWidget as Widget<
-                        CompStruct,
-                    >>::render(w, scene, handle)
+                    <::gui::gui_widget::ImageWidget as Widget<CompStruct>>::render(w, scene, handle)
                 }
                 WidgetSet1::W1(w) => {
-                    <::gui::gui_widget::ImageWidget as Widget<
-                        CompStruct,
-                    >>::render(w, scene, handle)
+                    <::gui::gui_widget::ImageWidget as Widget<CompStruct>>::render(w, scene, handle)
                 }
                 WidgetSet1::W2(w) => {
-                    <::gui::gui_widget::ImageWidget as Widget<
-                        CompStruct,
-                    >>::render(w, scene, handle)
+                    <::gui::gui_widget::ImageWidget as Widget<CompStruct>>::render(w, scene, handle)
                 }
             }
         }
@@ -97,38 +87,38 @@ mod gen {
         ) -> Size {
             match self {
                 WidgetSet1::W0(w) => {
-                    <::gui::gui_widget::ImageWidget as Widget<
-                        CompStruct,
-                    >>::resize(w, constraints, handle)
+                    <::gui::gui_widget::ImageWidget as Widget<CompStruct>>::resize(
+                        w,
+                        constraints,
+                        handle,
+                    )
                 }
                 WidgetSet1::W1(w) => {
-                    <::gui::gui_widget::ImageWidget as Widget<
-                        CompStruct,
-                    >>::resize(w, constraints, handle)
+                    <::gui::gui_widget::ImageWidget as Widget<CompStruct>>::resize(
+                        w,
+                        constraints,
+                        handle,
+                    )
                 }
                 WidgetSet1::W2(w) => {
-                    <::gui::gui_widget::ImageWidget as Widget<
-                        CompStruct,
-                    >>::resize(w, constraints, handle)
+                    <::gui::gui_widget::ImageWidget as Widget<CompStruct>>::resize(
+                        w,
+                        constraints,
+                        handle,
+                    )
                 }
             }
         }
         fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<CompStruct>) {
             match self {
                 WidgetSet1::W0(w) => {
-                    <::gui::gui_widget::ImageWidget as Widget<
-                        CompStruct,
-                    >>::event(w, event, handle)
+                    <::gui::gui_widget::ImageWidget as Widget<CompStruct>>::event(w, event, handle)
                 }
                 WidgetSet1::W1(w) => {
-                    <::gui::gui_widget::ImageWidget as Widget<
-                        CompStruct,
-                    >>::event(w, event, handle)
+                    <::gui::gui_widget::ImageWidget as Widget<CompStruct>>::event(w, event, handle)
                 }
                 WidgetSet1::W2(w) => {
-                    <::gui::gui_widget::ImageWidget as Widget<
-                        CompStruct,
-                    >>::event(w, event, handle)
+                    <::gui::gui_widget::ImageWidget as Widget<CompStruct>>::event(w, event, handle)
                 }
             }
         }
@@ -278,14 +268,10 @@ mod gen {
         #[allow(unused_mut)]
         fn update_vars(&mut self, mut force_update: bool, handle: &mut Handle) -> bool {
             self.multi_comp.get_messages(&mut self.comp_struct);
-            let need_multi_comp_resize = self
-                .multi_comp
-                .update_all_vars(force_update, handle);
+            let need_multi_comp_resize = self.multi_comp.update_all_vars(force_update, handle);
             let mut update_handle = UpdateHandle::new(handle, self.runtime_id);
             let handle_ref = &mut update_handle;
-            if force_update
-                || <CompStruct as Update<state>>::is_updated(&self.comp_struct)
-            {
+            if force_update || <CompStruct as Update<state>>::is_updated(&self.comp_struct) {
                 let new_state = <CompStruct as Update<state>>::value(&self.comp_struct);
                 if self.state != new_state {
                     self.state = new_state;
@@ -329,11 +315,7 @@ mod gen {
             }
             update_handle.unwrap() || need_multi_comp_resize
         }
-        fn resize(
-            &mut self,
-            constraints: LayoutConstraints,
-            handle: &mut Handle,
-        ) -> Size {
+        fn resize(&mut self, constraints: LayoutConstraints, handle: &mut Handle) -> Size {
             let mut resize_handle = ResizeHandle::new(
                 handle,
                 self.runtime_id,
@@ -366,16 +348,16 @@ mod gen {
             if runtime_id != self.runtime_id {
                 self.multi_comp.get_parent(runtime_id, widget_id)
             } else {
-                self.comp_struct.get_parent(widget_id).map(|id| (self.runtime_id, id))
+                self.comp_struct
+                    .get_parent(widget_id)
+                    .map(|id| (self.runtime_id, id))
             }
         }
         fn get_id(&self, name: &str) -> Option<(RuntimeID, WidgetID)> {
-            self.comp_struct
-                .get_id(name)
-                .map_or_else(
-                    || self.multi_comp.get_id(name),
-                    |id| Some((self.runtime_id, id)),
-                )
+            self.comp_struct.get_id(name).map_or_else(
+                || self.multi_comp.get_id(name),
+                |id| Some((self.runtime_id, id)),
+            )
         }
         fn get_comp_struct(&mut self) -> &mut dyn Any {
             &mut self.comp_struct

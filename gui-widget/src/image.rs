@@ -14,6 +14,7 @@ use image::io::Reader as ImageReader;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
+use std::path::PathBuf;
 
 #[derive(Default)]
 pub struct ImageWidget {
@@ -32,7 +33,8 @@ impl ImageWidget {
     }
 
     pub fn set_image_from_file(&mut self, path: &str, handle: &mut UpdateHandle) {
-        let dyn_img = ImageReader::open(path).unwrap().decode().unwrap();
+        let path_buf = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join(path);
+        let dyn_img = ImageReader::open(path_buf).unwrap().decode().unwrap();
         let img = dyn_img.to_rgba8();
         let image = Image {
             data: Blob::from(img.to_vec()),
