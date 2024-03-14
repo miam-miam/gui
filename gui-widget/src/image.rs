@@ -32,9 +32,6 @@ impl ImageWidget {
     }
 
     pub fn set_image_from_file(&mut self, path: &str, handle: &mut UpdateHandle) {
-        let mut dir = std::env::current_dir().unwrap();
-        dir.push(path);
-        println!("{}", dir.display());
         let dyn_img = ImageReader::open(path).unwrap().decode().unwrap();
         let img = dyn_img.to_rgba8();
         let image = Image {

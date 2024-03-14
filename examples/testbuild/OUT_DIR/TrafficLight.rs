@@ -18,28 +18,120 @@ mod gen {
     #[derive(Default, Copy, Clone, Eq, PartialEq)]
     pub(crate) enum State {
         #[default]
+        Red,
+        RedYellow,
         Green,
         Yellow,
-        Red,
     }
     #[allow(non_camel_case_types)]
     pub(crate) struct state;
     impl Variable for state {
         type VarType = State;
     }
-    #[allow(non_camel_case_types)]
-    pub(crate) struct hover_colour;
-    impl Variable for hover_colour {
-        type VarType = ::gui::gui_core::Colour;
+
+    enum WidgetSet1 {
+        W0(::gui::gui_widget::ImageWidget),
+        W1(::gui::gui_widget::ImageWidget),
+        W2(::gui::gui_widget::ImageWidget),
     }
-    #[allow(non_camel_case_types)]
-    pub(crate) struct count;
-    impl Variable for count {
-        type VarType = u32;
+
+    impl WidgetSet1 {
+        pub fn w0(&mut self) -> &mut ::gui::gui_widget::ImageWidget {
+            if let WidgetSet1::W0(val) = self {
+                val
+            } else {
+                panic!("Incorrect wrapped type.")
+            }
+        }
+        pub fn w1(&mut self) -> &mut ::gui::gui_widget::ImageWidget {
+            if let WidgetSet1::W1(val) = self {
+                val
+            } else {
+                panic!("Incorrect wrapped type.")
+            }
+        }
+        pub fn w2(&mut self) -> &mut ::gui::gui_widget::ImageWidget {
+            if let WidgetSet1::W2(val) = self {
+                val
+            } else {
+                panic!("Incorrect wrapped type.")
+            }
+        }
     }
-    pub(crate) struct Switch;
-    impl ToHandler for Switch {
-        type BaseHandler = CompStruct;
+
+    impl Widget<CompStruct> for WidgetSet1 {
+        fn id(&self) -> WidgetID {
+            match self {
+                WidgetSet1::W0(_) => WidgetID::new(1u32),
+                WidgetSet1::W1(_) => WidgetID::new(2u32),
+                WidgetSet1::W2(_) => WidgetID::new(3u32),
+            }
+        }
+        fn render(
+            &mut self,
+            scene: &mut SceneBuilder,
+            handle: &mut RenderHandle<CompStruct>,
+        ) {
+            match self {
+                WidgetSet1::W0(w) => {
+                    <::gui::gui_widget::ImageWidget as Widget<
+                        CompStruct,
+                    >>::render(w, scene, handle)
+                }
+                WidgetSet1::W1(w) => {
+                    <::gui::gui_widget::ImageWidget as Widget<
+                        CompStruct,
+                    >>::render(w, scene, handle)
+                }
+                WidgetSet1::W2(w) => {
+                    <::gui::gui_widget::ImageWidget as Widget<
+                        CompStruct,
+                    >>::render(w, scene, handle)
+                }
+            }
+        }
+        fn resize(
+            &mut self,
+            constraints: LayoutConstraints,
+            handle: &mut ResizeHandle<CompStruct>,
+        ) -> Size {
+            match self {
+                WidgetSet1::W0(w) => {
+                    <::gui::gui_widget::ImageWidget as Widget<
+                        CompStruct,
+                    >>::resize(w, constraints, handle)
+                }
+                WidgetSet1::W1(w) => {
+                    <::gui::gui_widget::ImageWidget as Widget<
+                        CompStruct,
+                    >>::resize(w, constraints, handle)
+                }
+                WidgetSet1::W2(w) => {
+                    <::gui::gui_widget::ImageWidget as Widget<
+                        CompStruct,
+                    >>::resize(w, constraints, handle)
+                }
+            }
+        }
+        fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<CompStruct>) {
+            match self {
+                WidgetSet1::W0(w) => {
+                    <::gui::gui_widget::ImageWidget as Widget<
+                        CompStruct,
+                    >>::event(w, event, handle)
+                }
+                WidgetSet1::W1(w) => {
+                    <::gui::gui_widget::ImageWidget as Widget<
+                        CompStruct,
+                    >>::event(w, event, handle)
+                }
+                WidgetSet1::W2(w) => {
+                    <::gui::gui_widget::ImageWidget as Widget<
+                        CompStruct,
+                    >>::event(w, event, handle)
+                }
+            }
+        }
     }
     impl ComponentTypeInfo for crate::__gui_private::TrafficLight {
         type ToComponent = CompStruct;
@@ -53,6 +145,7 @@ mod gen {
         pub fn new(comp: &mut CompStruct, parent_id: RuntimeID) -> Self {
             Self { parent_id }
         }
+        pub fn get_messages(&mut self, comp: &mut CompStruct) {}
     }
     #[automatically_derived]
     impl MultiComponent for MultiComponentHolder {
@@ -76,7 +169,7 @@ mod gen {
                 _ => false,
             }
         }
-        fn force_update_vars(&mut self, handle: &mut Handle) -> bool {
+        fn update_all_vars(&mut self, force_update: bool, handle: &mut Handle) -> bool {
             false
         }
         fn resize(
@@ -119,39 +212,13 @@ mod gen {
             None
         }
     }
-    use gui::{FluentBundle, FluentArgs, FluentResource};
-    use std::borrow::Cow;
-    fn get_bundle_message<'a>(
-        message: &'a str,
-        args: Option<&'a FluentArgs<'_>>,
-    ) -> Cow<'a, str> {
-        use std::sync::OnceLock;
-        use gui::langid;
-        static BUNDLE: OnceLock<FluentBundle<FluentResource>> = OnceLock::new();
-        const FTL_STRING: &str = include_str!(
-            concat!(env!("OUT_DIR"), "/TrafficLight.ftl")
-        );
-        let mut errors = vec![];
-        let bundle = BUNDLE
-            .get_or_init(|| {
-                let mut bundle = FluentBundle::new_concurrent(vec![langid!("en-GB")]);
-                let resource = FluentResource::try_new(FTL_STRING.to_string())
-                    .expect("FTL string is valid.");
-                bundle.add_resource(resource).expect("No identifiers are overlapping.");
-                bundle
-            });
-        let message = bundle.get_message(message).expect("Message exists.");
-        let pattern = message.value().expect("Value exists.");
-        bundle.format_pattern(pattern, args, &mut errors)
-    }
     #[allow(non_snake_case)]
     pub struct TrafficLightHolder {
         comp_struct: CompStruct,
         runtime_id: RuntimeID,
-        widget: ::gui::gui_widget::Button<Switch, CompStruct, ::gui::gui_widget::Text>,
+        widget: ::gui::gui_widget::HVStack<CompStruct, WidgetSet1>,
         state: State,
         multi_comp: MultiComponentHolder,
-        TrafficLight_SwitchText_Red_text: FluentArgs<'static>,
     }
     #[automatically_derived]
     impl ToComponent for CompStruct {
@@ -159,29 +226,41 @@ mod gen {
         type HeldComponents = MultiComponentHolder;
         fn to_component_holder(mut self, runtime_id: RuntimeID) -> Self::Component {
             TrafficLightHolder {
-                widget: ::gui::gui_widget::Button::new(
+                widget: ::gui::gui_widget::HVStack::new_vertical(
                     WidgetID::new(0u32),
-                    ::gui::gui_widget::Text::new(WidgetID::new(1u32)),
+                    vec![
+                        WidgetSet1::W0(::gui::gui_widget::ImageWidget::new(WidgetID::new(1u32))),
+                        WidgetSet1::W1(::gui::gui_widget::ImageWidget::new(WidgetID::new(2u32))),
+                        WidgetSet1::W2(::gui::gui_widget::ImageWidget::new(WidgetID::new(3u32))),
+                    ],
                 ),
                 runtime_id,
                 multi_comp: MultiComponentHolder::new(&mut self, runtime_id),
                 comp_struct: self,
                 state: Default::default(),
-                TrafficLight_SwitchText_Red_text: FluentArgs::new(),
             }
         }
         fn get_parent(&self, widget_id: WidgetID) -> Option<WidgetID> {
             match widget_id.id() {
-                1u32 => Some(WidgetID::new(0u32)),
+                1u32 | 2u32 | 3u32 => Some(WidgetID::new(0u32)),
                 _ => None,
             }
         }
         fn get_id(&self, name: &str) -> Option<WidgetID> {
             match name {
-                "Switch" => Some(WidgetID::new(0u32)),
-                "SwitchText" => Some(WidgetID::new(1u32)),
+                "VStack" => Some(WidgetID::new(0u32)),
+                "GreenLight" => Some(WidgetID::new(3u32)),
+                "YellowLight" => Some(WidgetID::new(2u32)),
+                "RedLight" => Some(WidgetID::new(1u32)),
                 _ => None,
             }
+        }
+    }
+
+    impl TrafficLightHolder {
+        #[allow(dead_code)]
+        pub fn comp_struct(&mut self) -> &mut CompStruct {
+            &mut self.comp_struct
         }
     }
     #[automatically_derived]
@@ -198,10 +277,12 @@ mod gen {
         }
         #[allow(unused_mut)]
         fn update_vars(&mut self, mut force_update: bool, handle: &mut Handle) -> bool {
-            let need_multi_comp_resize = self.multi_comp.force_update_vars(handle);
+            self.multi_comp.get_messages(&mut self.comp_struct);
+            let need_multi_comp_resize = self
+                .multi_comp
+                .update_all_vars(force_update, handle);
             let mut update_handle = UpdateHandle::new(handle, self.runtime_id);
             let handle_ref = &mut update_handle;
-            let mut text = false;
             if force_update
                 || <CompStruct as Update<state>>::is_updated(&self.comp_struct)
             {
@@ -213,91 +294,39 @@ mod gen {
             }
             if force_update {
                 let widget = &mut self.widget;
-                let value = ::gui::gui_core::Colour::rgba8(206u8, 212u8, 218u8, 255u8);
-                widget.set_border_colour(value, handle_ref);
-                let value = ::gui::gui_core::Colour::rgba8(248u8, 249u8, 250u8, 255u8);
-                widget.set_clicked_colour(value, handle_ref);
-                let value = false;
-                widget.set_disabled(value, handle_ref);
-                let value = ::gui::gui_core::Colour::rgba8(241u8, 243u8, 245u8, 255u8);
-                widget.set_disabled_colour(value, handle_ref);
+                let value = 10f32;
+                widget.set_spacing(value, handle_ref);
+                if self.state != State::Red && self.state != State::RedYellow {
+                    let widget = &mut self.widget.widgets(0usize).w0();
+                    let value = "./res/red_off.png";
+                    widget.set_image_from_file(value, handle_ref);
+                }
+                if self.state == State::Red || self.state == State::RedYellow {
+                    let widget = &mut self.widget.widgets(0usize).w0();
+                    let value = "./res/red_on.png";
+                    widget.set_image_from_file(value, handle_ref);
+                }
+                if self.state != State::RedYellow && self.state != State::Yellow {
+                    let widget = &mut self.widget.widgets(1usize).w1();
+                    let value = "./res/yellow_off.png";
+                    widget.set_image_from_file(value, handle_ref);
+                }
+                if self.state == State::RedYellow || self.state == State::Yellow {
+                    let widget = &mut self.widget.widgets(1usize).w1();
+                    let value = "./res/yellow_on.png";
+                    widget.set_image_from_file(value, handle_ref);
+                }
+                if self.state != State::Green {
+                    let widget = &mut self.widget.widgets(2usize).w2();
+                    let value = "./res/green_off.png";
+                    widget.set_image_from_file(value, handle_ref);
+                }
                 if self.state == State::Green {
-                    let widget = &mut self.widget;
-                    let value = ::gui::gui_core::Colour::rgba8(0u8, 128u8, 0u8, 255u8);
-                    widget.set_background_colour(value, handle_ref);
-                }
-                if self.state == State::Yellow {
-                    let widget = &mut self.widget;
-                    let value = ::gui::gui_core::Colour::rgba8(255u8, 255u8, 0u8, 255u8);
-                    widget.set_background_colour(value, handle_ref);
-                    let value = ::gui::gui_core::Colour::rgba8(255u8, 255u8, 0u8, 255u8);
-                    widget.set_hover_colour(value, handle_ref);
-                }
-                if self.state == State::Red {
-                    let widget = &mut self.widget;
-                    let value = ::gui::gui_core::Colour::rgba8(255u8, 0u8, 0u8, 255u8);
-                    widget.set_background_colour(value, handle_ref);
-                    let value = ::gui::gui_core::Colour::rgba8(255u8, 0u8, 0u8, 255u8);
-                    widget.set_hover_colour(value, handle_ref);
-                }
-                let widget = &mut self.widget.get_widget();
-                let value = ::gui::gui_core::Colour::rgba8(33u8, 37u8, 41u8, 255u8);
-                widget.set_colour(value, handle_ref);
-                let value = 50f32;
-                widget.set_size(value, handle_ref);
-            }
-            if force_update
-                || <CompStruct as Update<hover_colour>>::is_updated(&self.comp_struct)
-            {
-                let value = <CompStruct as Update<
-                    hover_colour,
-                >>::value(&self.comp_struct);
-                if self.state == State::Green {
-                    let widget = &mut self.widget;
-                    widget.set_hover_colour(value, handle_ref);
+                    let widget = &mut self.widget.widgets(2usize).w2();
+                    let value = "./res/green_on.png";
+                    widget.set_image_from_file(value, handle_ref);
                 }
             }
-            if force_update
-                || <CompStruct as Update<count>>::is_updated(&self.comp_struct)
-            {
-                let value = <CompStruct as Update<count>>::value(&self.comp_struct);
-                if self.state == State::Red {
-                    text = true;
-                    self.TrafficLight_SwitchText_Red_text.set("count", value);
-                }
-            }
-            if self.state == State::Green {
-                if force_update {
-                    let value = get_bundle_message(
-                        "TrafficLight-SwitchText-Green-text",
-                        None,
-                    );
-                    let widget = &mut self.widget.get_widget();
-                    widget.set_text(value, handle_ref);
-                }
-            }
-            if self.state == State::Yellow {
-                if force_update {
-                    let value = get_bundle_message(
-                        "TrafficLight-SwitchText-Yellow-text",
-                        None,
-                    );
-                    let widget = &mut self.widget.get_widget();
-                    widget.set_text(value, handle_ref);
-                }
-            }
-            if self.state == State::Red {
-                if force_update || text {
-                    let value = get_bundle_message(
-                        "TrafficLight-SwitchText-Red-text",
-                        Some(&self.TrafficLight_SwitchText_Red_text),
-                    );
-                    let widget = &mut self.widget.get_widget();
-                    widget.set_text(value, handle_ref);
-                }
-            }
-            <CompStruct as Update<hover_colour>>::reset(&mut self.comp_struct);
-            <CompStruct as Update<count>>::reset(&mut self.comp_struct);
             update_handle.unwrap() || need_multi_comp_resize
         }
         fn resize(
@@ -370,7 +399,13 @@ mod gen {
             let handle_ref = &mut event_handle;
             match widget_id.id() {
                 1u32 => {
-                    self.widget.get_widget().event(event, handle_ref);
+                    self.widget.widgets(0usize).w0().event(event, handle_ref);
+                }
+                2u32 => {
+                    self.widget.widgets(1usize).w1().event(event, handle_ref);
+                }
+                3u32 => {
+                    self.widget.widgets(2usize).w2().event(event, handle_ref);
                 }
                 0u32 => {
                     self.widget.event(event, handle_ref);

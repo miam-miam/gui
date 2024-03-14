@@ -13,7 +13,6 @@ struct Holder {
 impl ButtonHandler<gen::Button> for Holder {
     fn on_press(&mut self) {
         self.light.send_message(traffic_light::Message::Next);
-        println!("Send message");
     }
 }
 

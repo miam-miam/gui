@@ -137,15 +137,17 @@ impl<'a> Widget<'a> {
                 .gen_fluent_arg_update(&var.name, var_stream);
         });
 
-        self.shared_overrides.variables.gen_variables(
-            &*self.widget_declaration.widget,
-            widget_stmt,
-            &var.name,
-            stream,
-        );
-        self.shared_overrides
-            .fluents
-            .gen_fluent_arg_update(&var.name, stream);
+        self.gen_shared_overrides(stream, |var_stream| {
+            self.shared_overrides.variables.gen_variables(
+                &*self.widget_declaration.widget,
+                widget_stmt,
+                &var.name,
+                var_stream,
+            );
+            self.shared_overrides
+                .fluents
+                .gen_fluent_arg_update(&var.name, var_stream);
+        });
 
         for widget in &self.state_overrides {
             widget.gen_if_correct_state(stream, |var_stream| {
@@ -193,11 +195,13 @@ impl<'a> Widget<'a> {
             )
         });
 
-        self.shared_overrides.fluents.gen_fluents(
-            &*self.widget_declaration.widget,
-            &widget_stmt,
-            stream,
-        );
+        self.gen_shared_overrides(stream, |fluent_stream| {
+            self.shared_overrides.fluents.gen_fluents(
+                &*self.widget_declaration.widget,
+                &widget_stmt,
+                fluent_stream,
+            )
+        });
 
         for widget in &self.state_overrides {
             widget.gen_if_correct_state(stream, |state_stream| {
@@ -234,6 +238,30 @@ impl<'a> Widget<'a> {
     pub fn gen_widget_set(&self, stream: &mut TokenStream) {
         if let Some(set) = &self.child_widgets {
             set.gen_widget_set(stream)
+        }
+    }
+
+    fn gen_shared_overrides(&self, stream: &mut TokenStream, func: impl FnOnce(&mut TokenStream)) {
+        if self.fully_state_overridden || self.state_overrides.is_empty() {
+            func(stream)
+        } else {
+            let idents = self
+                .state_overrides
+                .iter()
+                .map(|o| format_ident!("{}", o.state_name));
+            let mut overrides = TokenStream::new();
+
+            func(&mut overrides);
+
+            if overrides.is_empty() {
+                return;
+            }
+
+            stream.extend(quote! {
+                if #(self.state == State::#idents)||* {
+                    #overrides
+                }
+            });
         }
     }
 
@@ -276,11 +304,13 @@ impl<'a> Widget<'a> {
             )
         });
 
-        self.shared_overrides.statics.gen_statics(
-            &*self.widget_declaration.widget,
-            &widget_stmt,
-            stream,
-        );
+        self.gen_shared_overrides(stream, |static_stream| {
+            self.shared_overrides.statics.gen_statics(
+                &*self.widget_declaration.widget,
+                &widget_stmt,
+                static_stream,
+            );
+        });
 
         self.components
             .gen_components(&*self.widget_declaration.widget, &widget_stmt, stream);

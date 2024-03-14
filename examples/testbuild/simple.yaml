@@ -7,10 +7,15 @@ components:
       widget: HStack
       properties:
         children:
-          - name: Text
-            widget: Text
+          - name: Button
+            widget: Button
             properties:
-              text: "Test"
+              child:
+                name: Text
+                widget: Text
+                properties:
+                  text: "Next"
+                  size: 30
           - name: CompHolder
             widget: CompHolder
             properties:
@@ -18,56 +23,53 @@ components:
                 variable: light
 
   - name: TrafficLight # Names for components must be unique
-    variables:
-      - name: hover_colour
-        type: ::gui::gui_core::Colour
-      - name: count
-        type: u32
     states:
+      - name: Red
+        overrides:
+          - name: RedLight
+            widget: Image
+            properties:
+              image: "./res/red_on.png"
+
+      - name: RedYellow
+        overrides:
+          - name: RedLight
+            widget: Image
+            properties:
+              image: "./res/red_on.png"
+          - name: YellowLight
+            widget: Image
+            properties:
+              image: "./res/yellow_on.png"
+
       - name: Green
         overrides:
-          - name: Switch
-            widget: Button
+          - name: GreenLight
+            widget: Image
             properties:
-              hover_colour:
-                variable: hover_colour
-              background_colour: green
-          - name: SwitchText
-            widget: Text
-            properties:
-              text: Go Yellow
+              image: "./res/green_on.png"
 
       - name: Yellow
         overrides:
-          - name: Switch
-            widget: Button
+          - name: YellowLight
+            widget: Image
             properties:
-              hover_colour: yellow
-              background_colour: yellow
-          - name: SwitchText
-            widget: Text
-            properties:
-              text: Go Red
-
-      - name: Red
-        overrides:
-          - name: Switch
-            widget: Button
-            properties:
-              hover_colour: red
-              background_colour: red
-          - name: SwitchText
-            widget: Text
-            properties:
-              text: Go Green {$count}
+              image: "./res/yellow_on.png"
 
     child:
-      name: Switch
-      widget: Button
+      name: VStack
+      widget: VStack
       properties:
-        child:
-          name: SwitchText
-          widget: Text
-          properties:
-            text: Next
-            size: 50
+        children:
+          - name: RedLight
+            widget: Image
+            properties:
+              image: "./res/red_off.png"
+          - name: YellowLight
+            widget: Image
+            properties:
+              image: "./res/yellow_off.png"
+          - name: GreenLight
+            widget: Image
+            properties:
+              image: "./res/green_off.png"
