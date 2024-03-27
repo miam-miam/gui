@@ -124,12 +124,12 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
         &self,
         handler: Option<&Ident>,
         component: &Ident,
-        widget: Option<&TokenStream>,
+        child: Option<&TokenStream>,
         stream: &mut TokenStream,
     );
     fn name(&self) -> &'static str;
     fn combine(&mut self, rhs: &dyn WidgetBuilder);
-    fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream);
+    fn create_widget(&self, id: WidgetID, children: Option<&TokenStream>, stream: &mut TokenStream);
     fn on_property_update(
         &self,
         property: &'static str,

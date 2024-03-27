@@ -11,7 +11,6 @@ use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
-use std::marker::PhantomData;
 
 enum Axis {
     Horizontal,
@@ -41,22 +40,20 @@ impl Axis {
     }
 }
 
-pub struct HVStack<C: ToComponent, W: Widget<C>> {
+pub struct HVStack<W> {
     id: WidgetID,
     axis: Axis,
     spacing: f32,
     children: Vec<W>,
-    phantom: PhantomData<C>,
 }
 
-impl<C: ToComponent, W: Widget<C>> HVStack<C, W> {
+impl<W> HVStack<W> {
     pub fn new_horizontal(id: WidgetID, children: Vec<W>) -> Self {
         Self {
             id,
             axis: Axis::Horizontal,
             spacing: Default::default(),
             children,
-            phantom: PhantomData,
         }
     }
 
@@ -66,7 +63,6 @@ impl<C: ToComponent, W: Widget<C>> HVStack<C, W> {
             axis: Axis::Vertical,
             spacing: Default::default(),
             children,
-            phantom: PhantomData,
         }
     }
 
@@ -80,7 +76,7 @@ impl<C: ToComponent, W: Widget<C>> HVStack<C, W> {
     }
 }
 
-impl<C: ToComponent, W: Widget<C>> Widget<C> for HVStack<C, W> {
+impl<C: ToComponent, W: Widget<C>> Widget<C> for HVStack<W> {
     fn id(&self) -> WidgetID {
         self.id
     }
@@ -162,11 +158,11 @@ impl WidgetBuilder for HStackBuilder {
     fn widget_type(
         &self,
         _handler: Option<&Ident>,
-        comp_struct: &Ident,
-        widget: Option<&TokenStream>,
+        _comp_struct: &Ident,
+        children: Option<&TokenStream>,
         stream: &mut TokenStream,
     ) {
-        stream.extend(quote!(::gui::gui_widget::HVStack<#comp_struct, #widget>));
+        stream.extend(quote!(::gui::gui_widget::HVStack<#children>));
     }
 
     fn name(&self) -> &'static str {
@@ -180,9 +176,14 @@ impl WidgetBuilder for HStackBuilder {
         }
     }
 
-    fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(
+        &self,
+        id: WidgetID,
+        children: Option<&TokenStream>,
+        stream: &mut TokenStream,
+    ) {
         stream.extend(quote! {
-            ::gui::gui_widget::HVStack::new_horizontal(#id, vec![#widget])
+            ::gui::gui_widget::HVStack::new_horizontal(#id, vec![#children])
         });
     }
 
@@ -251,11 +252,11 @@ impl WidgetBuilder for VStackBuilder {
     fn widget_type(
         &self,
         _handler: Option<&Ident>,
-        comp_struct: &Ident,
-        widget: Option<&TokenStream>,
+        _comp_struct: &Ident,
+        children: Option<&TokenStream>,
         stream: &mut TokenStream,
     ) {
-        stream.extend(quote!(::gui::gui_widget::HVStack<#comp_struct, #widget>));
+        stream.extend(quote!(::gui::gui_widget::HVStack<#children>));
     }
 
     fn name(&self) -> &'static str {
@@ -269,9 +270,14 @@ impl WidgetBuilder for VStackBuilder {
         }
     }
 
-    fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(
+        &self,
+        id: WidgetID,
+        children: Option<&TokenStream>,
+        stream: &mut TokenStream,
+    ) {
         stream.extend(quote! {
-            ::gui::gui_widget::HVStack::new_vertical(#id, vec![#widget])
+            ::gui::gui_widget::HVStack::new_vertical(#id, vec![#children])
         });
     }
 
