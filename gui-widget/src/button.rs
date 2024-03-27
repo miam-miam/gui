@@ -220,10 +220,10 @@ impl WidgetBuilder for ButtonBuilder {
         &self,
         handler: Option<&Ident>,
         component: &Ident,
-        widget: Option<&TokenStream>,
+        child: Option<&TokenStream>,
         stream: &mut TokenStream,
     ) {
-        stream.extend(quote!(::gui::gui_widget::Button<#handler, #component, #widget>));
+        stream.extend(quote!(::gui::gui_widget::Button<#handler, #component, #child>));
     }
 
     fn name(&self) -> &'static str {
@@ -252,9 +252,9 @@ impl WidgetBuilder for ButtonBuilder {
             }
         }
     }
-    fn create_widget(&self, id: WidgetID, widget: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, child: Option<&TokenStream>, stream: &mut TokenStream) {
         stream.extend(quote! {
-            ::gui::gui_widget::Button::new(#id, #widget)
+            ::gui::gui_widget::Button::new(#id, #child)
         });
     }
 

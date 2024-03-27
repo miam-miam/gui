@@ -65,7 +65,7 @@ impl WidgetBuilder for CompHolderBuilder {
         &self,
         _handler: Option<&Ident>,
         _comp_struct: &Ident,
-        _widget: Option<&TokenStream>,
+        _child: Option<&TokenStream>,
         stream: &mut TokenStream,
     ) {
         stream.extend(quote!(::gui::gui_widget::CompHolder));
@@ -76,7 +76,7 @@ impl WidgetBuilder for CompHolderBuilder {
     }
     fn combine(&mut self, _rhs: &dyn WidgetBuilder) {}
 
-    fn create_widget(&self, id: WidgetID, _widget: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, _child: Option<&TokenStream>, stream: &mut TokenStream) {
         stream.extend(quote! {
             ::gui::gui_widget::CompHolder::new(#id)
         });

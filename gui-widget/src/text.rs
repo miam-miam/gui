@@ -122,7 +122,7 @@ impl WidgetBuilder for TextBuilder {
         &self,
         _handler: Option<&Ident>,
         _comp_struct: &Ident,
-        _widget: Option<&TokenStream>,
+        _child: Option<&TokenStream>,
         stream: &mut TokenStream,
     ) {
         stream.extend(quote!(::gui::gui_widget::Text));
@@ -145,7 +145,7 @@ impl WidgetBuilder for TextBuilder {
         }
     }
 
-    fn create_widget(&self, id: WidgetID, _widget: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, _child: Option<&TokenStream>, stream: &mut TokenStream) {
         stream.extend(quote! {
             ::gui::gui_widget::Text::new(#id)
         });
