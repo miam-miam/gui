@@ -153,17 +153,14 @@ impl<'a> WidgetSet<'a> {
         &'b self,
         stream: &'b TokenStream,
     ) -> impl Iterator<Item = (TokenStream, &Widget)> + '_ {
-        self.widgets
-            .iter()
-            .enumerate()
-            .map(move |(i, (get_widget, w))| {
-                let mut s = stream.clone();
-                s.extend(get_widget.clone());
-                if self.count.is_some() {
-                    let func = format_ident!("w{i}");
-                    s.extend(quote!( .#func() ));
-                }
-                (s, w)
-            })
+        self.widgets.iter().enumerate().map(|(i, (get_widget, w))| {
+            let mut s = stream.clone();
+            s.extend(get_widget.clone());
+            if self.count.is_some() {
+                let func = format_ident!("w{i}");
+                s.extend(quote!( .#func() ));
+            }
+            (s, w)
+        })
     }
 }
