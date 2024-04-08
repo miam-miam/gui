@@ -80,4 +80,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-screenshots
-          path: examples/*/screenshots/**
+          path: examples/*/screenshots/wip/**
