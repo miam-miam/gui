@@ -29,7 +29,7 @@ mod test {
 
     #[test]
     fn correct_state_transitions() {
-        let mut harness = TestHarness::new(Holder::default(), (300.0, 800.0));
+        let mut harness = TestHarness::new(Holder::default(), (350.0, 800.0));
         let next_id = harness.get_id("Button").unwrap();
         assert_screenshot!(harness, "stop_state");
         harness.simulate_pointer_down_up(PointerButton::Primary, Some(next_id));
