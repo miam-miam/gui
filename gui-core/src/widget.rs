@@ -74,7 +74,9 @@ pub enum WidgetEvent<'a> {
     PointerUp(&'a PointerEvent),
     PointerDown(&'a PointerEvent),
     PointerMove(&'a PointerEvent),
+    /// Sent to all widgets that are no longer being hovered over
     HoverChange,
+    /// Sent to the active widget if a new widget is now active
     ActiveChange,
 }
 
