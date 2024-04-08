@@ -23,11 +23,17 @@ impl WidgetInfo {
             .unwrap_or_default()
     }
 
+    pub fn get_parent_rect(&self) -> Rect {
+        let parent_runtime_id = self.pos_map.keys().min().copied().unwrap_or_default();
+        self.get_rect(parent_runtime_id, WidgetID::new(0))
+    }
+
     pub fn convert_to_global_positions<C: Component>(&mut self, rect: Rect, component: &C) {
-        self.position_widget(RuntimeID::new(0), WidgetID::new(0), rect);
+        let parent_runtime_id = self.pos_map.keys().min().copied().unwrap_or_default();
+        self.position_widget(parent_runtime_id, WidgetID::new(0), rect);
         let local_positions = self.pos_map.clone();
         self.reset_positions();
-        self.position_widget(RuntimeID::new(0), WidgetID::new(0), rect);
+        self.position_widget(parent_runtime_id, WidgetID::new(0), rect);
 
         for (runtime_id, positions) in local_positions.into_iter().sorted_by_key(|(r, _)| *r) {
             for (id, rect) in positions.into_iter().enumerate() {
