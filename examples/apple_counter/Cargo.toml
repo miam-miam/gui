@@ -1,0 +1,12 @@
+[package]
+name = "apple_counter"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+gui = { path = "../../." }
+
+[build-dependencies]
+gui-build = { path = "../../gui-build" }
