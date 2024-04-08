@@ -68,7 +68,7 @@ mod gen {
                     CompStruct,
                     ::gui::gui_widget::Text,
                 > as Widget<CompStruct>>::resize(
-                    w, constraints, handle,
+                    w, constraints, handle
                 ),
                 WidgetSet0::W1(w) => <::gui::gui_widget::CompHolder as Widget<CompStruct>>::resize(
                     w,
@@ -84,7 +84,7 @@ mod gen {
                     CompStruct,
                     ::gui::gui_widget::Text,
                 > as Widget<CompStruct>>::event(
-                    w, event, handle,
+                    w, event, handle
                 ),
                 WidgetSet0::W1(w) => {
                     <::gui::gui_widget::CompHolder as Widget<CompStruct>>::event(w, event, handle)
@@ -92,9 +92,7 @@ mod gen {
             }
         }
     }
-
     pub(crate) struct Button;
-
     impl ToHandler for Button {
         type BaseHandler = CompStruct;
     }
@@ -235,7 +233,7 @@ mod gen {
     pub struct HolderHolder {
         comp_struct: CompStruct,
         runtime_id: RuntimeID,
-        widget: ::gui::gui_widget::HVStack<CompStruct, WidgetSet0>,
+        widget: ::gui::gui_widget::HVStack<WidgetSet0>,
         multi_comp: MultiComponentHolder,
     }
     #[automatically_derived]
@@ -259,6 +257,7 @@ mod gen {
                 comp_struct: self,
             }
         }
+        #[allow(clippy::manual_range_patterns)]
         fn get_parent(&self, widget_id: WidgetID) -> Option<WidgetID> {
             match widget_id.id() {
                 2u32 => Some(WidgetID::new(1u32)),
@@ -275,7 +274,6 @@ mod gen {
             }
         }
     }
-
     impl HolderHolder {
         #[allow(dead_code)]
         pub fn comp_struct(&mut self) -> &mut CompStruct {

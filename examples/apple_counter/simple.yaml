@@ -1,0 +1,51 @@
+components:
+  - name: AppleCounter
+    variables:
+      - name: apple_count
+        type: u32
+    child:
+      widget: VStack
+      properties:
+        children:
+          - name: HStack
+            widget: HStack
+            properties:
+              children:
+                - name: Image
+                  widget: Image
+                  properties:
+                    image: "./res/apple.png"
+                - name: Title
+                  widget: Text
+                  properties:
+                    size: 50
+                    text: Apple Counter
+          - name: AppleCount
+            widget: Text
+            properties:
+              size: 30
+              text: |
+                { $apple_count ->
+                  [ 0 ] no apples
+                  [ 1 ] 1 apple
+                  *[ other ] { $apple_count } apples
+                }
+          - name: AddApple
+            widget: Button
+            properties:
+              child:
+                name: AddText
+                widget: Text
+                properties:
+                  text: "Add an apple"
+                  size: 30
+
+          - name: ResetApple
+            widget: Button
+            properties:
+              child:
+                name: ResetText
+                widget: Text
+                properties:
+                  text: "Reset"
+                  size: 15

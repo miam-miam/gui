@@ -88,9 +88,9 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget
     }
 
     fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<C>) {
-        let clicking = handle.is_active(self.id());
-        let hovered = handle.is_hovered(self.id());
-        let affine = if handle.is_active(self.id()) {
+        let clicking = handle.is_active(self.id);
+        let hovered = handle.is_hovered(self.id);
+        let affine = if handle.is_active(self.id) {
             Affine::translate(Vec2::new(0.0, 0.875))
         } else {
             Affine::IDENTITY
@@ -105,7 +105,7 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget
             self.background_colour
         };
         let rect = handle
-            .get_local_rect(self.id())
+            .get_local_rect(self.id)
             .inset(-0.5 * STOKE_WIDTH)
             .to_rounded_rect(4.0);
         scene.fill(
@@ -148,7 +148,7 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget
                 affine,
                 &Brush::Solid(self.border_colour.0),
                 None,
-                &handle.get_local_rect(self.id()).to_rounded_rect(4.5),
+                &handle.get_local_rect(self.id).to_rounded_rect(4.5),
             );
         }
     }
@@ -171,33 +171,33 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget
         }
         let hit = event.get_point().map_or(false, |pos| {
             handle
-                .get_global_rect(self.id())
+                .get_global_rect(self.id)
                 .to_rounded_rect(4.0)
                 .contains(pos)
         });
         match event {
             WidgetEvent::PointerUp(_) => {
-                handle.set_active(self.id(), false);
-                handle.invalidate_id(self.id());
+                handle.set_active(self.id, false);
+                handle.invalidate_id(self.id);
                 if hit {
                     handle.get_handler().on_press();
                 }
             }
             WidgetEvent::PointerDown(_) => {
                 if hit {
-                    handle.set_active(self.id(), true);
-                    handle.invalidate_id(self.id());
+                    handle.set_active(self.id, true);
+                    handle.invalidate_id(self.id);
                 }
             }
             WidgetEvent::PointerMove(_) => {
                 if hit {
                     handle.set_cursor(&Cursor::Pointer);
-                    if handle.add_hover(self.id()) {
-                        handle.invalidate_id(self.id());
+                    if handle.add_hover(self.id) {
+                        handle.invalidate_id(self.id);
                     }
                 }
             }
-            WidgetEvent::HoverChange | WidgetEvent::ActiveChange => handle.invalidate_id(self.id()),
+            WidgetEvent::HoverChange | WidgetEvent::ActiveChange => handle.invalidate_id(self.id),
         }
     }
 }

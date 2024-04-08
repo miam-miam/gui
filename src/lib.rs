@@ -144,11 +144,7 @@ impl<C: Component> WindowState<C> {
             sb.append(
                 &fragment,
                 Some(Affine::translate(
-                    self.handle
-                        .info
-                        .get_rect(RuntimeID::new(0), WidgetID::new(0))
-                        .origin()
-                        .to_vec2(),
+                    self.handle.info.get_parent_rect().origin().to_vec2(),
                 )),
             );
 
