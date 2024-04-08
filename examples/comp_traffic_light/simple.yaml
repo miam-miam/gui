@@ -6,6 +6,7 @@ components:
     child:
       widget: HStack
       properties:
+        spacing: 50
         children:
           - name: Button
             widget: Button
