@@ -34,9 +34,9 @@ mod test {
     fn correct_resize() {
         let mut harness = TestHarness::new(AppleCounter::default(), (800.0, 400.0));
         assert_screenshot!(harness, "valid_start_state");
-        harness.set_size((600.0, 400.0));
+        harness.set_size((500.0, 400.0));
         assert_screenshot!(harness, "correct_text_wrap");
-        harness.set_size((600.0, 1000.0));
+        harness.set_size((500.0, 1000.0));
         assert_screenshot!(harness, "height_unaffected")
     }
 
