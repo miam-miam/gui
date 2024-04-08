@@ -1,8 +1,8 @@
 mod derive;
-mod type_registery;
+mod type_registry;
 
 use crate::derive::Derive;
-use crate::type_registery::TypeRegistry;
+use crate::type_registry::TypeRegistry;
 use proc_macro::TokenStream;
 use quote::ToTokens;
 use syn::parse_macro_input;

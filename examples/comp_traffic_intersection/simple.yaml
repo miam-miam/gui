@@ -1,0 +1,122 @@
+components:
+  - name: Intersection
+    variables:
+      - name: nw_light
+        component: TrafficLight
+      - name: ne_light
+        component: TrafficLight
+      - name: se_light
+        component: TrafficLight
+      - name: sw_light
+        component: TrafficLight
+    child:
+      widget: VStack
+      properties:
+        spacing: 20
+        children:
+          - name: North
+            widget: HStack
+            properties:
+              children:
+                - name: NorthWestLight
+                  widget: CompHolder
+                  properties:
+                    component:
+                      variable: nw_light
+                - widget: Image
+                  properties:
+                    image: "./res/vertical_road.jpg"
+                - name: NorthEastLight
+                  widget: CompHolder
+                  properties:
+                    component:
+                      variable: ne_light
+          - name: Center
+            widget: HStack
+            properties:
+              children:
+                - widget: Image
+                  properties:
+                    image: "./res/horizontal_road.jpg"
+                - name: Button
+                  widget: Button
+                  properties:
+                    child:
+                      name: Text
+                      widget: Text
+                      properties:
+                        text: "Next"
+                        size: 30
+                - widget: Image
+                  properties:
+                    image: "./res/horizontal_road.jpg"
+          - name: South
+            widget: HStack
+            properties:
+              children:
+                - name: SouthWestLight
+                  widget: CompHolder
+                  properties:
+                    component:
+                      variable: sw_light
+                - widget: Image
+                  properties:
+                    image: "./res/vertical_road.jpg"
+                - name: SouthEastLight
+                  widget: CompHolder
+                  properties:
+                    component:
+                      variable: se_light
+
+  - name: TrafficLight # Names for components must be unique
+    states:
+      - name: Red
+        overrides:
+          - name: RedLight
+            widget: Image
+            properties:
+              image: "./res/red_on.png"
+
+      - name: RedYellow
+        overrides:
+          - name: RedLight
+            widget: Image
+            properties:
+              image: "./res/red_on.png"
+          - name: YellowLight
+            widget: Image
+            properties:
+              image: "./res/yellow_on.png"
+
+      - name: Green
+        overrides:
+          - name: GreenLight
+            widget: Image
+            properties:
+              image: "./res/green_on.png"
+
+      - name: Yellow
+        overrides:
+          - name: YellowLight
+            widget: Image
+            properties:
+              image: "./res/yellow_on.png"
+
+    child:
+      name: VStack
+      widget: VStack
+      properties:
+        spacing: 0
+        children:
+          - name: RedLight
+            widget: Image
+            properties:
+              image: "./res/red_off.png"
+          - name: YellowLight
+            widget: Image
+            properties:
+              image: "./res/yellow_off.png"
+          - name: GreenLight
+            widget: Image
+            properties:
+              image: "./res/green_off.png"

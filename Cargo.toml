@@ -8,6 +8,7 @@ members = [
     #    "examples/**",
     "examples/traffic_light",
     "examples/comp_traffic_light",
+    "examples/comp_traffic_intersection",
     "examples/counter",
     "examples/apple_counter",
     "examples/testbed",
