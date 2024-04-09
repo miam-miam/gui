@@ -29,6 +29,30 @@ impl Handle {
             f(&mut self.window);
         }
     }
+
+    // MacOS hack as it does not correctly listen to widget redraws.
+
+    #[cfg(not(target_os = "macos"))]
+    pub fn invalidate_rect(&mut self, runtime_id: RuntimeID, id: WidgetID, local_rect: Rect) {
+        let global_rect = self.info.get_rect(runtime_id, id);
+        self.window
+            .invalidate_rect(local_rect + global_rect.origin().to_vec2())
+    }
+    #[cfg(target_os = "macos")]
+    pub fn invalidate_rect(&mut self, _runtime_id: RuntimeID, _id: WidgetID, _local_rect: Rect) {
+        self.window.invalidate()
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    pub fn invalidate_id(&mut self, runtime_id: RuntimeID, id: WidgetID) {
+        let rect = self.info.get_rect(runtime_id, id);
+        self.if_window(|w| w.invalidate_rect(rect));
+    }
+
+    #[cfg(target_os = "macos")]
+    pub fn invalidate_id(&mut self, _runtime_id: RuntimeID, _id: WidgetID) {
+        self.if_window(|w| w.invalidate())
+    }
 }
 
 pub struct UpdateHandle<'a> {
@@ -54,15 +78,13 @@ impl<'a> UpdateHandle<'a> {
     pub fn unwrap(self) -> bool {
         self.resize
     }
+
     pub fn invalidate_id(&mut self, id: WidgetID) {
-        let rect = self.handle.info.get_rect(self.runtime_id, id);
-        self.handle.if_window(|w| w.invalidate_rect(rect));
+        self.handle.invalidate_id(self.runtime_id, id)
     }
+
     pub fn invalidate_rect(&mut self, id: WidgetID, local_rect: Rect) {
-        let global_rect = self.handle.info.get_rect(self.runtime_id, id);
-        self.handle
-            .window
-            .invalidate_rect(local_rect + global_rect.origin().to_vec2())
+        self.handle.invalidate_rect(self.runtime_id, id, local_rect)
     }
 }
 
@@ -261,15 +283,11 @@ impl<'a, T: ToComponent> EventHandle<'a, T> {
     }
 
     pub fn invalidate_id(&mut self, id: WidgetID) {
-        let rect = self.handle.info.get_rect(self.runtime_id, id);
-        self.handle.if_window(|w| w.invalidate_rect(rect));
+        self.handle.invalidate_id(self.runtime_id, id)
     }
 
     pub fn invalidate_rect(&mut self, id: WidgetID, local_rect: Rect) {
-        let global_rect = self.handle.info.get_rect(self.runtime_id, id);
-        self.handle
-            .window
-            .invalidate_rect(local_rect + global_rect.origin().to_vec2())
+        self.handle.invalidate_rect(self.runtime_id, id, local_rect)
     }
 
     pub fn resize(&mut self) {

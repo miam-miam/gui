@@ -196,6 +196,8 @@ impl<C: Component + 'static> WinHandler for WindowState<C> {
     fn size(&mut self, size: Size) {
         if self.size != size {
             self.size = size;
+            // MacOS hack as it does not correctly listen to widget redraws.
+            self.handle.window.invalidate();
             self.resize();
         }
     }
