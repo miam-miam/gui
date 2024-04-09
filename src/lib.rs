@@ -80,20 +80,31 @@ impl<C: Component> WindowState<C> {
     }
 
     fn resize(&mut self) {
-        let (max_width, max_height) = self.surface_size();
+        let max_size = self.dp_surface_size();
         self.handle.info.reset_positions();
-        let size = self.component.resize(
-            LayoutConstraints::new_max(Size::new(max_width as f64, max_height as f64)),
-            &mut self.handle,
-        );
+        let size = self
+            .component
+            .resize(LayoutConstraints::new_max(max_size), &mut self.handle);
 
         self.handle.info.convert_to_global_positions(
-            Rect::from_center_size((max_width as f64 / 2.0, max_height as f64 / 2.0), size),
+            Rect::from_center_size((max_size / 2.0).to_vec2().to_point(), size),
             &self.component,
         );
     }
 
-    fn surface_size(&self) -> (u32, u32) {
+    fn dp_surface_size(&self) -> Size {
+        let window = &self.handle.window;
+        if window == &WindowHandle::default() {
+            return self.size;
+        }
+        let insets = window.content_insets();
+        let mut size = window.get_size();
+        size.width -= insets.x_value();
+        size.height -= insets.y_value();
+        size
+    }
+
+    fn px_surface_size(&self) -> (u32, u32) {
         let window = &self.handle.window;
         if window == &WindowHandle::default() {
             return (self.size.width as u32, self.size.height as u32);
@@ -108,7 +119,8 @@ impl<C: Component> WindowState<C> {
 
     // Code mostly adapted from https://github.com/linebender/glazier/blob/main/examples/shello.rs
     fn render(&mut self) {
-        let (width, height) = self.surface_size();
+        let (width, height) = self.px_surface_size();
+        let scale = self.handle.window.get_scale().unwrap_or_default();
         if self.surface.is_none() {
             self.surface = Some(
                 pollster::block_on(
@@ -143,9 +155,10 @@ impl<C: Component> WindowState<C> {
             self.component.render(&mut component, &mut self.handle);
             sb.append(
                 &fragment,
-                Some(Affine::translate(
-                    self.handle.info.get_parent_rect().origin().to_vec2(),
-                )),
+                Some(
+                    Affine::translate(self.handle.info.get_parent_rect().origin().to_vec2())
+                        .then_scale_non_uniform(scale.x(), scale.y()),
+                ),
             );
 
             self.renderer
