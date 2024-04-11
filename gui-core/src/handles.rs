@@ -368,3 +368,25 @@ impl<'a, T: ToComponent> EventHandle<'a, T> {
         self.comp_struct
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::{Handle, UpdateHandle};
+    use crate::widget::RuntimeID;
+
+    #[test]
+    fn handle_if_window() {
+        let mut handle = Handle::default();
+        let mut called = false;
+        handle.if_window(|_| called = true);
+        assert!(!called);
+    }
+
+    #[test]
+    fn update_handle_resize() {
+        let mut handle = Handle::default();
+        let mut update_handle = UpdateHandle::new(&mut handle, RuntimeID::next());
+        update_handle.resize();
+        assert!(update_handle.unwrap());
+    }
+}

@@ -154,3 +154,28 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
 }
 
 dyn_clone::clone_trait_object!(WidgetBuilder);
+
+#[cfg(test)]
+mod test {
+    use crate::widget::{RuntimeID, WidgetID};
+
+    #[test]
+    pub fn test_runtime_id() {
+        let first = RuntimeID::next();
+        let second = RuntimeID::next();
+        assert!(first.0 < second.0);
+    }
+
+    #[test]
+    pub fn test_widget_id() {
+        fn compare_ids(component_id: u32) {
+            let first = WidgetID::next(component_id);
+            let second = WidgetID::next(component_id);
+            assert!(first.0 < second.0);
+        }
+
+        compare_ids(0);
+        compare_ids(1);
+        compare_ids(2);
+    }
+}

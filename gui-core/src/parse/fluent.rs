@@ -136,4 +136,41 @@ complex_test: |
             ]
         )
     }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use serde_yaml::Value;
+
+        #[test]
+        fn deserialize_fluent_with_valid_string() {
+            let s = "Hello, { $name }";
+            let fluent: Fluent = serde_yaml::from_value(Value::String(s.to_string())).unwrap();
+            assert_eq!(fluent.text, s);
+            assert_eq!(fluent.vars, vec!["name".parse().unwrap()]);
+        }
+
+        #[test]
+        fn deserialize_fluent_with_invalid_string() {
+            let s = "Hello, { $name ";
+            let result: Result<Fluent, _> = serde_yaml::from_value(Value::String(s.to_string()));
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn deserialize_fluent_with_no_vars() {
+            let s = "Hello, world";
+            let fluent: Fluent = serde_yaml::from_value(Value::String(s.to_string())).unwrap();
+            assert_eq!(fluent.text, s);
+            assert_eq!(fluent.vars, vec![]);
+        }
+
+        #[test]
+        fn deserialize_fluent_with_multiple_same_vars() {
+            let s = "{ $name } { $name }";
+            let fluent: Fluent = serde_yaml::from_value(Value::String(s.to_string())).unwrap();
+            assert_eq!(fluent.text, s);
+            assert_eq!(fluent.vars, vec!["name".parse().unwrap()]);
+        }
+    }
 }

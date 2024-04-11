@@ -6,7 +6,7 @@ use std::ops::Deref;
 use std::str::FromStr;
 use syn::__private::Span;
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum Var<T> {
     Variable(Name),
@@ -14,7 +14,7 @@ pub enum Var<T> {
     Value(T),
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum ComponentVar {
     Variable(Name),
@@ -131,7 +131,9 @@ impl<'de> Deserialize<'de> for Name {
 
 #[cfg(test)]
 mod test {
-    use super::Name;
+    use super::{ComponentVar, Name};
+    use crate::Var;
+    use serde::Deserialize;
     use serde_yaml::Value;
 
     #[test]
@@ -148,5 +150,42 @@ mod test {
         assert!(serde_yaml::from_str::<Name>("0StartNumbers").is_err());
         assert!(serde_yaml::from_str::<Name>("await").is_err());
         assert!(serde_yaml::from_str::<Name>("fn").is_err());
+    }
+
+    #[test]
+    fn variable_deserialization() {
+        assert_eq!(
+            serde_yaml::from_str::<Var<u8>>("12").unwrap(),
+            Var::Value(12u8)
+        );
+        assert_eq!(
+            serde_yaml::from_str::<Var<u8>>(
+                r#"
+        variable:
+          variable_name"#
+            )
+            .unwrap(),
+            Var::Variable("variable_name".parse().unwrap())
+        );
+    }
+
+    #[test]
+    fn component_var_deserialization() {
+        #[derive(Deserialize, Eq, PartialEq, Debug)]
+        struct Widget {
+            #[serde(flatten)]
+            component: Option<ComponentVar>,
+        }
+
+        assert_eq!(
+            serde_yaml::from_str::<Widget>(
+                r#"
+              variable: component_name"#
+            )
+            .unwrap(),
+            Widget {
+                component: Some(ComponentVar::Variable("component_name".parse().unwrap()))
+            }
+        );
     }
 }
