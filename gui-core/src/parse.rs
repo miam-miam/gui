@@ -16,7 +16,7 @@ pub struct WidgetDeclaration {
     pub layout_properties: Option<LayoutDeclaration>,
 }
 
-#[derive(Deserialize, Debug, Clone, Copy)]
+#[derive(Deserialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub struct LayoutDeclaration {
     pub padding: u32,
 }
@@ -263,6 +263,7 @@ components:
         let first_state = &decl.components[1].states[0];
         assert_eq!(first_state.name, "State1".parse().unwrap());
         assert_eq!(first_state.overrides[0].name, "FakeName".parse().unwrap());
+        assert_eq!(first_state.overrides[0].layout_properties, None);
         let widget = first_state.overrides[0]
             .widget
             .as_ref()
@@ -275,6 +276,7 @@ components:
         let second_state = &decl.components[1].states[1];
         assert_eq!(second_state.name, "State2".parse().unwrap());
         assert_eq!(second_state.overrides[0].name, "FakeName".parse().unwrap());
+        assert_eq!(second_state.overrides[0].layout_properties, None);
         let widget = second_state.overrides[0]
             .widget
             .as_ref()
@@ -292,6 +294,7 @@ components:
             .downcast_ref::<FakeWidget>()
             .unwrap();
         assert_eq!(decl.components[0].child.name, None);
+        assert_eq!(decl.components[0].child.layout_properties, None);
         assert_eq!(widget.number, Some(1));
 
         // Assert that the base widget tree of the second component has the correct name and overrides
@@ -306,6 +309,7 @@ components:
             decl.components[1].child.name,
             Some("FakeName".parse().unwrap())
         );
+        assert_eq!(decl.components[1].child.layout_properties, None);
         assert_eq!(widget.number, Some(4));
 
         // Assert that the styling is correct
