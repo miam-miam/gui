@@ -36,6 +36,8 @@ fn main() {
 
 This will create a window with the text "Hello world!".
 
+![image](https://github.com/miam-miam/gui/assets/49870539/bd21bdb9-1459-4157-89a4-1d08143c86d8)
+
 ## Dependencies
 
 Gui requires a recent rust toolchain to build; it does not (yet) have an
