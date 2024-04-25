@@ -1,8 +1,40 @@
 # gui
 
-## Why gui?
+Gui is a novel way to create graphical user interfaces in Rust.
 
-To prevent bike shedding, I'll come up with a better name when the project needs one.
+To get started create a layout file in YAML to define the appearance of your application.
+
+```yaml
+components:
+  - name: HelloWorld
+    variables:
+      - name: name
+        type: String
+    child:
+      widget: Text
+      properties:
+        text: "Hello { $name }!"
+        size: 30
+```
+
+And then create a user defined component that matches the name defined in the layout file.
+
+```rust
+#[derive(ToComponent)]
+struct HelloWorld {
+    name: Updateable<String>,
+}
+
+type_registry!();
+
+fn main() {
+    gui::run(HelloWorld {
+        name: Updateable::new(String::from("world"))
+    });
+}
+```
+
+This will create a window with the text "Hello world!".
 
 ## Dependencies
 
@@ -15,17 +47,33 @@ and the development packages of `wayland`, `libxkbcommon` and `libxcb`, to be in
 Some of the examples require `vulkan-loader`.
 
 Most distributions have `pkg-config` installed by default. To install the remaining packages on Fedora, run
+
 ```sh
 sudo dnf install clang wayland-devel libxkbcommon-x11-devel libxcb-devel vulkan-loader-devel
 ```
+
 To install them on Debian or Ubuntu, run
+
 ```sh
 sudo apt-get install pkg-config clang libwayland-dev libxkbcommon-x11-dev libvulkan-dev
 ```
 
+## Examples
+
+Once you have the dependencies installed, you can run the examples found in [examples](examples) with:
+
+```sh
+cargo run --package <example-name>
+```
+
+## Why is it called gui?
+
+To prevent bike shedding, I'll come up with a better name when the project needs one.
+
 ### CI
 
 To run tests in CI install a software render
+
 ```yaml
 - name: install llvmpipe and lavapipe (sofware based renderers)
   shell: bash
