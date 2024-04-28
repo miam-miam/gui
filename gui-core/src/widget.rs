@@ -39,7 +39,7 @@ impl RuntimeID {
     }
 }
 
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Default)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Default, Hash)]
 pub struct WidgetID(u32);
 
 impl ToTokens for WidgetID {

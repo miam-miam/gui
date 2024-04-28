@@ -299,3 +299,30 @@ impl<T: ToComponent> Drop for TestHarness<T> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::compare_images;
+    use image::{ImageBuffer, Rgba};
+
+    #[test]
+    fn compare_images_identical() {
+        let img1 = ImageBuffer::from_fn(10, 10, |x, y| Rgba([x as u8, y as u8, 0, 0]));
+        let img2 = ImageBuffer::from_fn(10, 10, |x, y| Rgba([x as u8, y as u8, 0, 0]));
+        assert!(compare_images(&img1, &img2));
+    }
+
+    #[test]
+    fn compare_images_different_dimensions() {
+        let img1 = ImageBuffer::from_fn(10, 10, |x, y| Rgba([x as u8, y as u8, 0, 0]));
+        let img2 = ImageBuffer::from_fn(10, 11, |x, y| Rgba([x as u8, y as u8, 0, 0]));
+        assert!(!compare_images(&img1, &img2));
+    }
+
+    #[test]
+    fn compare_images_same_dimensions_different_data() {
+        let img1 = ImageBuffer::from_fn(10, 10, |x, y| Rgba([x as u8, y as u8, 0, 0]));
+        let img2 = ImageBuffer::from_fn(10, 10, |x, y| Rgba([x as u8, y as u8, 255, 255]));
+        assert!(!compare_images(&img1, &img2));
+    }
+}

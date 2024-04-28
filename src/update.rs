@@ -39,3 +39,45 @@ impl<T: Clone> Updateable<T> {
         self.value.clone()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Updateable;
+
+    #[test]
+    fn new_updateable() {
+        let u = Updateable::new(5);
+        assert_eq!(u.get_value(), &5);
+        assert!(!u.is_updated());
+    }
+
+    #[test]
+    fn set_updateable() {
+        let mut u = Updateable::new(5);
+        u.set_value(10);
+        assert_eq!(u.get_value(), &10);
+        assert!(u.is_updated());
+    }
+
+    #[test]
+    fn invalidate_updateable() {
+        let mut u = Updateable::new(5);
+        *u.invalidate() = 10;
+        assert_eq!(u.get_value(), &10);
+        assert!(u.is_updated());
+    }
+
+    #[test]
+    fn reset_updateable() {
+        let mut u = Updateable::new(5);
+        u.set_value(10);
+        u.reset();
+        assert!(!u.is_updated());
+    }
+
+    #[test]
+    fn clone_updateable_value() {
+        let u = Updateable::new(vec![1, 2, 3]);
+        assert_eq!(u.value(), vec![1, 2, 3]);
+    }
+}
