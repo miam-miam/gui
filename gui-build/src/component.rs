@@ -331,6 +331,7 @@ fn write_file(path: &Path, stream: TokenStream) -> anyhow::Result<()> {
     Ok(())
 }
 #[cfg(feature = "pretty")]
+/// Pretty prints a tokenstream before writing it out to a file to make it more readable
 fn write_file(path: &Path, stream: TokenStream) -> anyhow::Result<()> {
     let file = syn::parse2::<syn::File>(stream.clone()).inspect_err(|_| {
         let _ = fs::write(path, stream.to_string());
@@ -340,6 +341,7 @@ fn write_file(path: &Path, stream: TokenStream) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Writes to disk fluent files (.ftl) with the fluent text used in each component
 fn create_bundle(
     out_dir: &Path,
     component_name: &str,

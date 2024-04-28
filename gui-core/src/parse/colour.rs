@@ -4,6 +4,7 @@ use serde::de::{Error, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::fmt::Formatter;
 
+/// Colour declaration that can be parsed from a layout file. It can be parsed from a css colour declaration or hex values.
 #[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Hash)]
 pub struct Colour(pub vello::peniko::Color);
 
@@ -48,5 +49,55 @@ impl<'de> Deserialize<'de> for Colour {
         D: Deserializer<'de>,
     {
         deserializer.deserialize_str(ColourVisitor)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Colour;
+    use quote::ToTokens;
+    use vello::peniko::Color;
+
+    #[test]
+    pub fn colour_deserialize_known_name() {
+        let colour: Colour = serde_yaml::from_str(r##""blue""##).unwrap();
+        assert_eq!(colour.0, Color::BLUE);
+    }
+
+    #[test]
+    pub fn colour_deserialize_hex_rgb() {
+        let colour: Colour = serde_yaml::from_str(r##""#FF0000""##).unwrap();
+        assert_eq!(colour.0, Color::RED);
+    }
+
+    #[test]
+    pub fn colour_deserialize_hex_rgba() {
+        let colour: Colour = serde_yaml::from_str(r##""#FF000080""##).unwrap();
+        assert_eq!(
+            colour.0,
+            Color {
+                r: 255,
+                g: 0,
+                b: 0,
+                a: 128,
+            }
+        );
+    }
+
+    #[test]
+    pub fn colour_deserialize_invalid() {
+        let result: Result<Colour, _> = serde_yaml::from_str(r##""invalid""##);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    pub fn colour_to_tokens() {
+        let colour = Colour(Color::GREEN);
+        let mut tokens = proc_macro2::TokenStream::new();
+        colour.to_tokens(&mut tokens);
+        assert_eq!(
+            tokens.to_string(),
+            ":: gui :: gui_core :: Colour :: rgba8 (0u8 , 128u8 , 0u8 , 255u8)"
+        );
     }
 }

@@ -34,7 +34,6 @@ pub struct Button<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> {
 }
 
 impl<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> Button<T, C, W> {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(id: WidgetID, child: W) -> Self {
         Button {
             id,

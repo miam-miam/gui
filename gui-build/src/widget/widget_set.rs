@@ -5,9 +5,13 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use std::sync::atomic::{AtomicU32, Ordering};
 
+/// A collection of widgets that can be retrieved using their associated [`TokenStream`].
+/// A widget set is only created if there is more than one widget stored.
 #[derive(Clone, Debug)]
 pub struct WidgetSet<'a> {
     pub widgets: Vec<(TokenStream, Widget<'a>)>,
+    /// None if the widget length is smaller or equal to 1. Each count is unique to
+    /// guarantee that multiple WidgetSet implementations are not accidentally created.
     count: Option<u32>,
 }
 

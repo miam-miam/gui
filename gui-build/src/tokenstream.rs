@@ -3,6 +3,9 @@ use quote::ToTokens;
 use std::hash::{Hash, Hasher};
 use std::sync::OnceLock;
 
+/// Modified [`TokenStream`] that can be equated with another. This is done by converting the
+/// [`TokenStream`] into a [`String`] and checking if they are equivalent.
+/// This struct is used to allow [`TokenStream`]s to be stored in [`HashMap`]s.
 #[derive(Clone, Debug, Default)]
 pub struct EqTokenStream(TokenStream, OnceLock<String>);
 
@@ -37,6 +40,7 @@ impl EqTokenStream {
         &self.0
     }
 
+    /// mutably modify the [`TokenStream`] ensuring to invalidate the cached [`String`].
     pub fn get_mut(&mut self) -> &mut TokenStream {
         self.1.take();
         &mut self.0

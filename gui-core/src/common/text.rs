@@ -6,6 +6,7 @@ use vello::{
     *,
 };
 
+/// Brush that wraps a `peniko` [`Brush`] allowing it to be used by `parley`.
 #[derive(Clone, PartialEq, Debug)]
 pub struct ParleyBrush(pub Brush);
 

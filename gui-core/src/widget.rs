@@ -15,6 +15,7 @@ use std::sync::Mutex;
 use vello::kurbo::Size;
 use vello::SceneBuilder;
 
+/// A unique ID to reference a component, each instantiation increments the ID by 1.
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Default, Hash)]
 pub struct RuntimeID(u32);
 
@@ -39,7 +40,8 @@ impl RuntimeID {
     }
 }
 
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Default)]
+/// An ID giving to all widgets to uniquely identify them in their component's namespace.
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Default, Hash)]
 pub struct WidgetID(u32);
 
 impl ToTokens for WidgetID {
@@ -57,6 +59,7 @@ impl WidgetID {
         self.0
     }
 
+    /// Increments the Widget ID based on a given component ID.
     pub fn next(component_id: u32) -> Self {
         static WIDGET_COUNTER: Mutex<Vec<u32>> = Mutex::new(vec![]);
         let mut array = WIDGET_COUNTER.lock().expect("Mutex is not poisoned");
@@ -69,6 +72,7 @@ impl WidgetID {
     }
 }
 
+/// Framework events a widget could respond to.
 #[derive(Clone, Debug, PartialEq)]
 pub enum WidgetEvent<'a> {
     PointerUp(&'a PointerEvent),
@@ -92,9 +96,14 @@ impl<'a> WidgetEvent<'a> {
 }
 
 pub trait Widget<T: ToComponent> {
+    /// The id of the widget
     fn id(&self) -> WidgetID;
+    /// render the widget. It is up to the widget to call the render handle with any widget children that should be rendered.
     fn render(&mut self, scene: &mut SceneBuilder, handle: &mut RenderHandle<T>);
+    /// resize the current widget, the selected [`Size`] must be adhered to, it is up to the widget
+    /// to call `resize` on its children and tell the `handle` the child's position in the widget's local position.
     fn resize(&mut self, constraints: LayoutConstraints, handle: &mut ResizeHandle<T>) -> Size;
+    /// propagate the WidgetEvent use the [`EventHandle`] to decide how the event should be propagated to children.
     fn event(&mut self, event: WidgetEvent, handle: &mut EventHandle<T>);
 }
 
@@ -120,8 +129,11 @@ impl<T: Any> AsAny for T {
     }
 }
 
+/// Trait used to create and define widgets. All the implemented functions will only be run once
+/// so must only depend on the state of the WidgetBuilder.
 #[typetag::deserialize(tag = "widget", content = "properties", deny_unknown_fields)]
 pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
+    /// The type of the widget.
     fn widget_type(
         &self,
         handler: Option<&Ident>,
@@ -129,9 +141,15 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
         child: Option<&TokenStream>,
         stream: &mut TokenStream,
     );
+    /// The name of the widget, used in diagnostics. Normally matches the tag name.
     fn name(&self) -> &'static str;
+    /// Used to combine style properties and state properties into a single component.
+    /// Will always match the type of the current WidgetBuilder.
     fn combine(&mut self, rhs: &dyn WidgetBuilder);
+    /// [`TokenStream`] to create the widget, passing in the id and children.
+    /// The `children` [`TokenStream`] is of the form `<child1>, <child2>, <child3>`.
     fn create_widget(&self, id: WidgetID, children: Option<&TokenStream>, stream: &mut TokenStream);
+    /// Function to be called when a `property` is updated.
     fn on_property_update(
         &self,
         property: &'static str,
@@ -140,17 +158,52 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
         handle: &Ident,
         stream: &mut TokenStream,
     );
+    /// The value of a given static and the property it relates to.
     fn get_statics(&self) -> Vec<(&'static str, TokenStream)>;
+    /// The fluent and the property it is attached to.
     fn get_fluents(&self) -> Vec<(&'static str, Fluent)>;
+    /// The variables and property they are attached to.
     fn get_vars(&self) -> Vec<(&'static str, Name)>;
+    /// The components and property the widget holds.
     fn get_components(&self) -> Vec<(&'static str, ComponentVar)> {
         vec![]
     }
+    /// Indicates whether this widget has a handler.
     fn has_handler(&self) -> bool {
         false
     }
+    /// Return [`WidgetDeclaration`]s for each child stored in the widget.
+    /// None indicates that this widget does not normally store children
     fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>>;
+    /// Return the [`TokenStream`] needed to access the given child widgets from runtime widget.
+    /// None indicates that this widget does not normally store children
     fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>>;
 }
 
+// Allows the WidgetBuilder trait objects to be cloned into boxes.
 dyn_clone::clone_trait_object!(WidgetBuilder);
+
+#[cfg(test)]
+mod test {
+    use crate::widget::{RuntimeID, WidgetID};
+
+    #[test]
+    pub fn test_runtime_id() {
+        let first = RuntimeID::next();
+        let second = RuntimeID::next();
+        assert!(first.0 < second.0);
+    }
+
+    #[test]
+    pub fn test_widget_id() {
+        fn compare_ids(component_id: u32) {
+            let first = WidgetID::next(component_id);
+            let second = WidgetID::next(component_id);
+            assert!(first.0 < second.0);
+        }
+
+        compare_ids(0);
+        compare_ids(1);
+        compare_ids(2);
+    }
+}

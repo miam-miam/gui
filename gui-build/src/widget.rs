@@ -19,16 +19,18 @@ use quote::{format_ident, quote};
 use std::sync::atomic::{AtomicU32, Ordering};
 use widget_set::WidgetSet;
 
+/// Representation of a WidgetTree
 #[derive(Clone, Debug)]
 pub struct Widget<'a> {
     pub widget_type_name: &'static str,
     pub widget_declaration: &'a WidgetDeclaration,
     pub state_overrides: Vec<OverriddenWidget<'a>>,
+    /// Ignore fallback if this is the case.
     pub fully_state_overridden: bool,
     pub shared_overrides: WidgetProperties,
     pub fallback: WidgetProperties,
     pub child_widgets: Option<WidgetSet<'a>>,
-    pub child_type: Option<Ident>,
+    /// The name of the handler if this Widget requires one.
     pub handler: Option<Ident>,
     pub components: Components,
     pub id: WidgetID,
@@ -82,7 +84,6 @@ impl<'a> Widget<'a> {
                 .widgets()
                 .map(|ws| WidgetSet::new(component_name, ws, states, component_id))
                 .transpose()?,
-            child_type: None,
             fully_state_overridden: !state_overrides.is_empty()
                 && state_overrides.len() == states.len(),
             handler,

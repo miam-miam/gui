@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 gui = { path = "../../." }
-rand = "0.8.5"
 
 [build-dependencies]
 gui-build = { path = "../../gui-build" }

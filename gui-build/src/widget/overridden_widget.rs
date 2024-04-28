@@ -27,6 +27,7 @@ impl WidgetProperties {
             })
     }
 
+    /// Removes properties that are shared by all the given `widgets`.
     #[allow(clippy::mutable_key_type)]
     pub fn remove_common_properties(widgets: &mut [OverriddenWidget]) -> Self {
         let common_statics =
@@ -62,6 +63,7 @@ impl WidgetProperties {
     }
 }
 
+/// Struct holding the specific property overrides for each state.
 #[derive(Clone, Debug, Default)]
 pub struct OverriddenWidget<'a> {
     pub state_name: &'a str,
