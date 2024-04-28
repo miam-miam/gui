@@ -4,6 +4,7 @@ use glazier::kurbo::Rect;
 use itertools::Itertools;
 use std::collections::HashMap;
 
+/// Runtime information about widgets such as current positions and hovered/active widgets.
 #[derive(Debug, Default, Clone)]
 pub struct WidgetInfo {
     pos_map: HashMap<RuntimeID, Vec<Rect>>,
@@ -67,6 +68,7 @@ impl WidgetInfo {
         array[child_id.id() as usize] = rect;
     }
 
+    /// Remove all information stored about a component's widgets
     pub fn remove_runtime_id(&mut self, runtime_id: RuntimeID) {
         self.pos_map.remove(&runtime_id);
         if let Some((active_id, _)) = self.active_widget {
@@ -243,7 +245,7 @@ mod tests {
         let component = ComponentMock::default();
         let rect = Rect::new(0.0, 0.0, 10.0, 10.0);
         widget_info.convert_to_global_positions(rect, &component);
-        assert!(widget_info.pos_map.is_empty());
+        assert_eq!(widget_info.get_rect(RUNTIME_ZERO, WIDGET_ZERO), rect);
     }
 
     #[test]

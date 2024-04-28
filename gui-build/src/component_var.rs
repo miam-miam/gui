@@ -8,6 +8,7 @@ use quote::{format_ident, quote};
 use std::collections::HashMap;
 use std::iter;
 
+/// Struct holding pre-generated information from a [`ComponentVariableDeclaration`].
 #[derive(Debug, Clone)]
 struct ComponentVar {
     type_stream: TokenStream,
@@ -31,6 +32,7 @@ impl ComponentVar {
     }
 }
 
+/// Struct holding a set of [`ComponentVar`]s that will be used to emit a `MultiComponentHolder`
 #[derive(Debug, Clone)]
 pub struct ComponentVars(Vec<ComponentVar>);
 

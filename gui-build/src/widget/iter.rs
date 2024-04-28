@@ -1,5 +1,6 @@
 use crate::widget::Widget;
 
+/// A custom [`Widget`] tree iterator that visits the tree using a DFS approach
 pub struct WidgetIter<'a, 'b> {
     widget: Option<&'b Widget<'a>>,
     to_visit: Vec<&'b Widget<'a>>,

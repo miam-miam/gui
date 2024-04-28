@@ -2,6 +2,7 @@ use gui_core::parse::fluent::Fluent;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 
+/// Struct holding pre-generated information from a [`Fluent`] to help with generating the associated [`TokenStream`]s.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct FluentIdent {
     pub property: &'static str,
@@ -29,6 +30,7 @@ impl FluentIdent {
         }
     }
 
+    /// Used when a state a fluent property is only applied in certain states
     pub fn new_state_override(
         property: &'static str,
         fluent: Fluent,

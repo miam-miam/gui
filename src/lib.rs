@@ -36,6 +36,7 @@ use wgpu::Maintain;
 const WIDTH: usize = 1024;
 const HEIGHT: usize = 768;
 
+/// Entry point of the framework. Use this to create a window with the specified component.
 pub fn run<T: ToComponent>(component: T)
 where
     <T as ToComponent>::Component: 'static,
@@ -55,7 +56,10 @@ where
     app.run(None);
 }
 
+/// Holds the structs needed to render a component to a window.
 struct WindowState<C: Component + 'static> {
+    /// If this is set to the default value then a window has not been initialised,
+    /// and we are most likely rendering the window through a test.
     handle: Handle,
     renderer: Option<Renderer>,
     render: RenderContext,

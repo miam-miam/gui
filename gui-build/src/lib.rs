@@ -16,6 +16,9 @@ use std::path::Path;
 
 extern crate gui_widget;
 
+/// Entry point of the `gui-build` crate. Use this to compile the layout file at the given `path`
+/// into code. This function must be run in a `build.rs` file. To provide better error diagnostics
+/// this function will exit if an error is encountered.
 pub fn build<P: AsRef<Path>>(path: P) {
     if let Err(e) = build_path(path.as_ref()) {
         println!("{e:#}");

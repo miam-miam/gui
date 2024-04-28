@@ -6,6 +6,7 @@ use glazier::{Cursor, WindowHandle};
 use parley::FontContext;
 use vello::{SceneBuilder, SceneFragment};
 
+/// Handle used by [`RenderHandle`], [`UpdateHandle`] and [`EventHandle`]
 #[derive(Clone)]
 pub struct Handle {
     pub fcx: FontContext,

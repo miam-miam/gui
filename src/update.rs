@@ -1,3 +1,5 @@
+/// Main struct used to create procedural-type variables use this in your user-defined components
+/// to forego the need to implement the `Variable` trait.
 #[derive(Debug, Default)]
 pub struct Updateable<T> {
     updated: bool,
@@ -13,11 +15,6 @@ impl<T> Updateable<T> {
     }
     pub fn is_updated(&self) -> bool {
         self.updated
-    }
-
-    pub fn set_value(&mut self, val: T) {
-        self.value = val;
-        self.updated = true;
     }
 
     pub fn invalidate(&mut self) -> &mut T {
@@ -37,6 +34,16 @@ impl<T> Updateable<T> {
 impl<T: Clone> Updateable<T> {
     pub fn value(&self) -> T {
         self.value.clone()
+    }
+}
+
+impl<T: PartialEq> Updateable<T> {
+    /// Set the variable's value to `val`, invalidating the stored value if the value has changed.
+    pub fn set_value(&mut self, val: T) {
+        if self.value != val {
+            self.value = val;
+            self.updated = true;
+        }
     }
 }
 

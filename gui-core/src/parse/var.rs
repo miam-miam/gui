@@ -6,6 +6,7 @@ use std::ops::Deref;
 use std::str::FromStr;
 use syn::__private::Span;
 
+/// A variable that can either contain a variable declaration or a value
 #[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum Var<T> {
@@ -32,6 +33,7 @@ impl ComponentVar {
     }
 }
 
+/// A name that can be written out as a valid Rust identifier
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Name(String);
 

@@ -16,6 +16,7 @@ use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::thread;
 
+/// Render a screenshot and add it to the `wip` folder if it does not match the currently stored image.
 #[macro_export]
 macro_rules! assert_screenshot {
     ($harness:expr, $($arg:tt)*) => {$harness.take_screenshot(file!(), &format!($($arg)*))};
@@ -50,6 +51,8 @@ struct TestReport {
     wip_tests: u32,
 }
 
+/// Create a [`TestHarness`] to tests a component.
+/// The [`assert_screenshot`] macro can be used to check is visually identical between runs.
 pub struct TestHarness<T: ToComponent>
 where
     <T as ToComponent>::Component: 'static,
@@ -82,7 +85,7 @@ impl<T: ToComponent> TestHarness<T> {
         self.window_state.resize();
     }
 
-    /// Returns the size of the widget (not the component)
+    /// Returns the size of the first widget (not the component)
     pub fn set_size<S: Into<Size>>(&mut self, size: S) -> Size {
         self.window_state.size = size.into();
         self.window_state.resize();
@@ -119,6 +122,7 @@ impl<T: ToComponent> TestHarness<T> {
         (reference_path, new_path)
     }
 
+    /// Prefer to use [`assert_screenshot`] to take screenshots.
     pub fn take_screenshot(&mut self, file_path: &str, message: &str) {
         if message.contains(char::is_whitespace) {
             panic!("Message should not contain any whitespace: {message}")

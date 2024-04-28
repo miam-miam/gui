@@ -1,5 +1,6 @@
 use crate::OnMessage;
 
+/// Component holder that allows components to hold other components
 #[derive(Clone, Debug)]
 pub struct CompHolder<T: OnMessage> {
     component: Option<T>,
@@ -31,6 +32,7 @@ impl<T: OnMessage> CompHolder<T> {
     }
 }
 
+/// Used internally by the framework.
 #[doc(hidden)]
 impl<T: OnMessage> CompHolder<T> {
     pub fn take(&mut self) -> Option<T> {

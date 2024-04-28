@@ -7,6 +7,7 @@ use serde::de::{Error, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::fmt::Formatter;
 
+/// A parsed Fluent text. The variables are extracted by traversing the produced AST
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Fluent {
     pub vars: Vec<Name>,

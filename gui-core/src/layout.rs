@@ -1,6 +1,7 @@
 use vello::kurbo::common::FloatExt;
 use vello::kurbo::Size;
 
+/// Layout constraints used when resizing a Widget.
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[must_use]
 pub struct LayoutConstraints {
