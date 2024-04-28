@@ -33,7 +33,9 @@ pub use testing::TestHarness;
 pub use update::Updateable;
 use wgpu::Maintain;
 
+/// Default width of the window
 const WIDTH: usize = 1024;
+/// Default height of the window
 const HEIGHT: usize = 768;
 
 /// Entry point of the framework. Use this to create a window with the specified component.
