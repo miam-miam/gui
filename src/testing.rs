@@ -16,7 +16,8 @@ use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::thread;
 
-/// Render a screenshot and add it to the `wip` folder if it does not match the currently stored image.
+/// Render a screenshot and add it to the `wip` folder if it does not match the currently stored
+/// image. The `GUI_SCREENSHOT_RUNNER` environment variable can be used to control what screenshot group gets used.
 #[macro_export]
 macro_rules! assert_screenshot {
     ($harness:expr, $($arg:tt)*) => {$harness.take_screenshot(file!(), &format!($($arg)*))};
