@@ -115,7 +115,12 @@ impl<'a> Widget<'a> {
         for ow in &self.state_overrides {
             container.extend_from_slice(&ow.state_fluent_overrides.0[..]);
         }
-        for (_, child) in self.child_widgets.iter().flat_map(|s| &s.widgets) {
+        for (_, child) in self
+            .child_widgets
+            .iter()
+            .flat_map(|s| &s.widgets)
+            .flat_map(|(_, w)| w.iter())
+        {
             child.push_fluents(container);
         }
     }
@@ -226,14 +231,25 @@ impl<'a> Widget<'a> {
         }
     }
 
+    // TODO separate out child init so that it is done at the same time as the fluents
     pub fn gen_widget_init(&self) -> TokenStream {
         let mut stream = TokenStream::new();
         let child_init = self.child_widgets.as_ref().map(WidgetSet::gen_widget_init);
 
         self.widget_declaration
             .widget
-            .create_widget(self.id, child_init.as_ref(), &mut stream);
-        stream
+            .create_widget(self.id, &mut stream);
+        if child_init.is_some() {
+            quote!(
+                {
+                    let mut widget = #stream;
+                    #child_init;
+                    widget
+                }
+            )
+        } else {
+            stream
+        }
     }
 
     pub fn gen_widget_set(&self, stream: &mut TokenStream) {
@@ -354,6 +370,7 @@ impl<'a> Widget<'a> {
             let child_ids = set
                 .widgets
                 .iter()
+                .flat_map(|(_, w)| w.iter())
                 .map(|(_, w)| {
                     w.get_parent_ids(acc);
                     w.id
@@ -375,7 +392,7 @@ impl<'a> Widget<'a> {
         }
 
         if let Some(ws) = &self.child_widgets {
-            for (_, w) in &ws.widgets {
+            for (_, w) in ws.widgets.iter().flat_map(|(_, w)| w.iter()) {
                 w.gen_handler_structs(stream)?;
             }
         }

@@ -1,10 +1,9 @@
 use gui_core::glazier::kurbo::Rect;
-use gui_core::parse::fluent::Fluent;
 use gui_core::parse::var::Name;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::widget::{
-    EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
-    WidgetID,
+    EventHandle, MultiWidget, MutMultiWidget, RenderHandle, ResizeHandle, SingleOrMulti,
+    UpdateHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID,
 };
 use gui_core::{LayoutConstraints, Point, SceneBuilder, Size, ToComponent, Var};
 use itertools::Itertools;
@@ -48,21 +47,21 @@ pub struct HVStack<W> {
 }
 
 impl<W> HVStack<W> {
-    pub fn new_horizontal(id: WidgetID, children: Vec<W>) -> Self {
+    pub fn new_horizontal(id: WidgetID) -> Self {
         Self {
             id,
             axis: Axis::Horizontal,
             spacing: Default::default(),
-            children,
+            children: vec![],
         }
     }
 
-    pub fn new_vertical(id: WidgetID, children: Vec<W>) -> Self {
+    pub fn new_vertical(id: WidgetID) -> Self {
         Self {
             id,
             axis: Axis::Vertical,
             spacing: Default::default(),
-            children,
+            children: vec![],
         }
     }
 
@@ -71,8 +70,8 @@ impl<W> HVStack<W> {
         handle.invalidate_id(self.id);
     }
 
-    pub fn widgets(&mut self, i: usize) -> &mut W {
-        self.children.get_mut(i).unwrap()
+    pub fn widgets(&mut self) -> &mut Vec<W> {
+        &mut self.children
     }
 }
 
@@ -176,14 +175,9 @@ impl WidgetBuilder for HStackBuilder {
         }
     }
 
-    fn create_widget(
-        &self,
-        id: WidgetID,
-        children: Option<&TokenStream>,
-        stream: &mut TokenStream,
-    ) {
+    fn create_widget(&self, id: WidgetID, stream: &mut TokenStream) {
         stream.extend(quote! {
-            ::gui::gui_widget::HVStack::new_horizontal(#id, vec![#children])
+            ::gui::gui_widget::HVStack::new_horizontal(#id)
         });
     }
 
@@ -212,10 +206,6 @@ impl WidgetBuilder for HStackBuilder {
         array
     }
 
-    fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
-        vec![]
-    }
-
     fn get_vars(&self) -> Vec<(&'static str, Name)> {
         let mut array = vec![];
         if let Some(Var::Variable(v)) = &self.spacing {
@@ -224,18 +214,23 @@ impl WidgetBuilder for HStackBuilder {
         array
     }
 
-    fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
-        Some(self.children.iter_mut().collect())
+    fn get_widgets(&mut self) -> Option<Vec<MutMultiWidget>> {
+        let mut array = vec![];
+        if !self.children.is_empty() {
+            array.push(SingleOrMulti::Multi(self.children.iter_mut().collect()));
+        }
+        Some(array)
     }
 
-    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
-        Some(
-            self.children
-                .iter()
-                .enumerate()
-                .map(|(i, c)| (quote!(.widgets(#i)), c))
-                .collect(),
-        )
+    fn widgets(&self) -> Option<Vec<(TokenStream, MultiWidget)>> {
+        let mut array = vec![];
+        if !self.children.is_empty() {
+            array.push((
+                quote!(.widgets()),
+                SingleOrMulti::Multi(self.children.iter().collect()),
+            ));
+        }
+        Some(array)
     }
 }
 
@@ -270,14 +265,9 @@ impl WidgetBuilder for VStackBuilder {
         }
     }
 
-    fn create_widget(
-        &self,
-        id: WidgetID,
-        children: Option<&TokenStream>,
-        stream: &mut TokenStream,
-    ) {
+    fn create_widget(&self, id: WidgetID, stream: &mut TokenStream) {
         stream.extend(quote! {
-            ::gui::gui_widget::HVStack::new_vertical(#id, vec![#children])
+            ::gui::gui_widget::HVStack::new_vertical(#id)
         });
     }
 
@@ -306,10 +296,6 @@ impl WidgetBuilder for VStackBuilder {
         array
     }
 
-    fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
-        vec![]
-    }
-
     fn get_vars(&self) -> Vec<(&'static str, Name)> {
         let mut array = vec![];
         if let Some(Var::Variable(v)) = &self.spacing {
@@ -318,17 +304,22 @@ impl WidgetBuilder for VStackBuilder {
         array
     }
 
-    fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
-        Some(self.children.iter_mut().collect())
+    fn get_widgets(&mut self) -> Option<Vec<MutMultiWidget>> {
+        let mut array = vec![];
+        if !self.children.is_empty() {
+            array.push(SingleOrMulti::Multi(self.children.iter_mut().collect()));
+        }
+        Some(array)
     }
 
-    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
-        Some(
-            self.children
-                .iter()
-                .enumerate()
-                .map(|(i, c)| (quote!(.widgets(#i)), c))
-                .collect(),
-        )
+    fn widgets(&self) -> Option<Vec<(TokenStream, MultiWidget)>> {
+        let mut array = vec![];
+        if !self.children.is_empty() {
+            array.push((
+                quote!(.widgets()),
+                SingleOrMulti::Multi(self.children.iter().collect()),
+            ));
+        }
+        Some(array)
     }
 }

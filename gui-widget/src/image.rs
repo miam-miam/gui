@@ -1,8 +1,6 @@
 use gui_core::glazier::kurbo::Size;
 use gui_core::layout::LayoutConstraints;
-use gui_core::parse::fluent::Fluent;
 use gui_core::parse::var::Name;
-use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::Affine;
 use gui_core::vello::peniko::{Blob, Format, Image};
 use gui_core::widget::{
@@ -98,7 +96,7 @@ impl WidgetBuilder for ImageBuilder {
         }
     }
 
-    fn create_widget(&self, id: WidgetID, _child: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, stream: &mut TokenStream) {
         stream.extend(quote! {
             ::gui::gui_widget::ImageWidget::new(#id)
         });
@@ -130,22 +128,11 @@ impl WidgetBuilder for ImageBuilder {
         array
     }
 
-    fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
-        vec![]
-    }
-
     fn get_vars(&self) -> Vec<(&'static str, Name)> {
         let mut array = vec![];
         if let Some(Var::Variable(v)) = &self.image {
             array.push(("image", v.clone()));
         }
         array
-    }
-    fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
-        None
-    }
-
-    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
-        None
     }
 }

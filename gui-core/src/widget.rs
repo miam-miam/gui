@@ -7,9 +7,11 @@ use crate::ToComponent;
 use dyn_clone::DynClone;
 use glazier::kurbo::Point;
 use glazier::PointerEvent;
+use itertools::Either;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use std::any::Any;
+use std::slice::IterMut;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Mutex;
 use vello::kurbo::Size;
@@ -129,6 +131,90 @@ impl<T: Any> AsAny for T {
     }
 }
 
+pub type MutMultiWidget<'a> = SingleOrMulti<&'a mut WidgetDeclaration>;
+pub type MultiWidget<'a> = SingleOrMulti<&'a WidgetDeclaration>;
+
+#[derive(Clone, Debug)]
+pub enum SingleOrMulti<T> {
+    Single(T),
+    Multi(Vec<T>),
+}
+
+impl<T> SingleOrMulti<T> {
+    pub fn single(&self) -> Option<&T> {
+        if let SingleOrMulti::Single(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn multi(&self) -> Option<&Vec<T>> {
+        if let SingleOrMulti::Multi(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            SingleOrMulti::Single(_) => 1,
+            SingleOrMulti::Multi(v) => v.len(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.multi().is_some_and(|v| v.is_empty())
+    }
+
+    pub fn map<U, F: FnMut(T) -> U>(self, mut f: F) -> SingleOrMulti<U> {
+        match self {
+            SingleOrMulti::Single(s) => SingleOrMulti::Single(f(s)),
+            SingleOrMulti::Multi(m) => SingleOrMulti::Multi(m.into_iter().map(f).collect()),
+        }
+    }
+
+    pub fn try_map<U, E, F: FnMut(T) -> Result<U, E>>(
+        self,
+        mut f: F,
+    ) -> Result<SingleOrMulti<U>, E> {
+        Ok(match self {
+            SingleOrMulti::Single(s) => SingleOrMulti::Single(f(s)?),
+            SingleOrMulti::Multi(m) => {
+                SingleOrMulti::Multi(m.into_iter().map(f).collect::<Result<Vec<_>, E>>()?)
+            }
+        })
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.single()
+            .into_iter()
+            .chain(self.multi().into_iter().flat_map(|m| m.iter()))
+    }
+
+    pub fn iter_mut(&mut self) -> SingleOrMultiIterMut<T> {
+        let either = match self {
+            SingleOrMulti::Single(s) => Either::Left(Some(s)),
+            SingleOrMulti::Multi(m) => Either::Right(m.iter_mut()),
+        };
+        SingleOrMultiIterMut(either)
+    }
+}
+
+pub struct SingleOrMultiIterMut<'a, T>(Either<Option<&'a mut T>, IterMut<'a, T>>);
+
+impl<'a, T> Iterator for SingleOrMultiIterMut<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &mut self.0 {
+            Either::Left(l) => l.take(),
+            Either::Right(r) => r.next(),
+        }
+    }
+}
+
 /// Trait used to create and define widgets. All the implemented functions will only be run once
 /// so must only depend on the state of the WidgetBuilder.
 #[typetag::deserialize(tag = "widget", content = "properties", deny_unknown_fields)]
@@ -148,7 +234,7 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
     fn combine(&mut self, rhs: &dyn WidgetBuilder);
     /// [`TokenStream`] to create the widget, passing in the id and children.
     /// The `children` [`TokenStream`] is of the form `<child1>, <child2>, <child3>`.
-    fn create_widget(&self, id: WidgetID, children: Option<&TokenStream>, stream: &mut TokenStream);
+    fn create_widget(&self, id: WidgetID, stream: &mut TokenStream);
     /// Function to be called when a `property` is updated.
     fn on_property_update(
         &self,
@@ -159,11 +245,17 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
         stream: &mut TokenStream,
     );
     /// The value of a given static and the property it relates to.
-    fn get_statics(&self) -> Vec<(&'static str, TokenStream)>;
+    fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
+        vec![]
+    }
     /// The fluent and the property it is attached to.
-    fn get_fluents(&self) -> Vec<(&'static str, Fluent)>;
+    fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
+        vec![]
+    }
     /// The variables and property they are attached to.
-    fn get_vars(&self) -> Vec<(&'static str, Name)>;
+    fn get_vars(&self) -> Vec<(&'static str, Name)> {
+        vec![]
+    }
     /// The components and property the widget holds.
     fn get_components(&self) -> Vec<(&'static str, ComponentVar)> {
         vec![]
@@ -174,10 +266,14 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
     }
     /// Return [`WidgetDeclaration`]s for each child stored in the widget.
     /// None indicates that this widget does not normally store children
-    fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>>;
+    fn get_widgets(&mut self) -> Option<Vec<MutMultiWidget>> {
+        None
+    }
     /// Return the [`TokenStream`] needed to access the given child widgets from runtime widget.
     /// None indicates that this widget does not normally store children
-    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>>;
+    fn widgets(&self) -> Option<Vec<(TokenStream, MultiWidget)>> {
+        None
+    }
 }
 
 // Allows the WidgetBuilder trait objects to be cloned into boxes.

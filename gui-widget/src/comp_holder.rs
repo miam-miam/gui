@@ -1,8 +1,6 @@
 use gui_core::glazier::kurbo::Size;
 use gui_core::layout::LayoutConstraints;
-use gui_core::parse::fluent::Fluent;
-use gui_core::parse::var::{ComponentVar, Name};
-use gui_core::parse::WidgetDeclaration;
+use gui_core::parse::var::ComponentVar;
 use gui_core::widget::{
     EventHandle, RenderHandle, ResizeHandle, RuntimeID, UpdateHandle, Widget, WidgetBuilder,
     WidgetEvent, WidgetID,
@@ -76,7 +74,7 @@ impl WidgetBuilder for CompHolderBuilder {
     }
     fn combine(&mut self, _rhs: &dyn WidgetBuilder) {}
 
-    fn create_widget(&self, id: WidgetID, _child: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, stream: &mut TokenStream) {
         stream.extend(quote! {
             ::gui::gui_widget::CompHolder::new(#id)
         });
@@ -97,31 +95,11 @@ impl WidgetBuilder for CompHolderBuilder {
         }
     }
 
-    fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
-        vec![]
-    }
-
-    fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
-        vec![]
-    }
-
-    fn get_vars(&self) -> Vec<(&'static str, Name)> {
-        vec![]
-    }
-
     fn get_components(&self) -> Vec<(&'static str, ComponentVar)> {
         let mut result = vec![];
         if let Some(v) = &self.component {
             result.push(("component", v.clone()));
         }
         result
-    }
-
-    fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
-        None
-    }
-
-    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
-        None
     }
 }

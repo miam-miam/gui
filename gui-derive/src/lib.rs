@@ -35,13 +35,13 @@ pub fn type_registry(item: TokenStream) -> TokenStream {
 /// `::crate_name::widget_struct<type_param1, type_param2>`). 3 different parameters can be used
 /// (`#handler` (a type that implements `ToHandler`), `#component` (a type that implements
 /// `ToComponent`) and `#child` (the type of the children this widget can hold))
-/// - `init_path` (of the form `new(#id)`) which describes how the runtime widget should be created.
-/// The `#id` parameter must be used, any children field attributes can also be used
+/// - `init_path` (of the form `new`) which describes how the runtime widget should be created
+/// of type `fn(WidgetId) -> RuntimeWidget`
 ///
 /// ## Field Attributes
 ///
 /// Defaults are not required and are only available with `property` or `static_only`.
-/// - `default = "const_expression"`
+/// - `default = "expression"` of type `T` where `T: ToTokens`
 /// - `default_with = "path_to_function"` of type `fn(&WidgetBuilder) -> T` where `T: ToTokens`
 /// - `<property|static_only|var_only> = "path_to_function"` of type `fn(&mut RuntimeWidget, T, &mut UpdateHandle) -> ()` where `T: ToTokens`
 /// - `fluent = "path_to_function"` of type `fn<'a>(&mut RuntimeWidget, Cow<'a, str>, &mut UpdateHandle) -> ()`

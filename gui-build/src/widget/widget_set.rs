@@ -1,5 +1,6 @@
 use crate::widget::Widget;
-use gui_core::parse::{StateDeclaration, WidgetDeclaration};
+use gui_core::parse::StateDeclaration;
+use gui_core::widget::{MultiWidget, SingleOrMulti};
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
@@ -9,7 +10,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 /// A widget set is only created if there is more than one widget stored.
 #[derive(Clone, Debug)]
 pub struct WidgetSet<'a> {
-    pub widgets: Vec<(TokenStream, Widget<'a>)>,
+    pub widgets: Vec<(TokenStream, SingleOrMulti<(u32, Widget<'a>)>)>,
     /// None if the widget length is smaller or equal to 1. Each count is unique to
     /// guarantee that multiple WidgetSet implementations are not accidentally created.
     count: Option<u32>,
@@ -18,31 +19,38 @@ pub struct WidgetSet<'a> {
 impl<'a> WidgetSet<'a> {
     pub fn new(
         component_name: &str,
-        widgets: Vec<(TokenStream, &'a WidgetDeclaration)>,
+        widgets: Vec<(TokenStream, MultiWidget<'a>)>,
         states: &'a [StateDeclaration],
         component_id: u32,
     ) -> anyhow::Result<Self> {
         static COUNTER: AtomicU32 = AtomicU32::new(0);
+        let mut i = 0;
 
         let widgets = widgets
             .into_iter()
+            .filter(|(_, w)| !w.is_empty())
             .map(|(s, w)| {
-                Ok((
-                    s,
-                    Widget::new_inner(component_name, w, states, component_id)?,
-                ))
+                let widget = w.try_map(|w| {
+                    i += 1;
+                    Ok::<_, anyhow::Error>((
+                        i - 1,
+                        Widget::new_inner(component_name, w, states, component_id)?,
+                    ))
+                })?;
+                Ok((s, widget))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
 
         Ok(Self {
-            count: (widgets.len() > 1).then(|| COUNTER.fetch_add(1, Ordering::Relaxed)),
+            count: (i > 1).then(|| COUNTER.fetch_add(1, Ordering::Relaxed)),
             widgets,
         })
     }
 
     pub fn gen_widget_type(&self) -> TokenStream {
         match &self.widgets[..] {
-            [(_, child)] => child.gen_widget_type(),
+            [(_, SingleOrMulti::Single((_, child)))] => child.gen_widget_type(),
+            [(_, SingleOrMulti::Multi(v))] if v.len() == 1 => v[0].1.gen_widget_type(),
             [] => quote!(()),
             _ => {
                 let count = self.count.expect("widget set should be created.");
@@ -54,53 +62,64 @@ impl<'a> WidgetSet<'a> {
 
     pub fn gen_widget_init(&self) -> TokenStream {
         match &self.widgets[..] {
-            [(_, child)] => child.gen_widget_init(),
-            [] => quote!(()),
+            [(s, SingleOrMulti::Single((_, child)))] => {
+                let stream = child.gen_widget_init();
+                quote!(*widget #s = #stream)
+            }
+            [(s, SingleOrMulti::Multi(v))] if v.len() == 1 => {
+                let stream = v[0].1.gen_widget_init();
+                quote!(*widget #s = vec![#stream])
+            }
+            [] => TokenStream::new(),
             _ => {
                 let count = self.count.expect("widget set should be created.");
                 let widget_set = format_ident!("WidgetSet{count}");
 
-                let inits = self
-                    .widgets
+                self.widgets
                     .iter()
-                    .map(|(_, child)| child.gen_widget_init());
-
-                let variants = self.widgets.iter().enumerate().map(|(i, _)| {
-                    let ident = format_ident!("W{i}");
-                    quote!(#widget_set::#ident)
-                });
-
-                quote! {
-                    #(#variants(#inits)),*
-                }
+                    .map(|(s, child)| match child {
+                        SingleOrMulti::Single((i, child)) => {
+                            let stream = child.gen_widget_init();
+                            let ident = format_ident!("W{i}");
+                            quote!(*widget #s = #widget_set :: #ident (#stream))
+                        }
+                        SingleOrMulti::Multi(children) => {
+                            let inits = children.iter().map(|(i, child)| {
+                                let stream = child.gen_widget_init();
+                                let ident = format_ident!("W{i}");
+                                quote!(#widget_set :: #ident (#stream))
+                            });
+                            quote!(*widget #s = vec![#(#inits),*])
+                        }
+                    })
+                    .collect()
             }
         }
     }
 
     pub fn gen_widget_set(&self, stream: &mut TokenStream) {
+        let all_widgets = self
+            .widgets
+            .iter()
+            .flat_map(|(_, w)| w.iter())
+            .collect_vec();
+
         if let Some(count) = self.count {
             let widget_set = format_ident!("WidgetSet{count}");
 
-            let variants = self
-                .widgets
+            let variants = all_widgets
                 .iter()
-                .enumerate()
                 .map(|(i, _)| format_ident!("W{i}"))
                 .collect_vec();
 
-            let func_names = self
-                .widgets
-                .iter()
-                .enumerate()
-                .map(|(i, _)| format_ident!("w{i}"));
+            let func_names = all_widgets.iter().map(|(i, _)| format_ident!("w{i}"));
 
-            let types = self
-                .widgets
+            let types = all_widgets
                 .iter()
                 .map(|(_, w)| w.gen_widget_type())
                 .collect_vec();
 
-            let ids = self.widgets.iter().map(|(_, w)| w.id);
+            let ids = all_widgets.iter().map(|(_, w)| w.id);
 
             stream.extend(quote! {
                 enum #widget_set {
@@ -148,23 +167,41 @@ impl<'a> WidgetSet<'a> {
             });
         }
 
-        for (_, w) in &self.widgets {
+        for (_, w) in all_widgets {
             w.gen_widget_set(stream)
         }
     }
 
+    //TODO: Fix this to cache results instead of re-computing this every time.
     pub fn gen_widget_gets<'b>(
         &'b self,
         stream: &'b TokenStream,
     ) -> impl Iterator<Item = (TokenStream, &Widget)> + '_ {
-        self.widgets.iter().enumerate().map(|(i, (get_widget, w))| {
-            let mut s = stream.clone();
-            s.extend(get_widget.clone());
-            if self.count.is_some() {
-                let func = format_ident!("w{i}");
-                s.extend(quote!( .#func() ));
-            }
-            (s, w)
-        })
+        self.widgets
+            .iter()
+            .flat_map(|(get_widget, widgets)| match widgets {
+                SingleOrMulti::Single((i, w)) => {
+                    let mut s = stream.clone();
+                    s.extend(get_widget.clone());
+                    if self.count.is_some() {
+                        let func = format_ident!("w{i}");
+                        s.extend(quote!( .#func() ));
+                    }
+                    vec![(s, w)]
+                }
+                SingleOrMulti::Multi(m) => m
+                    .iter()
+                    .enumerate()
+                    .map(|(count, (i, w))| {
+                        let mut s = stream.clone();
+                        s.extend(get_widget.clone());
+                        if self.count.is_some() {
+                            let func = format_ident!("w{i}");
+                            s.extend(quote!( [#count].#func() ));
+                        }
+                        (s, w)
+                    })
+                    .collect_vec(),
+            })
     }
 }

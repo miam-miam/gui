@@ -1,14 +1,14 @@
 use gui_core::glazier::kurbo::{Shape, Size};
 use gui_core::glazier::Cursor;
 use gui_core::layout::LayoutConstraints;
-use gui_core::parse::fluent::Fluent;
 use gui_core::parse::var::Name;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::{Affine, Vec2};
 use gui_core::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
 use gui_core::vello::SceneFragment;
 use gui_core::widget::{
-    RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID,
+    MultiWidget, MutMultiWidget, RenderHandle, ResizeHandle, SingleOrMulti, UpdateHandle, Widget,
+    WidgetBuilder, WidgetEvent, WidgetID,
 };
 use gui_core::{widget, Colour, SceneBuilder, ToComponent, ToHandler, Var};
 use proc_macro2::{Ident, TokenStream};
@@ -29,12 +29,12 @@ pub struct Button<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> {
     hover_colour: Colour,
     border_colour: Colour,
     disabled: bool,
-    child: W,
+    child: Option<W>,
     phantom: PhantomData<(T, C)>,
 }
 
 impl<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> Button<T, C, W> {
-    pub fn new(id: WidgetID, child: W) -> Self {
+    pub fn new(id: WidgetID) -> Self {
         Button {
             id,
             background_colour: Default::default(),
@@ -43,7 +43,7 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> Button<T, C, W
             hover_colour: Default::default(),
             border_colour: Default::default(),
             disabled: Default::default(),
-            child,
+            child: None,
             phantom: PhantomData,
         }
     }
@@ -73,7 +73,7 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> Button<T, C, W
         handle.invalidate_id(self.id)
     }
     pub fn get_widget(&mut self) -> &mut W {
-        &mut self.child
+        self.child.as_mut().unwrap()
     }
 }
 
@@ -117,7 +117,7 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget
 
         let mut fragment = SceneFragment::new();
         let mut builder = SceneBuilder::for_fragment(&mut fragment);
-        handle.render_widgets(&mut builder, [&mut self.child].into_iter());
+        handle.render_widgets(&mut builder, [self.child.as_mut().unwrap()].into_iter());
 
         scene.append(
             &fragment,
@@ -157,7 +157,7 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget
         constraints = constraints.deset(padding);
         let mut child_size = handle.layout_widget(
             padding.to_vec2().to_point(),
-            &mut self.child,
+            self.child.as_mut().unwrap(),
             constraints.min_clamp(Size::new(0.0, 18.0)),
         );
         child_size += padding * 2.0;
@@ -251,9 +251,9 @@ impl WidgetBuilder for ButtonBuilder {
             }
         }
     }
-    fn create_widget(&self, id: WidgetID, child: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, stream: &mut TokenStream) {
         stream.extend(quote! {
-            ::gui::gui_widget::Button::new(#id, #child)
+            ::gui::gui_widget::Button::new(#id)
         });
     }
 
@@ -328,11 +328,6 @@ impl WidgetBuilder for ButtonBuilder {
         };
         array
     }
-
-    fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
-        vec![]
-    }
-
     fn get_vars(&self) -> Vec<(&'static str, Name)> {
         let mut array = vec![];
         if let Some(Var::Variable(v)) = &self.disabled {
@@ -360,15 +355,15 @@ impl WidgetBuilder for ButtonBuilder {
         true
     }
 
-    fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
-        Some(self.child.iter_mut().collect())
+    fn get_widgets(&mut self) -> Option<Vec<MutMultiWidget>> {
+        Some(self.child.iter_mut().map(SingleOrMulti::Single).collect())
     }
 
-    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
+    fn widgets(&self) -> Option<Vec<(TokenStream, MultiWidget)>> {
         Some(
             self.child
                 .iter()
-                .map(|c| (quote!(.get_widget()), c))
+                .map(|c| (quote!(.get_widget()), SingleOrMulti::Single(c)))
                 .collect(),
         )
     }

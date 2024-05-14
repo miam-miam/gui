@@ -119,7 +119,7 @@ mod test {
     use crate::parse::fluent::Fluent;
     use crate::parse::var::Name;
     use crate::parse::{GUIDeclaration, WidgetDeclaration};
-    use crate::widget::{WidgetBuilder, WidgetID};
+    use crate::widget::{SingleOrMulti, WidgetBuilder, WidgetID};
     use proc_macro2::{Ident, TokenStream};
     use serde::Deserialize;
 
@@ -149,12 +149,7 @@ mod test {
             unimplemented!()
         }
 
-        fn create_widget(
-            &self,
-            id: WidgetID,
-            children: Option<&TokenStream>,
-            stream: &mut TokenStream,
-        ) {
+        fn create_widget(&self, id: WidgetID, stream: &mut TokenStream) {
             unimplemented!()
         }
 
@@ -181,11 +176,11 @@ mod test {
             unimplemented!()
         }
 
-        fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
+        fn get_widgets(&mut self) -> Option<Vec<SingleOrMulti<&mut WidgetDeclaration>>> {
             unimplemented!()
         }
 
-        fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
+        fn widgets(&self) -> Option<Vec<(TokenStream, SingleOrMulti<&WidgetDeclaration>)>> {
             unimplemented!()
         }
     }

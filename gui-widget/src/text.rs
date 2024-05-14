@@ -7,7 +7,6 @@ use gui_core::parley::style::{FontWeight, StyleProperty};
 use gui_core::parley::LayoutContext;
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::var::Name;
-use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::Affine;
 use gui_core::vello::peniko::{Brush, Color};
 use gui_core::widget::{
@@ -145,7 +144,7 @@ impl WidgetBuilder for TextBuilder {
         }
     }
 
-    fn create_widget(&self, id: WidgetID, _child: Option<&TokenStream>, stream: &mut TokenStream) {
+    fn create_widget(&self, id: WidgetID, stream: &mut TokenStream) {
         stream.extend(quote! {
             ::gui::gui_widget::Text::new(#id)
         });
@@ -195,13 +194,5 @@ impl WidgetBuilder for TextBuilder {
             array.push(("size", v.clone()));
         }
         array
-    }
-
-    fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
-        None
-    }
-
-    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
-        None
     }
 }
