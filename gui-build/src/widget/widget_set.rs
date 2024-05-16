@@ -67,7 +67,7 @@ impl<'a> WidgetSet<'a> {
         match &self.widgets[..] {
             [(s, Children::One((_, child)))] => {
                 let stream = child.gen_widget_init();
-                quote!(*widget #s = #stream)
+                quote!(*widget #s = Some(#stream))
             }
             [(s, Children::Many(v))] if v.len() == 1 => {
                 let stream = v[0].1.gen_widget_init();
@@ -84,7 +84,7 @@ impl<'a> WidgetSet<'a> {
                         Children::One((i, child)) => {
                             let stream = child.gen_widget_init();
                             let ident = format_ident!("W{i}");
-                            quote!(*widget #s = #widget_set :: #ident (#stream))
+                            quote!(*widget #s = Some(#widget_set :: #ident (#stream)))
                         }
                         Children::Many(children) => {
                             let inits = children.iter().map(|(i, child)| {
@@ -186,6 +186,8 @@ impl<'a> WidgetSet<'a> {
                 Children::One((i, w)) => {
                     let mut s = stream.clone();
                     s.extend(get_widget.clone());
+                    // TODO: Find a better method than using an &mut Option<ChildWidget> for children
+                    s.extend(quote!(.as_mut().unwrap()));
                     if self.count.is_some() {
                         let func = format_ident!("w{i}");
                         s.extend(quote!( .#func() ));

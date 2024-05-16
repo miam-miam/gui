@@ -1,11 +1,12 @@
+use serde::Deserialize;
+
+use crate::parse::var::Name;
+use crate::widget::WidgetBuilder;
+
 pub mod colour;
 pub mod var;
 
 pub mod fluent;
-
-use crate::parse::var::Name;
-use crate::widget::WidgetBuilder;
-use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -116,12 +117,14 @@ pub struct GUIDeclaration {
 
 #[cfg(test)]
 mod test {
-    use crate::parse::fluent::Fluent;
-    use crate::parse::var::Name;
-    use crate::parse::{GUIDeclaration, WidgetDeclaration};
-    use crate::widget::{SingleOrMulti, WidgetBuilder, WidgetID};
     use proc_macro2::{Ident, TokenStream};
     use serde::Deserialize;
+
+    use crate::{MutWidgetChildren, WidgetChildren};
+    use crate::parse::fluent::Fluent;
+    use crate::parse::GUIDeclaration;
+    use crate::parse::var::Name;
+    use crate::widget::{WidgetBuilder, WidgetID};
 
     #[derive(Deserialize, Debug, Clone)]
     struct FakeWidget {
@@ -176,11 +179,11 @@ mod test {
             unimplemented!()
         }
 
-        fn get_widgets(&mut self) -> Option<Vec<SingleOrMulti<&mut WidgetDeclaration>>> {
+        fn get_widgets(&mut self) -> Option<Vec<MutWidgetChildren>> {
             unimplemented!()
         }
 
-        fn widgets(&self) -> Option<Vec<(TokenStream, SingleOrMulti<&WidgetDeclaration>)>> {
+        fn widgets(&self) -> Option<Vec<(TokenStream, WidgetChildren)>> {
             unimplemented!()
         }
     }

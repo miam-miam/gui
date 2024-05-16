@@ -74,8 +74,8 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> Button<T, C, W
         self.border_colour = colour;
         handle.invalidate_id(self.id)
     }
-    pub fn get_widget(&mut self) -> &mut W {
-        self.child.as_mut().unwrap()
+    pub fn get_widget(&mut self) -> &mut Option<W> {
+        &mut self.child
     }
 }
 
