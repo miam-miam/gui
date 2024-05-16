@@ -1,15 +1,19 @@
-use gui_core::glazier::kurbo::Rect;
-use gui_core::parse::var::Name;
-use gui_core::parse::WidgetDeclaration;
-use gui_core::widget::{
-    EventHandle, MultiWidget, MutMultiWidget, RenderHandle, ResizeHandle, SingleOrMulti,
-    UpdateHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID,
-};
-use gui_core::{LayoutConstraints, Point, SceneBuilder, Size, ToComponent, Var};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
+
+use gui_core::{
+    Children, LayoutConstraints, MutWidgetChildren, Point, SceneBuilder, Size, ToComponent,
+    Var, WidgetChildren,
+};
+use gui_core::glazier::kurbo::Rect;
+use gui_core::parse::var::Name;
+use gui_core::parse::WidgetDeclaration;
+use gui_core::widget::{
+    EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
+    WidgetID,
+};
 
 enum Axis {
     Horizontal,
@@ -214,20 +218,20 @@ impl WidgetBuilder for HStackBuilder {
         array
     }
 
-    fn get_widgets(&mut self) -> Option<Vec<MutMultiWidget>> {
+    fn get_widgets(&mut self) -> Option<Vec<MutWidgetChildren>> {
         let mut array = vec![];
         if !self.children.is_empty() {
-            array.push(SingleOrMulti::Multi(self.children.iter_mut().collect()));
+            array.push(Children::Many(self.children.iter_mut().collect()));
         }
         Some(array)
     }
 
-    fn widgets(&self) -> Option<Vec<(TokenStream, MultiWidget)>> {
+    fn widgets(&self) -> Option<Vec<(TokenStream, WidgetChildren)>> {
         let mut array = vec![];
         if !self.children.is_empty() {
             array.push((
                 quote!(.widgets()),
-                SingleOrMulti::Multi(self.children.iter().collect()),
+                Children::Many(self.children.iter().collect()),
             ));
         }
         Some(array)
@@ -304,20 +308,20 @@ impl WidgetBuilder for VStackBuilder {
         array
     }
 
-    fn get_widgets(&mut self) -> Option<Vec<MutMultiWidget>> {
+    fn get_widgets(&mut self) -> Option<Vec<MutWidgetChildren>> {
         let mut array = vec![];
         if !self.children.is_empty() {
-            array.push(SingleOrMulti::Multi(self.children.iter_mut().collect()));
+            array.push(Children::Many(self.children.iter_mut().collect()));
         }
         Some(array)
     }
 
-    fn widgets(&self) -> Option<Vec<(TokenStream, MultiWidget)>> {
+    fn widgets(&self) -> Option<Vec<(TokenStream, WidgetChildren)>> {
         let mut array = vec![];
         if !self.children.is_empty() {
             array.push((
                 quote!(.widgets()),
-                SingleOrMulti::Multi(self.children.iter().collect()),
+                Children::Many(self.children.iter().collect()),
             ));
         }
         Some(array)

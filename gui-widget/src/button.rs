@@ -1,5 +1,13 @@
-use gui_core::glazier::kurbo::{Shape, Size};
+use std::marker::PhantomData;
+
+use proc_macro2::{Ident, TokenStream};
+use quote::{quote, ToTokens};
+use serde::Deserialize;
+
+use gui_core::{Colour, SceneBuilder, ToComponent, ToHandler, Var, widget};
+use gui_core::{Children, MutWidgetChildren, WidgetChildren};
 use gui_core::glazier::Cursor;
+use gui_core::glazier::kurbo::{Shape, Size};
 use gui_core::layout::LayoutConstraints;
 use gui_core::parse::var::Name;
 use gui_core::parse::WidgetDeclaration;
@@ -7,14 +15,8 @@ use gui_core::vello::kurbo::{Affine, Vec2};
 use gui_core::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
 use gui_core::vello::SceneFragment;
 use gui_core::widget::{
-    MultiWidget, MutMultiWidget, RenderHandle, ResizeHandle, SingleOrMulti, UpdateHandle, Widget,
-    WidgetBuilder, WidgetEvent, WidgetID,
+    RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID,
 };
-use gui_core::{widget, Colour, SceneBuilder, ToComponent, ToHandler, Var};
-use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
-use serde::Deserialize;
-use std::marker::PhantomData;
 use widget::EventHandle;
 
 pub trait ButtonHandler<T: ToHandler<BaseHandler = Self>> {
@@ -355,15 +357,15 @@ impl WidgetBuilder for ButtonBuilder {
         true
     }
 
-    fn get_widgets(&mut self) -> Option<Vec<MutMultiWidget>> {
-        Some(self.child.iter_mut().map(SingleOrMulti::Single).collect())
+    fn get_widgets(&mut self) -> Option<Vec<MutWidgetChildren>> {
+        Some(self.child.iter_mut().map(Children::One).collect())
     }
 
-    fn widgets(&self) -> Option<Vec<(TokenStream, MultiWidget)>> {
+    fn widgets(&self) -> Option<Vec<(TokenStream, WidgetChildren)>> {
         Some(
             self.child
                 .iter()
-                .map(|c| (quote!(.get_widget()), SingleOrMulti::Single(c)))
+                .map(|c| (quote!(.get_widget()), Children::One(c)))
                 .collect(),
         )
     }

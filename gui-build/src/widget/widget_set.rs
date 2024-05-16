@@ -1,16 +1,19 @@
-use crate::widget::Widget;
-use gui_core::parse::StateDeclaration;
-use gui_core::widget::{MultiWidget, SingleOrMulti};
+use std::sync::atomic::{AtomicU32, Ordering};
+
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use std::sync::atomic::{AtomicU32, Ordering};
+
+use gui_core::{Children, WidgetChildren};
+use gui_core::parse::StateDeclaration;
+
+use crate::widget::Widget;
 
 /// A collection of widgets that can be retrieved using their associated [`TokenStream`].
 /// A widget set is only created if there is more than one widget stored.
 #[derive(Clone, Debug)]
 pub struct WidgetSet<'a> {
-    pub widgets: Vec<(TokenStream, SingleOrMulti<(u32, Widget<'a>)>)>,
+    pub widgets: Vec<(TokenStream, Children<(u32, Widget<'a>)>)>,
     /// None if the widget length is smaller or equal to 1. Each count is unique to
     /// guarantee that multiple WidgetSet implementations are not accidentally created.
     count: Option<u32>,
@@ -19,7 +22,7 @@ pub struct WidgetSet<'a> {
 impl<'a> WidgetSet<'a> {
     pub fn new(
         component_name: &str,
-        widgets: Vec<(TokenStream, MultiWidget<'a>)>,
+        widgets: Vec<(TokenStream, WidgetChildren<'a>)>,
         states: &'a [StateDeclaration],
         component_id: u32,
     ) -> anyhow::Result<Self> {
@@ -49,8 +52,8 @@ impl<'a> WidgetSet<'a> {
 
     pub fn gen_widget_type(&self) -> TokenStream {
         match &self.widgets[..] {
-            [(_, SingleOrMulti::Single((_, child)))] => child.gen_widget_type(),
-            [(_, SingleOrMulti::Multi(v))] if v.len() == 1 => v[0].1.gen_widget_type(),
+            [(_, Children::One((_, child)))] => child.gen_widget_type(),
+            [(_, Children::Many(v))] if v.len() == 1 => v[0].1.gen_widget_type(),
             [] => quote!(()),
             _ => {
                 let count = self.count.expect("widget set should be created.");
@@ -62,11 +65,11 @@ impl<'a> WidgetSet<'a> {
 
     pub fn gen_widget_init(&self) -> TokenStream {
         match &self.widgets[..] {
-            [(s, SingleOrMulti::Single((_, child)))] => {
+            [(s, Children::One((_, child)))] => {
                 let stream = child.gen_widget_init();
                 quote!(*widget #s = #stream)
             }
-            [(s, SingleOrMulti::Multi(v))] if v.len() == 1 => {
+            [(s, Children::Many(v))] if v.len() == 1 => {
                 let stream = v[0].1.gen_widget_init();
                 quote!(*widget #s = vec![#stream])
             }
@@ -78,12 +81,12 @@ impl<'a> WidgetSet<'a> {
                 self.widgets
                     .iter()
                     .map(|(s, child)| match child {
-                        SingleOrMulti::Single((i, child)) => {
+                        Children::One((i, child)) => {
                             let stream = child.gen_widget_init();
                             let ident = format_ident!("W{i}");
                             quote!(*widget #s = #widget_set :: #ident (#stream))
                         }
-                        SingleOrMulti::Multi(children) => {
+                        Children::Many(children) => {
                             let inits = children.iter().map(|(i, child)| {
                                 let stream = child.gen_widget_init();
                                 let ident = format_ident!("W{i}");
@@ -180,7 +183,7 @@ impl<'a> WidgetSet<'a> {
         self.widgets
             .iter()
             .flat_map(|(get_widget, widgets)| match widgets {
-                SingleOrMulti::Single((i, w)) => {
+                Children::One((i, w)) => {
                     let mut s = stream.clone();
                     s.extend(get_widget.clone());
                     if self.count.is_some() {
@@ -189,7 +192,7 @@ impl<'a> WidgetSet<'a> {
                     }
                     vec![(s, w)]
                 }
-                SingleOrMulti::Multi(m) => m
+                Children::Many(m) => m
                     .iter()
                     .enumerate()
                     .map(|(count, (i, w))| {

@@ -1,3 +1,22 @@
+use std::any::Any;
+
+pub use glazier;
+pub use glazier::kurbo::Point;
+pub use parley;
+pub use parley::font::FontContext;
+pub use vello;
+pub use vello::kurbo::Size;
+pub use vello::SceneBuilder;
+
+pub use layout::LayoutConstraints;
+pub use parse::colour::Colour;
+pub use parse::var::Var;
+pub use single_or_multi::{Children, MutWidgetChildren, WidgetChildren};
+
+pub use crate::comp_holder::CompHolder;
+use crate::handles::Handle;
+use crate::widget::{RuntimeID, WidgetEvent, WidgetID};
+
 pub mod common;
 pub mod parse;
 pub mod widget;
@@ -6,22 +25,7 @@ mod comp_holder;
 mod handles;
 pub mod layout;
 mod positions;
-
-pub use glazier;
-pub use glazier::kurbo::Point;
-pub use layout::LayoutConstraints;
-pub use parley;
-pub use parse::colour::Colour;
-pub use parse::var::Var;
-use std::any::Any;
-pub use vello;
-pub use vello::kurbo::Size;
-
-pub use crate::comp_holder::CompHolder;
-use crate::handles::Handle;
-use crate::widget::{RuntimeID, WidgetEvent, WidgetID};
-pub use parley::font::FontContext;
-pub use vello::SceneBuilder;
+mod single_or_multi;
 
 #[allow(dead_code)]
 struct TestBoxable {
