@@ -120,11 +120,11 @@ mod test {
     use proc_macro2::{Ident, TokenStream};
     use serde::Deserialize;
 
-    use crate::{MutWidgetChildren, WidgetChildren};
     use crate::parse::fluent::Fluent;
-    use crate::parse::GUIDeclaration;
     use crate::parse::var::Name;
+    use crate::parse::GUIDeclaration;
     use crate::widget::{WidgetBuilder, WidgetID};
+    use crate::{MutWidgetChildren, WidgetChildren};
 
     #[derive(Deserialize, Debug, Clone)]
     struct FakeWidget {

@@ -48,10 +48,7 @@ impl<T> Children<T> {
         }
     }
 
-    pub fn try_map<U, E, F: FnMut(T) -> Result<U, E>>(
-        self,
-        mut f: F,
-    ) -> Result<Children<U>, E> {
+    pub fn try_map<U, E, F: FnMut(T) -> Result<U, E>>(self, mut f: F) -> Result<Children<U>, E> {
         Ok(match self {
             Children::One(s) => Children::One(f(s)?),
             Children::Many(m) => {
@@ -60,7 +57,7 @@ impl<T> Children<T> {
         })
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=&T> {
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
         self.single()
             .into_iter()
             .chain(self.multi().into_iter().flat_map(|m| m.iter()))

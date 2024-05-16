@@ -4,8 +4,8 @@ use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
-use gui_core::{Children, WidgetChildren};
 use gui_core::parse::StateDeclaration;
+use gui_core::{Children, WidgetChildren};
 
 use crate::widget::Widget;
 

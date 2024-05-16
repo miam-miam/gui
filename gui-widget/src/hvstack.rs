@@ -3,16 +3,16 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
 
-use gui_core::{
-    Children, LayoutConstraints, MutWidgetChildren, Point, SceneBuilder, Size, ToComponent,
-    Var, WidgetChildren,
-};
 use gui_core::glazier::kurbo::Rect;
 use gui_core::parse::var::Name;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::widget::{
     EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
     WidgetID,
+};
+use gui_core::{
+    Children, LayoutConstraints, MutWidgetChildren, Point, SceneBuilder, Size, ToComponent, Var,
+    WidgetChildren,
 };
 
 enum Axis {
