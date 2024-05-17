@@ -1,11 +1,14 @@
-mod derive;
-mod type_registry;
+use proc_macro::TokenStream;
+
+use quote::ToTokens;
+use syn::parse_macro_input;
 
 use crate::derive::Derive;
 use crate::type_registry::TypeRegistry;
-use proc_macro::TokenStream;
-use quote::ToTokens;
-use syn::parse_macro_input;
+
+mod derive;
+mod type_registry;
+mod widget_builder;
 
 /// Add this to all user-defined components to associate them with their layout file equivalents.
 #[proc_macro_derive(ToComponent)]
@@ -51,5 +54,6 @@ pub fn type_registry(item: TokenStream) -> TokenStream {
 ///
 #[proc_macro_derive(WidgetBuilder, attributes(widget))]
 pub fn derive_widget_builder(input: TokenStream) -> TokenStream {
-    input
+    let input = parse_macro_input!(input as Derive);
+    input.to_token_stream().into()
 }
