@@ -31,8 +31,8 @@ pub fn type_registry(item: TokenStream) -> TokenStream {
 /// ## Container Attributes
 ///
 /// Attributes are added using `#[widget]`. Each derive invocation must contain a container attribute:
-/// `#[widget(name = "widgetName", type = "type_path", init = "init_path")]` where:
-/// - `name` describes the name of the widget (prefixed with the name of your library in the form
+/// `#[widget(name = "widgetName", type_path = "type_path", init_path = "init_path")]` where:
+/// - `name` describes the name of the widget (it will be automatically prefixed with the name of your library in the form
 /// <crate>::<name>). This is used for typetag deserialization and widget naming for debug printing.
 /// - `type_path` which is the type of the runtime widget (of the form
 /// `::crate_name::widget_struct<type_param1, type_param2>`). 3 different parameters can be used
@@ -44,7 +44,7 @@ pub fn type_registry(item: TokenStream) -> TokenStream {
 /// ## Field Attributes
 ///
 /// Defaults are not required and are only available with `property` or `static_only`.
-/// - `default = "expression"` of type `T` where `T: ToTokens`
+/// - `default = expression` of type `T` where `T: ToTokens`
 /// - `default_with = "path_to_function"` of type `fn(&WidgetBuilder) -> T` where `T: ToTokens`
 /// - `<property|static_only|var_only> = "path_to_function"` of type `fn(&mut RuntimeWidget, T, &mut UpdateHandle) -> ()` where `T: ToTokens`
 /// - `fluent = "path_to_function"` of type `fn<'a>(&mut RuntimeWidget, Cow<'a, str>, &mut UpdateHandle) -> ()`
