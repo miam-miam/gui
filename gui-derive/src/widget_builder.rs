@@ -83,6 +83,7 @@ mod test {
             }
         };
 
-        assert_eq!(builder.attributes, multi_attributes.attributes)
+        assert_eq!(builder.attributes, multi_attributes.attributes);
+        assert_eq!(builder.fields, multi_attributes.fields);
     }
 }
