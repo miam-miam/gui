@@ -1,18 +1,14 @@
 use std::path::PathBuf;
 
 use image::io::Reader as ImageReader;
-use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
 use serde::Deserialize;
 
 use gui_core::glazier::kurbo::Size;
 use gui_core::layout::LayoutConstraints;
-use gui_core::parse::var::Name;
 use gui_core::vello::kurbo::Affine;
 use gui_core::vello::peniko::{Blob, Format, Image};
 use gui_core::widget::{
-    EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
-    WidgetID,
+    EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetEvent, WidgetID,
 };
 use gui_core::{SceneBuilder, ToComponent, Var};
 use gui_derive::WidgetBuilder;

@@ -1,13 +1,10 @@
-use proc_macro2::{Ident, TokenStream};
-use quote::quote;
 use serde::Deserialize;
 
 use gui_core::glazier::kurbo::Size;
 use gui_core::layout::LayoutConstraints;
 use gui_core::parse::var::ComponentVar;
 use gui_core::widget::{
-    EventHandle, RenderHandle, ResizeHandle, RuntimeID, UpdateHandle, Widget, WidgetBuilder,
-    WidgetEvent, WidgetID,
+    EventHandle, RenderHandle, ResizeHandle, RuntimeID, UpdateHandle, Widget, WidgetEvent, WidgetID,
 };
 use gui_core::{Point, SceneBuilder, ToComponent};
 use gui_derive::WidgetBuilder;

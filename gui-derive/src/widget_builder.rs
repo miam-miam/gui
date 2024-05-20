@@ -18,6 +18,17 @@ mod attributes;
 mod field_attributes;
 mod interpolated_path;
 
+#[derive(Copy, Clone)]
+struct Import;
+
+impl ToTokens for Import {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        tokens.extend(quote!(::gui_custom::__private))
+    }
+}
+
+const IMPORT: Import = Import;
+
 #[derive(Clone)]
 pub struct WidgetBuilder {
     name: Ident,
@@ -72,7 +83,7 @@ impl WidgetBuilder {
             .map(|f| f.field.ident.as_ref().unwrap())
             .collect_vec();
         quote! {
-            fn combine(&mut self, rhs: &dyn WidgetBuilder) {
+            fn combine(&mut self, rhs: &dyn #IMPORT::WidgetBuilder) {
                 if let Some(other) = rhs.as_any().downcast_ref::<Self>() {
                     #(
                         if let Some(p) = &other. #fields {
@@ -108,13 +119,13 @@ impl WidgetBuilder {
             .map(|(ident, ext, _, path)| {
                 let property = ext.form_prop_name(ident);
                 quote! {
-                    #property => stream.extend(quote!( ##widget . #path (##value, ##handle); )),
+                    #property => stream.extend(#IMPORT::quote!( ##widget . #path (##value, ##handle); )),
                 }
             })
             .collect();
 
         fields.is_empty().not().then(|| quote! {
-            fn on_property_update(&self, property: &'static str, widget: &Ident, value: &Ident, handle: &Ident, stream: &mut TokenStream) {
+            fn on_property_update(&self, property: &'static str, widget: &#IMPORT::Ident, value: &#IMPORT::Ident, handle: &#IMPORT::Ident, stream: &mut #IMPORT::TokenStream) {
                 match property {
                     #fields
                     _ => {}
@@ -131,7 +142,7 @@ impl WidgetBuilder {
             .map(|property| {
                 quote! {
                     if let Some(c) = &mut self. #property {
-                        result.push(Children::Many(c.iter_mut().collect()));
+                        result.push(#IMPORT::Children::Many(c.iter_mut().collect()));
                     }
                 }
             })
@@ -144,7 +155,7 @@ impl WidgetBuilder {
             .map(|property| {
                 quote! {
                     if let Some(c) = &mut self. #property {
-                        result.push(Children::One(c));
+                        result.push(#IMPORT::Children::One(c));
                     }
                 }
             })
@@ -161,7 +172,7 @@ impl WidgetBuilder {
             .map(|(property, path)| {
                 quote! {
                     if let Some(c) = &self. #property {
-                        result.push(( quote!( . #path () ), Children::Many(c.iter().collect())));
+                        result.push(( #IMPORT::quote!( . #path () ), #IMPORT::Children::Many(c.iter().collect())));
                     }
                 }
             })
@@ -178,7 +189,7 @@ impl WidgetBuilder {
             .map(|(property, path)| {
                 quote! {
                     if let Some(c) = &self. #property {
-                        result.push(( quote!( . #path () ), Children::One(c)));
+                        result.push(( #IMPORT::quote!( . #path () ), #IMPORT::Children::One(c)));
                     }
                 }
             })
@@ -189,14 +200,14 @@ impl WidgetBuilder {
         }
 
         Some(quote! {
-            fn get_widgets(&mut self) -> Option<Vec<MutWidgetChildren>> {
+            fn get_widgets(&mut self) -> Option<Vec<#IMPORT::MutWidgetChildren>> {
                 let mut result = vec![];
                 #children_mut
                 #child_mut
                 Some(result)
             }
 
-            fn widgets(&self) -> Option<Vec<(TokenStream, WidgetChildren)>> {
+            fn widgets(&self) -> Option<Vec<(#IMPORT::TokenStream, #IMPORT::WidgetChildren)>> {
                 let mut result = vec![];
                 #children_ref
                 #child_ref
@@ -242,7 +253,8 @@ impl WidgetBuilder {
 
         statics.is_empty().not().then(|| {
             quote! {
-                fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
+                fn get_statics(&self) -> Vec<(&'static str, #IMPORT::TokenStream)> {
+                    use #IMPORT::ToTokens;
                     let mut result = vec![];
                     #statics
                     result
@@ -270,7 +282,7 @@ impl WidgetBuilder {
 
         fluents.is_empty().not().then(|| {
             quote! {
-                fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
+                fn get_fluents(&self) -> Vec<(&'static str, #IMPORT::Fluent)> {
                     let mut result = vec![];
                     #fluents
                     result
@@ -306,7 +318,7 @@ impl WidgetBuilder {
 
         vars.is_empty().not().then(|| {
             quote! {
-                fn get_vars(&self) -> Vec<(&'static str, Name)> {
+                fn get_vars(&self) -> Vec<(&'static str, #IMPORT::Name)> {
                     let mut result = vec![];
                     #vars
                     result
@@ -334,7 +346,7 @@ impl WidgetBuilder {
 
         components.is_empty().not().then(|| {
             quote! {
-                fn get_components(&self) -> Vec<(&'static str, ComponentVar)> {
+                fn get_components(&self) -> Vec<(&'static str, #IMPORT::ComponentVar)> {
                     let mut result = vec![];
                     #components
                     result
@@ -382,10 +394,10 @@ impl ToTokens for WidgetBuilder {
         tokens.extend(quote! {
             #assertions
 
-            #[typetag::deserialize(name = #widget_name)]
-            impl #impl_generics WidgetBuilder for #builder_name #ty_generics #where_clause {
-                fn widget_type(&self, handler: Option<&Ident>, component: &Ident, child: Option<&TokenStream>, stream: &mut TokenStream) {
-                    stream.extend(quote!(#type_path))
+            #[#IMPORT::typetag::deserialize(name = #widget_name)]
+            impl #impl_generics #IMPORT::WidgetBuilder for #builder_name #ty_generics #where_clause {
+                fn widget_type(&self, handler: Option<&#IMPORT::Ident>, component: &#IMPORT::Ident, child: Option<&#IMPORT::TokenStream>, stream: &mut #IMPORT::TokenStream) {
+                    stream.extend(#IMPORT::quote!(#type_path))
                 }
 
                 fn name(&self) -> &'static str {
@@ -394,8 +406,8 @@ impl ToTokens for WidgetBuilder {
 
                 #combine_func
 
-                fn create_widget(&self, id: WidgetID, stream: &mut TokenStream) {
-                    stream.extend(quote!(#erased_type_path :: #init_path (##id)))
+                fn create_widget(&self, id: #IMPORT::WidgetID, stream: &mut #IMPORT::TokenStream) {
+                    stream.extend(#IMPORT::quote!(#erased_type_path :: #init_path (##id)))
                 }
 
                 #property_func

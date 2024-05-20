@@ -1,22 +1,16 @@
 use std::marker::PhantomData;
 
-use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
 use serde::Deserialize;
 
 use gui_core::glazier::kurbo::{Shape, Size};
 use gui_core::glazier::Cursor;
 use gui_core::layout::LayoutConstraints;
-use gui_core::parse::var::Name;
 use gui_core::parse::WidgetDeclaration;
 use gui_core::vello::kurbo::{Affine, Vec2};
 use gui_core::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
 use gui_core::vello::SceneFragment;
-use gui_core::widget::{
-    RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID,
-};
+use gui_core::widget::{RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetEvent, WidgetID};
 use gui_core::{widget, Colour, SceneBuilder, ToComponent, ToHandler, Var};
-use gui_core::{Children, MutWidgetChildren, WidgetChildren};
 use gui_derive::WidgetBuilder;
 use widget::EventHandle;
 
@@ -201,24 +195,6 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget
             }
             WidgetEvent::HoverChange | WidgetEvent::ActiveChange => handle.invalidate_id(self.id),
         }
-    }
-}
-
-// #[cfg(unused)]
-mod test {
-    use gui_core::widget::WidgetID;
-    use gui_custom::__private::fakes::*;
-
-    #[allow(unused)]
-    fn test() {
-        // ::gui_custom::__private::assertions::init_path::<Button<Handler, ToComp, WidgetID>>(Button::<Handler, ToComp, WidgetID>::new);
-        // ::gui_custom::__private::assertions::property_path::<Button<Handler, ToComp, WidgetID>, super::Colour>(Button::<Handler, ToComp, WidgetID>::set_background_colour);
-        // ::gui_custom::__private::assertions::child_path::<Button<Handler, ToComp, WidgetID>, WidgetID>(Button::<Handler, ToComp, WidgetID>::get_widget);
-        // let closure = |a, _, c| {
-        //     super::Button::<Handler, ToComp, WidgetID>::set_background_colour(a, { panic!() }, c);
-        // };
-        let a = || super::Button::<Handler, ToComp, WidgetID>::set_background_colour;
-        // let func: for<'a, T> fn(&mut super::Button::<Handler, ToComp, WidgetID>, T, &mut UpdateHandle) = (super::Button::<Handler, ToComp, WidgetID>::set_background_colour);
     }
 }
 
