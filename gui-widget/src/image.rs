@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use image::io::Reader as ImageReader;
 use serde::Deserialize;
@@ -29,19 +29,22 @@ impl ImageWidget {
         handle.resize();
     }
 
-    pub fn set_image_from_file(&mut self, path: &str, handle: &mut UpdateHandle) {
+    pub fn set_image_from_file<P: AsRef<Path>>(&mut self, path: P, handle: &mut UpdateHandle) {
         let path_buf = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join(path);
-        let dyn_img = ImageReader::open(path_buf).unwrap().decode().unwrap();
-        let img = dyn_img.to_rgba8();
-        let image = Image {
-            data: Blob::from(img.to_vec()),
-            format: Format::Rgba8,
-            width: img.width(),
-            height: img.height(),
-            extend: Default::default(),
-        };
-        self.image = Some(image);
-        handle.resize();
+        inner(&mut self.image, path_buf, handle);
+        fn inner(image: &mut Option<Image>, path_buf: PathBuf, handle: &mut UpdateHandle) {
+            let dyn_img = ImageReader::open(path_buf).unwrap().decode().unwrap();
+            let img = dyn_img.to_rgba8();
+            let new_image = Image {
+                data: Blob::from(img.to_vec()),
+                format: Format::Rgba8,
+                width: img.width(),
+                height: img.height(),
+                extend: Default::default(),
+            };
+            *image = Some(new_image);
+            handle.resize();
+        }
     }
 }
 
@@ -74,6 +77,10 @@ impl<C: ToComponent> Widget<C> for ImageWidget {
     init_path = "new"
 )]
 pub struct ImageBuilder {
-    #[widget(static_only = "set_image_from_file", var_only = "set_image")]
+    #[widget(
+        static_only = "set_image_from_file",
+        var_only = "set_image",
+        static_bound = "P: AsRef<Path>"
+    )]
     pub image: Option<Var<String>>,
 }

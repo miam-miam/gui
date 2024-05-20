@@ -1,15 +1,19 @@
 use proc_macro2::Ident;
 use syn::spanned::Spanned;
-use syn::{Error, Expr, Field, Path};
+use syn::{Error, Expr, Field, Path, PredicateType};
 
-use crate::widget_builder::attributes::{get_attributes, parse_from_lit, require_func_path};
+use crate::widget_builder::attributes::{
+    get_attributes, parse_from_lit, require_func_path, require_type_predicate,
+};
 
 #[derive(Clone, Debug)]
 pub struct FieldAttributes {
     pub field: Field,
     pub static_default: Option<StaticDefault>,
     pub static_prop: Option<Path>,
+    pub static_bound: Option<PredicateType>,
     pub var_prop: Option<Path>,
+    pub var_bound: Option<PredicateType>,
     pub fluent: Option<Path>,
     pub component: Option<Path>,
     pub child: Option<Path>,
@@ -170,7 +174,9 @@ impl FieldAttributes {
     pub fn new(field: Field) -> syn::Result<Self> {
         let mut static_default = None;
         let mut static_prop = None;
+        let mut static_bound = None;
         let mut var_prop = None;
+        let mut var_bound = None;
         let mut fluent = None;
         let mut component = None;
         let mut child = None;
@@ -184,11 +190,21 @@ impl FieldAttributes {
                     static_prop = Some(require_func_path(parse_from_lit(expr)?)?);
                     var_prop.clone_from(&static_prop);
                 }
+                "property_bound" if static_bound.is_none() && var_bound.is_none() => {
+                    static_bound = Some(require_type_predicate(parse_from_lit(expr)?)?);
+                    var_bound.clone_from(&static_bound);
+                }
                 "static_only" if static_prop.is_none() => {
                     static_prop = Some(require_func_path(parse_from_lit(expr)?)?)
                 }
+                "static_bound" if static_bound.is_none() => {
+                    static_bound = Some(require_type_predicate(parse_from_lit(expr)?)?)
+                }
                 "var_only" if var_prop.is_none() => {
                     var_prop = Some(require_func_path(parse_from_lit(expr)?)?)
+                }
+                "var_bound" if static_bound.is_none() => {
+                    var_bound = Some(require_type_predicate(parse_from_lit(expr)?)?)
                 }
                 "fluent" if fluent.is_none() => {
                     fluent = Some(require_func_path(parse_from_lit(expr)?)?)
@@ -230,12 +246,24 @@ impl FieldAttributes {
                 field.ident.span(),
                 "Defaults only apply to static properties",
             ))
+        } else if static_bound.is_some() && static_prop.is_none() {
+            Err(Error::new(
+                field.ident.span(),
+                "Bounds only apply to static properties",
+            ))
+        } else if var_bound.is_some() && var_prop.is_none() {
+            Err(Error::new(
+                field.ident.span(),
+                "Bounds only apply to var properties",
+            ))
         } else {
             Ok(FieldAttributes {
                 field,
                 static_default,
                 static_prop,
+                static_bound,
                 var_prop,
+                var_bound,
                 fluent,
                 component,
                 child,

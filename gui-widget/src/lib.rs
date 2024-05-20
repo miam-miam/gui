@@ -22,6 +22,6 @@ mod tests {
     #[test]
     fn parse_simple() {
         let yaml = include_str!("simple.yaml");
-        let _ser: gui_core::parse::GUIDeclaration = serde_yaml::from_str(yaml).unwrap();
+        let _ser: gui_custom::parse::GUIDeclaration = serde_yaml::from_str(yaml).unwrap();
     }
 }

@@ -1,8 +1,45 @@
-use proc_macro2::TokenStream;
-use quote::{format_ident, quote, ToTokens};
+use std::sync::atomic::{AtomicU32, Ordering};
+
+use proc_macro2::{Span, TokenStream};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
+use syn::spanned::Spanned;
+use syn::{Path, PredicateType};
 
 use crate::widget_builder::field_attributes::FieldAttributes;
 use crate::widget_builder::WidgetBuilder;
+
+fn generate_prop_assert(
+    assert_path: &TokenStream,
+    widget_type: &TokenStream,
+    widget_turbo: &TokenStream,
+    span: Span,
+    bound: &Option<PredicateType>,
+    property: &Path,
+) -> TokenStream {
+    /// Ensure generated functions are unique
+    static FUNC_COUNTER: AtomicU32 = AtomicU32::new(0);
+
+    match bound {
+        None => quote_spanned!(span=>
+            #assert_path property_path::<#widget_type, _>(#widget_turbo :: #property);
+        ),
+        Some(static_bound) => {
+            let func_name = format_ident!(
+                "assert_type_{}",
+                FUNC_COUNTER.fetch_add(1, Ordering::Relaxed)
+            );
+            let type_param = &static_bound.bounded_ty;
+            quote! {
+                {
+                    use super::*;
+                    fn #func_name<#type_param>() where #static_bound {
+                        #assert_path property_path::<#widget_type, #type_param>(#widget_turbo :: #property);
+                    }
+                }
+            }
+        }
+    }
+}
 
 impl FieldAttributes {
     pub fn assert(&self, widget_type: &TokenStream, widget_turbo: &TokenStream) -> TokenStream {
@@ -10,16 +47,27 @@ impl FieldAttributes {
 
         let assert_path = quote!(::gui_custom::__private::assertions::);
         let widget_id = quote!(::gui_custom::widget::WidgetID);
+        let span = self.field.ident.span();
 
         if let Some(static_prop) = &self.static_prop {
-            stream.extend(quote!(
-                #assert_path property_path::<#widget_type, _>(#widget_turbo :: #static_prop);
-            ))
+            stream.extend(generate_prop_assert(
+                &assert_path,
+                widget_type,
+                widget_turbo,
+                span,
+                &self.static_bound,
+                static_prop,
+            ));
         }
         if let Some(var_prop) = &self.var_prop {
-            stream.extend(quote!(
-                #assert_path property_path::<#widget_type, _>(#widget_turbo :: #var_prop);
-            ))
+            stream.extend(generate_prop_assert(
+                &assert_path,
+                widget_type,
+                widget_turbo,
+                span,
+                &self.var_bound,
+                var_prop,
+            ));
         }
         if let Some(fluent) = &self.fluent {
             stream.extend(
@@ -72,6 +120,7 @@ impl WidgetBuilder {
 
         quote! {
             #[allow(non_snake_case)]
+            #[doc(hidden)]
             mod #module {
                 #[allow(unused)]
                 fn assert_types() {

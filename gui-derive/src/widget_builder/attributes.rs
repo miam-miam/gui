@@ -3,7 +3,7 @@ use proc_macro2::{Ident, Span};
 use syn::parse::Parse;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{Attribute, Error, Expr, Lit, MetaNameValue, Path, Token};
+use syn::{Attribute, Error, Expr, Lit, MetaNameValue, Path, PredicateType, Token, WherePredicate};
 
 use crate::widget_builder::interpolated_path::{InterpolatedPath, InterpolatedType};
 
@@ -54,6 +54,13 @@ pub fn require_func_path(path: Path) -> syn::Result<Path> {
         Err(Error::new(path.segments.span(), "Expected a function name"))
     } else {
         Ok(path)
+    }
+}
+
+pub fn require_type_predicate(predicate: WherePredicate) -> syn::Result<PredicateType> {
+    match predicate {
+        WherePredicate::Type(t) => Ok(t),
+        _ => Err(Error::new(predicate.span(), "Expected a type predicate")),
     }
 }
 

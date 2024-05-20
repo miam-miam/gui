@@ -34,7 +34,7 @@ pub fn type_registry(item: TokenStream) -> TokenStream {
 /// Attributes are added using `#[widget]`. Each derive invocation must contain a container attribute:
 /// `#[widget(name = "widgetName", type_path = "type_path", init_path = "init_path")]` where:
 /// - `name` describes the name of the widget (it will be automatically prefixed with the name of your library in the form
-/// <crate>::<name>). This is used for typetag deserialization and widget naming for debug printing.
+/// `"<crate>::<name>"`). This is used for typetag deserialization and widget naming for debug printing.
 /// - `type_path` which is the type of the runtime widget (of the form
 /// `::crate_name::widget_struct<type_param1, type_param2>`). 3 different parameters can be used
 /// (`#handler` (a type that implements `ToHandler`), `#component` (a type that implements
@@ -47,7 +47,10 @@ pub fn type_registry(item: TokenStream) -> TokenStream {
 /// Defaults are not required and are only available with `property` or `static_only`.
 /// - `default = expression` of type `T` where `T: ToTokens`
 /// - `default_with = "path_to_function"` of type `fn(&WidgetBuilder) -> T` where `T: ToTokens`
-/// - `<property|static_only|var_only> = "path_to_function"` of type `fn(&mut RuntimeWidget, T, &mut UpdateHandle) -> ()` where `T: ToTokens`
+/// - `<property|static_only|var_only> = "path_to_function"` of type `fn(&mut RuntimeWidget, T, &mut UpdateHandle) -> ()`.
+/// Should you get an error informing you that a type could not be inferred please add the `bound` attribute.
+/// - `<property|static|var|>bound = "T: Trait"` used for type assertions to ensure that the given
+/// function can deal with all the types declared by the bound.
 /// - `fluent = "path_to_function"` of type `fn<'a>(&mut RuntimeWidget, Cow<'a, str>, &mut UpdateHandle) -> ()`
 /// - `component = "path_to_function"` of type `fn(&mut RuntimeWidget, WidgetId, &mut UpdateHandle) -> ()`
 /// - `child = "path_to_function"` of type `fn(&mut RuntimeWidget) -> &mut Child`

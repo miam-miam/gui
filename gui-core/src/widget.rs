@@ -181,7 +181,7 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
     fn has_handler(&self) -> bool {
         false
     }
-    /// Return [`WidgetDeclaration`]s for each child stored in the widget.
+    /// Return [`WidgetDeclaration`](crate::parse::WidgetDeclaration)s for each child stored in the widget.
     /// None indicates that this widget does not normally store children
     fn get_widgets(&mut self) -> Option<Vec<MutWidgetChildren>> {
         None
