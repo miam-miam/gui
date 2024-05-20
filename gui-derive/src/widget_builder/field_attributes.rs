@@ -4,7 +4,7 @@ use syn::spanned::Spanned;
 
 use crate::widget_builder::attributes::{get_attributes, parse_from_lit, require_func_path};
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub struct FieldAttributes {
     pub field: Field,
     pub static_default: Option<StaticDefault>,
@@ -15,6 +15,21 @@ pub struct FieldAttributes {
     pub child: Option<Path>,
     pub children: Option<Path>,
 }
+
+/// Only check ident in field for equality
+impl PartialEq for FieldAttributes {
+    fn eq(&self, other: &FieldAttributes) -> bool {
+        self.field.ident == other.field.ident
+            && self.static_default == other.static_default
+            && self.static_prop == other.static_prop
+            && self.var_prop == other.var_prop
+            && self.fluent == other.fluent
+            && self.component == other.component
+            && self.child == other.child
+            && self.children == other.children
+    }
+}
+
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Extension {
