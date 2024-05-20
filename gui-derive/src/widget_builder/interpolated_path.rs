@@ -1,9 +1,9 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
+use syn::{parse_quote, Token, Type, TypeInfer};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::token::PathSep;
-use syn::{Token, Type, TypeInfer};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InterpolatedPath {
@@ -33,7 +33,11 @@ impl ToTokens for InterpolatedPath {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let segments = &self.segments;
         let generics = &self.generics;
-        tokens.extend(quote!(:: #segments #generics ))
+        if segments.first().is_some_and(|i| *i == "crate") {
+            tokens.extend(quote!(#segments #generics ))
+        } else {
+            tokens.extend(quote!(:: #segments #generics ))
+        }
     }
 }
 
@@ -73,6 +77,17 @@ impl InterpolatedType {
             *self = InterpolatedType::Type(Type::Infer(TypeInfer {
                 underscore_token: Default::default(),
             }))
+        }
+    }
+
+    pub fn convert_to_fakes(&mut self, fake_path: &TokenStream) {
+        if let InterpolatedType::Interpolated { name, .. } = self {
+            match name.to_string().as_str() {
+                "handler" => { *self = InterpolatedType::Type(parse_quote!(#fake_path Handler)) }
+                "component" => { *self = InterpolatedType::Type(parse_quote!(#fake_path ToComp)) }
+                "child" => { *self = InterpolatedType::Type(parse_quote!(::gui_custom::widget::WidgetID)) }
+                _ => {}
+            }
         }
     }
 }

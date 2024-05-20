@@ -5,6 +5,7 @@ members = [
     "gui-core",
     "gui-widget",
     "gui-build",
+    "gui-custom",
     #    "examples/**",
     "examples/traffic_light",
     "examples/comp_traffic_light",

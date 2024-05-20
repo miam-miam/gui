@@ -1,18 +1,21 @@
+pub use button::Button;
+pub use comp_holder::CompHolder;
+pub use hvstack::HVStack;
+pub use image::ImageWidget;
+pub use text::Text;
+
 pub mod button;
 mod comp_holder;
 mod hvstack;
 mod image;
 mod text;
 
-pub use button::Button;
-
-pub use text::Text;
-
-pub use hvstack::HVStack;
-
-pub use comp_holder::CompHolder;
-
-pub use image::ImageWidget;
+/// Hack to allow widget paths to be asserted as unlike any other widget library 
+/// this one gets imported through the gui crate
+#[doc(hidden)]
+mod gui_widget {
+    pub use super::*;
+}
 
 #[cfg(test)]
 mod tests {

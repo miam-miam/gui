@@ -3,9 +3,9 @@ use std::ops::Not;
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
+use syn::{Data, DeriveInput, Error, Fields, Generics, Path};
 use syn::parse::{Parse, ParseStream};
 use syn::spanned::Spanned;
-use syn::{Data, DeriveInput, Error, Fields, Generics, Path};
 
 use field_attributes::FieldAttributes;
 
@@ -16,6 +16,7 @@ use crate::widget_builder::interpolated_path::InterpolatedType;
 mod attributes;
 mod field_attributes;
 mod interpolated_path;
+mod assert;
 
 #[derive(Clone)]
 pub struct WidgetBuilder {
@@ -360,6 +361,7 @@ impl ToTokens for WidgetBuilder {
         let init_path = &self.attributes.init_path;
         let id = format_ident!("id");
         let combine_func = self.combine_func();
+        let assertions = self.generate_assertions();
 
         let property_names = self.get_property_names();
         let property_func = self.property_func(&property_names);
@@ -378,6 +380,8 @@ impl ToTokens for WidgetBuilder {
         });
 
         tokens.extend(quote! {
+            #assertions
+            
             #[typetag::deserialize(name = #widget_name)]
             impl #impl_generics WidgetBuilder for #builder_name #ty_generics #where_clause {
                 fn widget_type(&self, handler: Option<&Ident>, component: &Ident, child: Option<&TokenStream>, stream: &mut TokenStream) {

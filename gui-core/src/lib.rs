@@ -132,7 +132,7 @@ pub trait Variable {
 
 /// Trait implemented by generated handler names
 pub trait ToHandler {
-    type BaseHandler;
+    type BaseHandler: ToComponent;
 }
 
 /// Trait that broadcast the value of a variable back to the component.
