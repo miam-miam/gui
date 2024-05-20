@@ -212,10 +212,10 @@ impl WidgetBuilder {
 
                 let default = default.map(|d| match d {
                     StaticDefault::Expression(e) => quote! {
-                        None => result.push((#property_name, (#e).to_token_stream()))
+                        None => result.push((#property_name, (#e).to_token_stream())),
                     },
                     StaticDefault::Function(f) => quote! {
-                        None => result.push((#property_name, self . #f ()))
+                        None => result.push((#property_name, self . #f ())),
                     },
                 });
 

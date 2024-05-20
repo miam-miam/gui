@@ -92,7 +92,7 @@ impl FieldAttributes {
                 return vec![(Extension::Unnecessary(Property::Var), None, var_prop)];
             }
             (Some(static_prop), Some(var_prop), _, _) if static_prop == var_prop => {
-                let mut result = vec![(Extension::Unnecessary(Property::Both), None, static_prop)];
+                let mut result = vec![(Extension::Unnecessary(Property::Both), self.static_default.as_ref(), static_prop)];
                 if let Some(fluent) = &self.fluent {
                     result.push((Extension::Fluent, None, fluent));
                 }
@@ -187,10 +187,10 @@ impl FieldAttributes {
             || child.is_some()
             || children.is_some())
         {
-            Err(Error::new(field.ident.span(), "Expected at least one attribute"))
+            Err(Error::new(field.ident.span(), "Expected at least one widget attribute on this field"))
         } else if static_default.is_some() && static_prop.is_none() {
             Err(Error::new(
-                field.span(),
+                field.ident.span(),
                 "Defaults only apply to static properties",
             ))
         } else {
