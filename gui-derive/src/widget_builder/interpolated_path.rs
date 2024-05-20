@@ -1,6 +1,6 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{Token, Type};
+use syn::{Token, Type, TypeInfer};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::token::PathSep;
@@ -29,6 +29,14 @@ impl Parse for InterpolatedPath {
     }
 }
 
+impl ToTokens for InterpolatedPath {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let segments = self.segments.iter();
+        let generics = &self.generics;
+        tokens.extend(quote!(:: #(#segments)::* #generics ))
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InterpolatedGenerics {
     pub lt_token: Token![<],
@@ -46,10 +54,25 @@ impl Parse for InterpolatedGenerics {
     }
 }
 
+impl ToTokens for InterpolatedGenerics {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let args = self.args.iter();
+        tokens.extend(quote!(< #(#args),* >))
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum InterpolatedType {
     Interpolated { pound: Token![#], name: Ident },
     Type(Type),
+}
+
+impl InterpolatedType {
+    pub fn erase_interpolated(&mut self) {
+        if let InterpolatedType::Interpolated { .. } = self {
+            *self = InterpolatedType::Type(Type::Infer(TypeInfer { underscore_token: Default::default() }))
+        }
+    }
 }
 
 impl Parse for InterpolatedType {
@@ -82,7 +105,7 @@ mod test {
 
     fn assert_type_params(type_path: &str, expected: &[&str]) {
         let path: InterpolatedPath = syn::parse_str(type_path).unwrap();
-        let found = path.generics.map_or_else(|| vec![], |g| g.args.into_iter().map(|t| t.into_token_stream().to_string()).collect_vec());
+        let found = path.generics.map_or_else(Vec::new, |g| g.args.into_iter().map(|t| t.into_token_stream().to_string()).collect_vec());
         assert_eq!(expected, found);
     }
 

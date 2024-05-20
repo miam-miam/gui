@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 gui-core = { version = "0.1.0", path = "./../gui-core" }
+gui-derive = { version = "0.1.0", path = "./../gui-derive" }
 serde_yaml = "0.9.30"
 typetag = "0.2.15"
 serde = { version = "1.0.195", features = ["derive"] }

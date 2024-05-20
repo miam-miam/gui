@@ -1,3 +1,11 @@
+use std::path::PathBuf;
+
+use image::io::Reader as ImageReader;
+use proc_macro2::{Ident, TokenStream};
+use quote::{quote, ToTokens};
+use serde::Deserialize;
+
+use gui_core::{SceneBuilder, ToComponent, Var};
 use gui_core::glazier::kurbo::Size;
 use gui_core::layout::LayoutConstraints;
 use gui_core::parse::var::Name;
@@ -7,12 +15,7 @@ use gui_core::widget::{
     EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
     WidgetID,
 };
-use gui_core::{SceneBuilder, ToComponent, Var};
-use image::io::Reader as ImageReader;
-use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
-use serde::Deserialize;
-use std::path::PathBuf;
+use gui_derive::WidgetBuilder;
 
 #[derive(Default)]
 pub struct ImageWidget {
@@ -67,72 +70,10 @@ impl<C: ToComponent> Widget<C> for ImageWidget {
     fn event(&mut self, _event: WidgetEvent, _handle: &mut EventHandle<C>) {}
 }
 
-#[derive(Deserialize, Debug, Clone, Default)]
+#[derive(Deserialize, WidgetBuilder, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
+#[widget(name = "Image", type_path = "::gui::gui_widget::ImageWidget", init_path = "new")]
 pub struct ImageBuilder {
+    #[widget(static_only = "set_image_from_file", var_only = "set_image")]
     pub image: Option<Var<String>>,
-}
-
-#[typetag::deserialize(name = "Image")]
-impl WidgetBuilder for ImageBuilder {
-    fn widget_type(
-        &self,
-        _handler: Option<&Ident>,
-        _comp_struct: &Ident,
-        _child: Option<&TokenStream>,
-        stream: &mut TokenStream,
-    ) {
-        stream.extend(quote!(::gui::gui_widget::ImageWidget));
-    }
-
-    fn name(&self) -> &'static str {
-        "Image"
-    }
-    fn combine(&mut self, rhs: &dyn WidgetBuilder) {
-        if let Some(other) = rhs.as_any().downcast_ref::<Self>() {
-            if let Some(s) = &other.image {
-                self.image.get_or_insert_with(|| s.clone());
-            }
-        }
-    }
-
-    fn create_widget(&self, id: WidgetID, stream: &mut TokenStream) {
-        stream.extend(quote! {
-            ::gui::gui_widget::ImageWidget::new(#id)
-        });
-    }
-
-    #[allow(clippy::single_match)]
-    fn on_property_update(
-        &self,
-        property: &'static str,
-        widget: &Ident,
-        value: &Ident,
-        handle: &Ident,
-        stream: &mut TokenStream,
-    ) {
-        match property {
-            "image" => stream.extend(quote! {#widget.set_image(#value, #handle);}),
-            "image_file" => stream.extend(quote! {#widget.set_image_from_file(#value, #handle);}),
-            _ => {}
-        }
-    }
-
-    #[allow(clippy::single_match)]
-    fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
-        let mut array = vec![];
-        match &self.image {
-            Some(Var::Value(v)) => array.push(("image_file", v.to_token_stream())),
-            _ => {}
-        }
-        array
-    }
-
-    fn get_vars(&self) -> Vec<(&'static str, Name)> {
-        let mut array = vec![];
-        if let Some(Var::Variable(v)) = &self.image {
-            array.push(("image", v.clone()));
-        }
-        array
-    }
 }

@@ -5,6 +5,7 @@ use syn::parse_macro_input;
 
 use crate::derive::Derive;
 use crate::type_registry::TypeRegistry;
+use crate::widget_builder::WidgetBuilder;
 
 mod derive;
 mod type_registry;
@@ -54,6 +55,6 @@ pub fn type_registry(item: TokenStream) -> TokenStream {
 ///
 #[proc_macro_derive(WidgetBuilder, attributes(widget))]
 pub fn derive_widget_builder(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as Derive);
+    let input = parse_macro_input!(input as WidgetBuilder);
     input.to_token_stream().into()
 }

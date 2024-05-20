@@ -5,7 +5,7 @@ use syn::parse::Parse;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 
-use crate::widget_builder::interpolated_path::InterpolatedPath;
+use crate::widget_builder::interpolated_path::{InterpolatedPath, InterpolatedType};
 
 pub fn get_attributes(attributes: &[Attribute]) -> syn::Result<Vec<(Ident, Expr)>> {
     attributes
@@ -35,6 +35,15 @@ pub fn parse_from_lit<T: Parse>(expr: Expr) -> syn::Result<T> {
     Err(Error::new(expr.span(), "Expected literal string"))
 }
 
+pub fn require_lit(expr: Expr) -> syn::Result<String> {
+    if let Expr::Lit(lit) = &expr {
+        if let Lit::Str(str) = &lit.lit {
+            return Ok(str.value())
+        }
+    }
+    Err(Error::new(expr.span(), "Expected literal string"))
+}
+
 pub fn require_func_path(path: Path) -> syn::Result<Path> {
     if path.leading_colon.is_some() {
         Err(Error::new(path.leading_colon.span(), "Unexpected leading colon"))
@@ -51,16 +60,41 @@ pub fn require_attribute<T>(
     name: &str,
 ) -> syn::Result<T> {
     match attribute {
-        None => Err(Error::new(span(), format!("Expected to find a {name} attribute"))),
+        None => Err(Error::new(span(), format!("Expected to find a {name} attribute of the form #[widget({name} = ...)]"))),
         Some(a) => Ok(a),
     }
 }
 
+/// Returns whether the path contains a handler
+pub fn check_interpolated_path(path: &InterpolatedPath) -> syn::Result<bool> {
+    if path.generics.is_none() {
+        return Ok(false)
+    }
+
+    let mut has_handler = false;
+    for arg in &path.generics.as_ref().unwrap().args {
+        if let InterpolatedType::Interpolated { name, .. } = arg {
+            match name.to_string().as_str() {
+                "handler" => {
+                    has_handler = true;
+                },
+                "component" | "child" => {},
+                name => {
+                    return Err(Error::new(Span::call_site(), format!("Unexpected attribute {name}")));
+                }
+            }
+        }
+    }
+
+    Ok(has_handler)
+}
+
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct StructAttributes {
-    widget_name: Ident,
-    type_path: InterpolatedPath,
-    init_path: Path,
+    pub widget_name: String,
+    pub has_handler: bool,
+    pub type_path: InterpolatedPath,
+    pub init_path: Path,
 }
 
 impl StructAttributes {
@@ -73,7 +107,7 @@ impl StructAttributes {
 
         for (name, expr) in attributes {
             match name.to_string().as_str() {
-                "name" if widget_name.is_none() => widget_name = Some(parse_from_lit(expr)?),
+                "name" if widget_name.is_none() => widget_name = Some(require_lit(expr)?),
                 "type_path" if type_path.is_none() => type_path = Some(parse_from_lit(expr)?),
                 "init_path" if init_path.is_none() => init_path = Some(require_func_path(parse_from_lit(expr)?)?),
                 _ => return Err(Error::new(name.span(), "Unexpected attribute")),
@@ -84,7 +118,10 @@ impl StructAttributes {
         let type_path = require_attribute(type_path, Span::call_site, "type_path")?;
         let init_path = require_attribute(init_path, Span::call_site, "init_path")?;
 
+        let has_handler = check_interpolated_path(&type_path)?;
+
         Ok(StructAttributes {
+            has_handler,
             widget_name,
             type_path,
             init_path,
