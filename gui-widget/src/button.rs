@@ -4,10 +4,8 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
 
-use gui_core::{Colour, SceneBuilder, ToComponent, ToHandler, Var, widget};
-use gui_core::{Children, MutWidgetChildren, WidgetChildren};
-use gui_core::glazier::Cursor;
 use gui_core::glazier::kurbo::{Shape, Size};
+use gui_core::glazier::Cursor;
 use gui_core::layout::LayoutConstraints;
 use gui_core::parse::var::Name;
 use gui_core::parse::WidgetDeclaration;
@@ -17,6 +15,8 @@ use gui_core::vello::SceneFragment;
 use gui_core::widget::{
     RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID,
 };
+use gui_core::{widget, Colour, SceneBuilder, ToComponent, ToHandler, Var};
+use gui_core::{Children, MutWidgetChildren, WidgetChildren};
 use gui_derive::WidgetBuilder;
 use widget::EventHandle;
 

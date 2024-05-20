@@ -1,7 +1,7 @@
 pub use typetag;
 
-pub use gui_core::{Component, MutWidgetChildren, ToComponent, ToHandler, WidgetChildren};
 pub use gui_core::widget;
+pub use gui_core::{Component, MutWidgetChildren, ToComponent, ToHandler, WidgetChildren};
 #[doc(inline)]
 pub use gui_derive::WidgetBuilder;
 
@@ -12,4 +12,3 @@ pub mod __private {
     pub mod assertions;
     pub mod fakes;
 }
-

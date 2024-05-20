@@ -22,10 +22,14 @@ impl FieldAttributes {
             ))
         }
         if let Some(fluent) = &self.fluent {
-            stream.extend(quote!( #assert_path fluent_path::<#widget_type>(#widget_turbo :: #fluent); ))
+            stream.extend(
+                quote!( #assert_path fluent_path::<#widget_type>(#widget_turbo :: #fluent); ),
+            )
         }
         if let Some(component) = &self.component {
-            stream.extend(quote!( #assert_path component_path::<#widget_type>(#widget_turbo :: #component); ))
+            stream.extend(
+                quote!( #assert_path component_path::<#widget_type>(#widget_turbo :: #component); ),
+            )
         }
         if let Some(child) = &self.child {
             stream.extend(quote!( #assert_path child_path::<#widget_type, #widget_id>(#widget_turbo :: #child); ))
@@ -47,7 +51,10 @@ impl WidgetBuilder {
         }
         if let Some(generics) = &mut widget_type.generics {
             let fake_path = quote!(::gui_custom::__private::fakes::);
-            generics.args.iter_mut().for_each(|t| t.convert_to_fakes(&fake_path))
+            generics
+                .args
+                .iter_mut()
+                .for_each(|t| t.convert_to_fakes(&fake_path))
         }
 
         let mut widget_turbo = widget_type.clone();
@@ -57,7 +64,11 @@ impl WidgetBuilder {
 
         let widget_type = widget_type.to_token_stream();
         let widget_turbo = widget_turbo.to_token_stream();
-        let field_assertions: TokenStream = self.fields.iter().map(|a| a.assert(&widget_type, &widget_turbo)).collect();
+        let field_assertions: TokenStream = self
+            .fields
+            .iter()
+            .map(|a| a.assert(&widget_type, &widget_turbo))
+            .collect();
 
         quote! {
             #[allow(non_snake_case)]

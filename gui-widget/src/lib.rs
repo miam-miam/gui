@@ -10,7 +10,7 @@ mod hvstack;
 mod image;
 mod text;
 
-/// Hack to allow widget paths to be asserted as unlike any other widget library 
+/// Hack to allow widget paths to be asserted as unlike any other widget library
 /// this one gets imported through the gui crate
 #[doc(hidden)]
 mod gui_widget {

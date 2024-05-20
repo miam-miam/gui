@@ -1,9 +1,9 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{parse_quote, Token, Type, TypeInfer};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::token::PathSep;
+use syn::{parse_quote, Token, Type, TypeInfer};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InterpolatedPath {
@@ -83,9 +83,11 @@ impl InterpolatedType {
     pub fn convert_to_fakes(&mut self, fake_path: &TokenStream) {
         if let InterpolatedType::Interpolated { name, .. } = self {
             match name.to_string().as_str() {
-                "handler" => { *self = InterpolatedType::Type(parse_quote!(#fake_path Handler)) }
-                "component" => { *self = InterpolatedType::Type(parse_quote!(#fake_path ToComp)) }
-                "child" => { *self = InterpolatedType::Type(parse_quote!(::gui_custom::widget::WidgetID)) }
+                "handler" => *self = InterpolatedType::Type(parse_quote!(#fake_path Handler)),
+                "component" => *self = InterpolatedType::Type(parse_quote!(#fake_path ToComp)),
+                "child" => {
+                    *self = InterpolatedType::Type(parse_quote!(::gui_custom::widget::WidgetID))
+                }
                 _ => {}
             }
         }

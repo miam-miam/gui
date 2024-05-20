@@ -1,7 +1,9 @@
 use std::any::Any;
 
-use gui_core::{Component, LayoutConstraints, MultiComponent, SceneBuilder, Size, ToComponent, ToHandler};
 use gui_core::widget::{Handle, RuntimeID, WidgetEvent, WidgetID};
+use gui_core::{
+    Component, LayoutConstraints, MultiComponent, SceneBuilder, Size, ToComponent, ToHandler,
+};
 
 pub struct Handler;
 
@@ -47,7 +49,11 @@ impl Component for Comp {
         unimplemented!()
     }
 
-    fn get_parent(&self, _runtime_id: RuntimeID, _widget_id: WidgetID) -> Option<(RuntimeID, WidgetID)> {
+    fn get_parent(
+        &self,
+        _runtime_id: RuntimeID,
+        _widget_id: WidgetID,
+    ) -> Option<(RuntimeID, WidgetID)> {
         unimplemented!()
     }
 
@@ -59,7 +65,13 @@ impl Component for Comp {
         unimplemented!()
     }
 
-    fn event(&mut self, _runtime_id: RuntimeID, _widget_id: WidgetID, _event: WidgetEvent, _handle: &mut Handle) -> bool {
+    fn event(
+        &mut self,
+        _runtime_id: RuntimeID,
+        _widget_id: WidgetID,
+        _event: WidgetEvent,
+        _handle: &mut Handle,
+    ) -> bool {
         unimplemented!()
     }
 
