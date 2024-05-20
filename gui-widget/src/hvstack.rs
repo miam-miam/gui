@@ -1,13 +1,13 @@
 use itertools::Itertools;
 use serde::Deserialize;
 
-use gui_core::glazier::kurbo::Rect;
-use gui_core::parse::WidgetDeclaration;
-use gui_core::widget::{
+use gui_custom::glazier::kurbo::Rect;
+use gui_custom::parse::WidgetDeclaration;
+use gui_custom::widget::{
     EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetEvent, WidgetID,
 };
-use gui_core::{LayoutConstraints, Point, SceneBuilder, Size, ToComponent, Var};
-use gui_derive::WidgetBuilder;
+use gui_custom::WidgetBuilder;
+use gui_custom::{LayoutConstraints, Point, SceneBuilder, Size, ToComponent, Var};
 
 enum Axis {
     Horizontal,

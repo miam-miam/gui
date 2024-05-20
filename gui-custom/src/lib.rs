@@ -1,7 +1,4 @@
-pub use typetag;
-
-pub use gui_core::widget;
-pub use gui_core::{Component, MutWidgetChildren, ToComponent, ToHandler, WidgetChildren};
+pub use gui_core::*;
 #[doc(inline)]
 pub use gui_derive::WidgetBuilder;
 
@@ -13,7 +10,6 @@ pub mod __private {
     pub use proc_macro2::TokenStream;
     pub use quote::quote;
     pub use quote::ToTokens;
-    pub use typetag;
 
     pub use gui_core::parse::fluent::Fluent;
     pub use gui_core::parse::var::{ComponentVar, Name};

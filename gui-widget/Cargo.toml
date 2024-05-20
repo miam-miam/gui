@@ -7,12 +7,8 @@ edition = "2021"
 
 [dependencies]
 gui-custom = { version = "0.1.0", path = "./../gui-custom" }
-gui-core = { version = "0.1.0", path = "./../gui-core" }
-gui-derive = { version = "0.1.0", path = "./../gui-derive" }
 serde_yaml = "0.9.30"
 typetag = "0.2.15"
 serde = { version = "1.0.195", features = ["derive"] }
-proc-macro2 = { version = "1.0.76", features = [] }
-quote = "1.0.35"
-itertools = "0.12.0"
+itertools = "0.13.0"
 image = "0.25.0"

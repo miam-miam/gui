@@ -2,21 +2,20 @@ use std::borrow::Cow;
 
 use serde::Deserialize;
 
-use gui_core::common::text;
-use gui_core::common::text::ParleyBrush;
-use gui_core::glazier::kurbo::Size;
-use gui_core::layout::LayoutConstraints;
-use gui_core::parley::layout::{Alignment, Layout};
-use gui_core::parley::style::{FontWeight, StyleProperty};
-use gui_core::parley::LayoutContext;
-use gui_core::parse::fluent::Fluent;
-use gui_core::vello::kurbo::Affine;
-use gui_core::vello::peniko::{Brush, Color};
-use gui_core::widget::{
+use gui_custom::common::text;
+use gui_custom::common::text::ParleyBrush;
+use gui_custom::glazier::kurbo::Size;
+use gui_custom::layout::LayoutConstraints;
+use gui_custom::parley::layout::{Alignment, Layout};
+use gui_custom::parley::style::{FontWeight, StyleProperty};
+use gui_custom::parley::LayoutContext;
+use gui_custom::vello::kurbo::Affine;
+use gui_custom::vello::peniko::{Brush, Color};
+use gui_custom::widget::{
     EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetEvent, WidgetID,
 };
-use gui_core::{Colour, FontContext, SceneBuilder, ToComponent, Var};
-use gui_derive::WidgetBuilder;
+use gui_custom::WidgetBuilder;
+use gui_custom::{Colour, Fluent, FontContext, SceneBuilder, ToComponent, Var};
 
 pub struct Text {
     id: WidgetID,

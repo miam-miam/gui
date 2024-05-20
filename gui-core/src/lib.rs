@@ -15,6 +15,7 @@ pub use single_or_multi::{Children, MutWidgetChildren, WidgetChildren};
 
 pub use crate::comp_holder::CompHolder;
 use crate::handles::Handle;
+pub use crate::parse::fluent::Fluent;
 use crate::widget::{RuntimeID, WidgetEvent, WidgetID};
 
 pub mod common;

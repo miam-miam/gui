@@ -1,13 +1,13 @@
 use serde::Deserialize;
 
-use gui_core::glazier::kurbo::Size;
-use gui_core::layout::LayoutConstraints;
-use gui_core::parse::var::ComponentVar;
-use gui_core::widget::{
+use gui_custom::glazier::kurbo::Size;
+use gui_custom::layout::LayoutConstraints;
+use gui_custom::parse::var::ComponentVar;
+use gui_custom::widget::{
     EventHandle, RenderHandle, ResizeHandle, RuntimeID, UpdateHandle, Widget, WidgetEvent, WidgetID,
 };
-use gui_core::{Point, SceneBuilder, ToComponent};
-use gui_derive::WidgetBuilder;
+use gui_custom::WidgetBuilder;
+use gui_custom::{Point, SceneBuilder, ToComponent};
 
 pub struct CompHolder {
     id: WidgetID,

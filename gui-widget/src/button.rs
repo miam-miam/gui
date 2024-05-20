@@ -2,16 +2,16 @@ use std::marker::PhantomData;
 
 use serde::Deserialize;
 
-use gui_core::glazier::kurbo::{Shape, Size};
-use gui_core::glazier::Cursor;
-use gui_core::layout::LayoutConstraints;
-use gui_core::parse::WidgetDeclaration;
-use gui_core::vello::kurbo::{Affine, Vec2};
-use gui_core::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
-use gui_core::vello::SceneFragment;
-use gui_core::widget::{RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetEvent, WidgetID};
-use gui_core::{widget, Colour, SceneBuilder, ToComponent, ToHandler, Var};
-use gui_derive::WidgetBuilder;
+use gui_custom::glazier::kurbo::{Shape, Size};
+use gui_custom::glazier::Cursor;
+use gui_custom::layout::LayoutConstraints;
+use gui_custom::parse::WidgetDeclaration;
+use gui_custom::vello::kurbo::{Affine, Vec2};
+use gui_custom::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
+use gui_custom::vello::SceneFragment;
+use gui_custom::widget::{RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetEvent, WidgetID};
+use gui_custom::WidgetBuilder;
+use gui_custom::{widget, Colour, SceneBuilder, ToComponent, ToHandler, Var};
 use widget::EventHandle;
 
 pub trait ButtonHandler<T: ToHandler<BaseHandler = Self>> {

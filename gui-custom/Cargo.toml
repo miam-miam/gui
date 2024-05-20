@@ -11,4 +11,4 @@ gui-derive = { version = "0.1.0", path = "./../gui-derive" }
 typetag = "0.2.15"
 proc-macro2 = { version = "1.0.76", features = [] }
 quote = "1.0.35"
-itertools = "0.12.0"
+itertools = "0.13.0"

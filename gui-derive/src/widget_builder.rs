@@ -394,7 +394,7 @@ impl ToTokens for WidgetBuilder {
         tokens.extend(quote! {
             #assertions
 
-            #[#IMPORT::typetag::deserialize(name = #widget_name)]
+            #[typetag::deserialize(name = #widget_name)]
             impl #impl_generics #IMPORT::WidgetBuilder for #builder_name #ty_generics #where_clause {
                 fn widget_type(&self, handler: Option<&#IMPORT::Ident>, component: &#IMPORT::Ident, child: Option<&#IMPORT::TokenStream>, stream: &mut #IMPORT::TokenStream) {
                     stream.extend(#IMPORT::quote!(#type_path))
