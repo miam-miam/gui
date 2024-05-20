@@ -20,7 +20,11 @@ impl<'a, 'b> Iterator for WidgetIter<'a, 'b> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(Some(ws)) = &self.widget.map(|w| &w.child_widgets) {
-            self.to_visit.extend(ws.widgets.iter().map(|(_, w)| w));
+            self.to_visit.extend(
+                ws.widgets
+                    .iter()
+                    .flat_map(|(_, w)| w.iter().map(|(_, w)| w)),
+            );
         }
         let widget = self.widget;
         self.widget = self.to_visit.pop();

@@ -81,8 +81,10 @@ fn combine_style(
         widget.widget.combine(styles[*i].as_ref())
     }
 
-    for child in widget.widget.get_widgets().into_iter().flatten() {
-        combine_style(child, style_map, styles);
+    for mut widgets in widget.widget.get_widgets().into_iter().flatten() {
+        for child in widgets.iter_mut() {
+            combine_style(child, style_map, styles);
+        }
     }
 }
 

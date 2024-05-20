@@ -19,6 +19,6 @@ quote = "1.0.35"
 unic-langid = "0.9.4"
 fluent-bundle = "0.15.2"
 gui-widget = {path = "./../gui-widget"}
-itertools = "0.12.0"
+itertools = "0.13.0"
 prettyplease = { version = "0.2.16", optional = true }
 syn = { version = "2.0.48", optional = true, features = ["full"] }

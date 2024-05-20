@@ -1,20 +1,17 @@
-use gui_core::glazier::kurbo::{Shape, Size};
-use gui_core::glazier::Cursor;
-use gui_core::layout::LayoutConstraints;
-use gui_core::parse::fluent::Fluent;
-use gui_core::parse::var::Name;
-use gui_core::parse::WidgetDeclaration;
-use gui_core::vello::kurbo::{Affine, Vec2};
-use gui_core::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
-use gui_core::vello::SceneFragment;
-use gui_core::widget::{
-    RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent, WidgetID,
-};
-use gui_core::{widget, Colour, SceneBuilder, ToComponent, ToHandler, Var};
-use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
-use serde::Deserialize;
 use std::marker::PhantomData;
+
+use serde::Deserialize;
+
+use gui_custom::glazier::kurbo::{Shape, Size};
+use gui_custom::glazier::Cursor;
+use gui_custom::layout::LayoutConstraints;
+use gui_custom::parse::WidgetDeclaration;
+use gui_custom::vello::kurbo::{Affine, Vec2};
+use gui_custom::vello::peniko::{BlendMode, Brush, Color, Compose, Fill, Mix, Stroke};
+use gui_custom::vello::SceneFragment;
+use gui_custom::widget::{RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetEvent, WidgetID};
+use gui_custom::WidgetBuilder;
+use gui_custom::{widget, Colour, SceneBuilder, ToComponent, ToHandler, Var};
 use widget::EventHandle;
 
 pub trait ButtonHandler<T: ToHandler<BaseHandler = Self>> {
@@ -29,12 +26,12 @@ pub struct Button<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> {
     hover_colour: Colour,
     border_colour: Colour,
     disabled: bool,
-    child: W,
+    child: Option<W>,
     phantom: PhantomData<(T, C)>,
 }
 
 impl<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> Button<T, C, W> {
-    pub fn new(id: WidgetID, child: W) -> Self {
+    pub fn new(id: WidgetID) -> Self {
         Button {
             id,
             background_colour: Default::default(),
@@ -43,7 +40,7 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> Button<T, C, W
             hover_colour: Default::default(),
             border_colour: Default::default(),
             disabled: Default::default(),
-            child,
+            child: None,
             phantom: PhantomData,
         }
     }
@@ -72,7 +69,7 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent, W: Widget<C>> Button<T, C, W
         self.border_colour = colour;
         handle.invalidate_id(self.id)
     }
-    pub fn get_widget(&mut self) -> &mut W {
+    pub fn get_widget(&mut self) -> &mut Option<W> {
         &mut self.child
     }
 }
@@ -117,7 +114,7 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget
 
         let mut fragment = SceneFragment::new();
         let mut builder = SceneBuilder::for_fragment(&mut fragment);
-        handle.render_widgets(&mut builder, [&mut self.child].into_iter());
+        handle.render_widgets(&mut builder, [self.child.as_mut().unwrap()].into_iter());
 
         scene.append(
             &fragment,
@@ -157,7 +154,7 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget
         constraints = constraints.deset(padding);
         let mut child_size = handle.layout_widget(
             padding.to_vec2().to_point(),
-            &mut self.child,
+            self.child.as_mut().unwrap(),
             constraints.min_clamp(Size::new(0.0, 18.0)),
         );
         child_size += padding * 2.0;
@@ -201,175 +198,31 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, WidgetBuilder, Debug, Clone)]
 #[serde(deny_unknown_fields)]
+#[widget(
+    name = "Button",
+    type_path = "::gui::gui_widget::Button<#handler, #component, #child>",
+    init_path = "new"
+)]
 pub struct ButtonBuilder {
+    #[widget(property = "set_disabled")]
     disabled: Option<Var<bool>>,
+    #[widget(property = "set_background_colour")]
+    #[widget(default = Colour(Color::WHITE))]
     background_colour: Option<Var<Colour>>,
+    #[widget(property = "set_disabled_colour")]
+    #[widget(default = Colour(Color::rgb8(241, 243, 245)))]
     disabled_colour: Option<Var<Colour>>,
+    #[widget(property = "set_clicked_colour")]
+    #[widget(default = Colour(Color::rgb8(248, 249, 250)))]
     clicked_colour: Option<Var<Colour>>,
+    #[widget(property = "set_hover_colour")]
+    #[widget(default = Colour(Color::rgb8(248, 249, 250)))]
     hover_colour: Option<Var<Colour>>,
+    #[widget(property = "set_border_colour")]
+    #[widget(default = Colour(Color::rgb8(206, 212, 218)))]
     border_colour: Option<Var<Colour>>,
+    #[widget(child = "get_widget")]
     child: Option<WidgetDeclaration>,
-}
-
-#[typetag::deserialize(name = "Button")]
-impl WidgetBuilder for ButtonBuilder {
-    fn widget_type(
-        &self,
-        handler: Option<&Ident>,
-        component: &Ident,
-        child: Option<&TokenStream>,
-        stream: &mut TokenStream,
-    ) {
-        stream.extend(quote!(::gui::gui_widget::Button<#handler, #component, #child>));
-    }
-
-    fn name(&self) -> &'static str {
-        "Button"
-    }
-
-    fn combine(&mut self, rhs: &dyn WidgetBuilder) {
-        if let Some(other) = rhs.as_any().downcast_ref::<Self>() {
-            if let Some(s) = &other.disabled {
-                self.disabled.get_or_insert_with(|| s.clone());
-            }
-            if let Some(s) = &other.background_colour {
-                self.background_colour.get_or_insert_with(|| s.clone());
-            }
-            if let Some(s) = &other.disabled_colour {
-                self.disabled_colour.get_or_insert_with(|| s.clone());
-            }
-            if let Some(s) = &other.clicked_colour {
-                self.clicked_colour.get_or_insert_with(|| s.clone());
-            }
-            if let Some(s) = &other.hover_colour {
-                self.hover_colour.get_or_insert_with(|| s.clone());
-            }
-            if let Some(s) = &other.border_colour {
-                self.border_colour.get_or_insert_with(|| s.clone());
-            }
-        }
-    }
-    fn create_widget(&self, id: WidgetID, child: Option<&TokenStream>, stream: &mut TokenStream) {
-        stream.extend(quote! {
-            ::gui::gui_widget::Button::new(#id, #child)
-        });
-    }
-
-    fn on_property_update(
-        &self,
-        property: &'static str,
-        widget: &Ident,
-        value: &Ident,
-        handle: &Ident,
-        stream: &mut TokenStream,
-    ) {
-        match property {
-            "disabled" => stream.extend(quote! {#widget.set_disabled(#value, #handle);}),
-            "background_colour" => {
-                stream.extend(quote! {#widget.set_background_colour(#value, #handle);})
-            }
-            "disabled_colour" => {
-                stream.extend(quote! {#widget.set_disabled_colour(#value, #handle);})
-            }
-            "clicked_colour" => {
-                stream.extend(quote! {#widget.set_clicked_colour(#value, #handle);})
-            }
-            "hover_colour" => stream.extend(quote! {#widget.set_hover_colour(#value, #handle);}),
-            "border_colour" => stream.extend(quote! {#widget.set_border_colour(#value, #handle);}),
-            _ => {}
-        }
-    }
-
-    fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
-        let mut array = vec![];
-        match &self.background_colour {
-            Some(Var::Value(v)) => array.push(("background_colour", v.to_token_stream())),
-            None => array.push(("background_colour", Colour(Color::WHITE).to_token_stream())),
-            _ => {}
-        }
-        match &self.disabled_colour {
-            Some(Var::Value(v)) => array.push(("disabled_colour", v.to_token_stream())),
-            None => array.push((
-                "disabled_colour",
-                Colour(Color::rgb8(241, 243, 245)).to_token_stream(),
-            )),
-            _ => {}
-        };
-        match &self.clicked_colour {
-            Some(Var::Value(v)) => array.push(("clicked_colour", v.to_token_stream())),
-            None => array.push((
-                "clicked_colour",
-                Colour(Color::rgb8(248, 249, 250)).to_token_stream(),
-            )),
-            _ => {}
-        };
-        match &self.hover_colour {
-            Some(Var::Value(v)) => array.push(("hover_colour", v.to_token_stream())),
-            None => array.push((
-                "hover_colour",
-                Colour(Color::rgb8(248, 249, 250)).to_token_stream(),
-            )),
-            _ => {}
-        };
-        match &self.border_colour {
-            Some(Var::Value(v)) => array.push(("border_colour", v.to_token_stream())),
-            None => array.push((
-                "border_colour",
-                Colour(Color::rgb8(206, 212, 218)).to_token_stream(),
-            )),
-            _ => {}
-        };
-        match &self.disabled {
-            Some(Var::Value(v)) => array.push(("disabled", v.to_token_stream())),
-            None => array.push(("disabled", false.to_token_stream())),
-            _ => {}
-        };
-        array
-    }
-
-    fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
-        vec![]
-    }
-
-    fn get_vars(&self) -> Vec<(&'static str, Name)> {
-        let mut array = vec![];
-        if let Some(Var::Variable(v)) = &self.disabled {
-            array.push(("disabled", v.clone()));
-        }
-        if let Some(Var::Variable(v)) = &self.background_colour {
-            array.push(("background_colour", v.clone()));
-        }
-        if let Some(Var::Variable(v)) = &self.disabled_colour {
-            array.push(("disabled_colour", v.clone()));
-        }
-        if let Some(Var::Variable(v)) = &self.clicked_colour {
-            array.push(("clicked_colour", v.clone()));
-        }
-        if let Some(Var::Variable(v)) = &self.hover_colour {
-            array.push(("hover_colour", v.clone()));
-        }
-        if let Some(Var::Variable(v)) = &self.border_colour {
-            array.push(("border_colour", v.clone()));
-        }
-        array
-    }
-
-    fn has_handler(&self) -> bool {
-        true
-    }
-
-    fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
-        Some(self.child.iter_mut().collect())
-    }
-
-    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
-        Some(
-            self.child
-                .iter()
-                .map(|c| (quote!(.get_widget()), c))
-                .collect(),
-        )
-    }
 }

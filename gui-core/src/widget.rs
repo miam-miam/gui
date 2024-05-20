@@ -1,19 +1,21 @@
-pub use crate::handles::{EventHandle, Handle, RenderHandle, ResizeHandle, UpdateHandle};
-use crate::layout::LayoutConstraints;
-use crate::parse::fluent::Fluent;
-use crate::parse::var::{ComponentVar, Name};
-use crate::parse::WidgetDeclaration;
-use crate::ToComponent;
+use std::any::Any;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Mutex;
+
 use dyn_clone::DynClone;
 use glazier::kurbo::Point;
 use glazier::PointerEvent;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use std::any::Any;
-use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::Mutex;
 use vello::kurbo::Size;
 use vello::SceneBuilder;
+
+pub use crate::handles::{EventHandle, Handle, RenderHandle, ResizeHandle, UpdateHandle};
+use crate::layout::LayoutConstraints;
+use crate::parse::fluent::Fluent;
+use crate::parse::var::{ComponentVar, Name};
+use crate::ToComponent;
+use crate::{MutWidgetChildren, WidgetChildren};
 
 /// A unique ID to reference a component, each instantiation increments the ID by 1.
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Default, Hash)]
@@ -148,22 +150,29 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
     fn combine(&mut self, rhs: &dyn WidgetBuilder);
     /// [`TokenStream`] to create the widget, passing in the id and children.
     /// The `children` [`TokenStream`] is of the form `<child1>, <child2>, <child3>`.
-    fn create_widget(&self, id: WidgetID, children: Option<&TokenStream>, stream: &mut TokenStream);
+    fn create_widget(&self, id: WidgetID, stream: &mut TokenStream);
     /// Function to be called when a `property` is updated.
     fn on_property_update(
         &self,
-        property: &'static str,
-        widget: &Ident,
-        value: &Ident,
-        handle: &Ident,
-        stream: &mut TokenStream,
-    );
+        _property: &'static str,
+        _widget: &Ident,
+        _value: &Ident,
+        _handle: &Ident,
+        _stream: &mut TokenStream,
+    ) {
+    }
     /// The value of a given static and the property it relates to.
-    fn get_statics(&self) -> Vec<(&'static str, TokenStream)>;
+    fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
+        vec![]
+    }
     /// The fluent and the property it is attached to.
-    fn get_fluents(&self) -> Vec<(&'static str, Fluent)>;
+    fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
+        vec![]
+    }
     /// The variables and property they are attached to.
-    fn get_vars(&self) -> Vec<(&'static str, Name)>;
+    fn get_vars(&self) -> Vec<(&'static str, Name)> {
+        vec![]
+    }
     /// The components and property the widget holds.
     fn get_components(&self) -> Vec<(&'static str, ComponentVar)> {
         vec![]
@@ -172,12 +181,16 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
     fn has_handler(&self) -> bool {
         false
     }
-    /// Return [`WidgetDeclaration`]s for each child stored in the widget.
+    /// Return [`WidgetDeclaration`](crate::parse::WidgetDeclaration)s for each child stored in the widget.
     /// None indicates that this widget does not normally store children
-    fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>>;
+    fn get_widgets(&mut self) -> Option<Vec<MutWidgetChildren>> {
+        None
+    }
     /// Return the [`TokenStream`] needed to access the given child widgets from runtime widget.
     /// None indicates that this widget does not normally store children
-    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>>;
+    fn widgets(&self) -> Option<Vec<(TokenStream, WidgetChildren)>> {
+        None
+    }
 }
 
 // Allows the WidgetBuilder trait objects to be cloned into boxes.

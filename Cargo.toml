@@ -5,6 +5,7 @@ members = [
     "gui-core",
     "gui-widget",
     "gui-build",
+    "gui-custom",
     #    "examples/**",
     "examples/traffic_light",
     "examples/comp_traffic_light",
@@ -33,7 +34,7 @@ fluent-bundle = { version = "0.15.2", git = "https://github.com/projectfluent/fl
 unic-langid = { version = "0.9.4", features = ["unic-langid-macros"] }
 intl-memoizer = "0.5.1"
 wgpu = "0.17.2"
-itertools = "0.12.0"
+itertools = "0.13.0"
 image = "0.24.8"
 futures-intrusive = "0.5.0"
 termcolor = "1.4.1"

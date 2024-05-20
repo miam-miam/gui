@@ -1,24 +1,21 @@
-use gui_core::common::text;
-use gui_core::common::text::ParleyBrush;
-use gui_core::glazier::kurbo::Size;
-use gui_core::layout::LayoutConstraints;
-use gui_core::parley::layout::{Alignment, Layout};
-use gui_core::parley::style::{FontWeight, StyleProperty};
-use gui_core::parley::LayoutContext;
-use gui_core::parse::fluent::Fluent;
-use gui_core::parse::var::Name;
-use gui_core::parse::WidgetDeclaration;
-use gui_core::vello::kurbo::Affine;
-use gui_core::vello::peniko::{Brush, Color};
-use gui_core::widget::{
-    EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
-    WidgetID,
-};
-use gui_core::{Colour, FontContext, SceneBuilder, ToComponent, Var};
-use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
-use serde::Deserialize;
 use std::borrow::Cow;
+
+use serde::Deserialize;
+
+use gui_custom::common::text;
+use gui_custom::common::text::ParleyBrush;
+use gui_custom::glazier::kurbo::Size;
+use gui_custom::layout::LayoutConstraints;
+use gui_custom::parley::layout::{Alignment, Layout};
+use gui_custom::parley::style::{FontWeight, StyleProperty};
+use gui_custom::parley::LayoutContext;
+use gui_custom::vello::kurbo::Affine;
+use gui_custom::vello::peniko::{Brush, Color};
+use gui_custom::widget::{
+    EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetEvent, WidgetID,
+};
+use gui_custom::WidgetBuilder;
+use gui_custom::{Colour, Fluent, FontContext, SceneBuilder, ToComponent, Var};
 
 pub struct Text {
     id: WidgetID,
@@ -108,100 +105,19 @@ impl<C: ToComponent> Widget<C> for Text {
     fn event(&mut self, _event: WidgetEvent, _handle: &mut EventHandle<C>) {}
 }
 
-#[derive(Deserialize, Debug, Clone, Default)]
+#[derive(Deserialize, WidgetBuilder, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
+#[widget(
+    name = "Text",
+    type_path = "::gui::gui_widget::Text",
+    init_path = "new"
+)]
 pub struct TextBuilder {
+    #[widget(fluent = "set_text")]
     pub text: Option<Fluent>,
+    #[widget(property = "set_colour")]
+    #[widget(default = Colour(Color::rgb8(33, 37, 41)))]
     pub colour: Option<Var<Colour>>,
+    #[widget(property = "set_size", default = 14.0f32)]
     pub size: Option<Var<f32>>,
-}
-
-#[typetag::deserialize(name = "Text")]
-impl WidgetBuilder for TextBuilder {
-    fn widget_type(
-        &self,
-        _handler: Option<&Ident>,
-        _comp_struct: &Ident,
-        _child: Option<&TokenStream>,
-        stream: &mut TokenStream,
-    ) {
-        stream.extend(quote!(::gui::gui_widget::Text));
-    }
-
-    fn name(&self) -> &'static str {
-        "Text"
-    }
-    fn combine(&mut self, rhs: &dyn WidgetBuilder) {
-        if let Some(other) = rhs.as_any().downcast_ref::<Self>() {
-            if let Some(s) = &other.text {
-                self.text.get_or_insert_with(|| s.clone());
-            }
-            if let Some(s) = &other.colour {
-                self.colour.get_or_insert_with(|| s.clone());
-            }
-            if let Some(s) = &other.size {
-                self.size.get_or_insert_with(|| s.clone());
-            }
-        }
-    }
-
-    fn create_widget(&self, id: WidgetID, _child: Option<&TokenStream>, stream: &mut TokenStream) {
-        stream.extend(quote! {
-            ::gui::gui_widget::Text::new(#id)
-        });
-    }
-
-    fn on_property_update(
-        &self,
-        property: &'static str,
-        widget: &Ident,
-        value: &Ident,
-        handle: &Ident,
-        stream: &mut TokenStream,
-    ) {
-        match property {
-            "text" => stream.extend(quote! {#widget.set_text(#value, #handle);}),
-            "colour" => stream.extend(quote! {#widget.set_colour(#value, #handle);}),
-            "size" => stream.extend(quote! {#widget.set_size(#value, #handle);}),
-            _ => {}
-        }
-    }
-
-    fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
-        let mut array = vec![];
-        match &self.colour {
-            Some(Var::Value(v)) => array.push(("colour", v.to_token_stream())),
-            None => array.push(("colour", Colour(Color::rgb8(33, 37, 41)).to_token_stream())),
-            _ => {}
-        };
-        match &self.size {
-            Some(Var::Value(v)) => array.push(("size", v.to_token_stream())),
-            None => array.push(("size", 14.0f32.to_token_stream())),
-            _ => {}
-        };
-        array
-    }
-
-    fn get_fluents(&self) -> Vec<(&'static str, Fluent)> {
-        self.text.iter().map(|f| ("text", f.clone())).collect()
-    }
-
-    fn get_vars(&self) -> Vec<(&'static str, Name)> {
-        let mut array = vec![];
-        if let Some(Var::Variable(v)) = &self.colour {
-            array.push(("colour", v.clone()));
-        }
-        if let Some(Var::Variable(v)) = &self.size {
-            array.push(("size", v.clone()));
-        }
-        array
-    }
-
-    fn get_widgets(&mut self) -> Option<Vec<&mut WidgetDeclaration>> {
-        None
-    }
-
-    fn widgets(&self) -> Option<Vec<(TokenStream, &WidgetDeclaration)>> {
-        None
-    }
 }

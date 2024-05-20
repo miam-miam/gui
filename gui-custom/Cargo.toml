@@ -1,0 +1,14 @@
+[package]
+name = "gui-custom"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+gui-core = { version = "0.1.0", path = "./../gui-core" }
+gui-derive = { version = "0.1.0", path = "./../gui-derive" }
+typetag = "0.2.15"
+proc-macro2 = { version = "1.0.76", features = [] }
+quote = "1.0.35"
+itertools = "0.13.0"
