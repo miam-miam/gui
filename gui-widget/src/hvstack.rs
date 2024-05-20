@@ -151,7 +151,11 @@ impl<C: ToComponent, W: Widget<C>> Widget<C> for HVStack<W> {
 
 #[derive(Deserialize, WidgetBuilder, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-#[widget(name = "HStack", type_path = "::gui::gui_widget::HVStack<#child>", init_path = "new_horizontal")]
+#[widget(
+name = "HStack",
+type_path = "::gui::gui_widget::HVStack<#child>",
+init_path = "new_horizontal"
+)]
 pub struct HStackBuilder {
     #[widget(property = "set_spacing", default = 0_10f32)]
     spacing: Option<Var<f32>>,
@@ -161,7 +165,11 @@ pub struct HStackBuilder {
 
 #[derive(Deserialize, WidgetBuilder, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-#[widget(name = "VStack", type_path = "::gui::gui_widget::HVStack<#child>", init_path = "new_vertical")]
+#[widget(
+name = "VStack",
+type_path = "::gui::gui_widget::HVStack<#child>",
+init_path = "new_vertical"
+)]
 pub struct VStackBuilder {
     #[widget(property = "set_spacing", default = 0_10f32)]
     spacing: Option<Var<f32>>,

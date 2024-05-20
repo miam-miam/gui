@@ -3,9 +3,9 @@ use std::ops::Not;
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
-use syn::{Data, DeriveInput, Error, Fields, Generics, Path};
 use syn::parse::{Parse, ParseStream};
 use syn::spanned::Spanned;
+use syn::{Data, DeriveInput, Error, Fields, Generics, Path};
 
 use field_attributes::FieldAttributes;
 
@@ -149,13 +149,22 @@ impl WidgetBuilder {
             })
             .collect();
 
-        let children_ref: TokenStream = self.fields.iter().filter_map(|f| f.children.as_ref().map(|c| (f.field.ident.as_ref().unwrap(), c))).map(|(property, path)| {
-            quote! {
-                if let Some(c) = &self. #property {
-                    result.push(( quote!( . #path () ), Children::Many(c.iter().collect())));
+        let children_ref: TokenStream = self
+            .fields
+            .iter()
+            .filter_map(|f| {
+                f.children
+                    .as_ref()
+                    .map(|c| (f.field.ident.as_ref().unwrap(), c))
+            })
+            .map(|(property, path)| {
+                quote! {
+                    if let Some(c) = &self. #property {
+                        result.push(( quote!( . #path () ), Children::Many(c.iter().collect())));
+                    }
                 }
-            }
-        }).collect();
+            })
+            .collect();
 
         let child_ref: TokenStream = self
             .fields
@@ -204,11 +213,12 @@ impl WidgetBuilder {
             .filter(|(_, e, ..)| Property::from(e).is_static())
             .map(|(property_ident, ext, default, _)| {
                 let property_name = ext.form_prop_name(property_ident);
-                let binding = if let Extension::Unnecessary(Property::Both) | Extension::Static(true) = ext {
-                    quote!(Var::Value(v))
-                } else {
-                    quote!(v)
-                };
+                let binding =
+                    if let Extension::Unnecessary(Property::Both) | Extension::Static(true) = ext {
+                        quote!(Var::Value(v))
+                    } else {
+                        quote!(v)
+                    };
 
                 let default = default.map(|d| match d {
                     StaticDefault::Expression(e) => quote! {
@@ -278,11 +288,12 @@ impl WidgetBuilder {
             .map(|(property, ext, ..)| {
                 let property_name = ext.form_prop_name(property);
 
-                let binding = if let Extension::Unnecessary(Property::Both) | Extension::Var(true) = ext {
-                    quote!(Var::Variable(v))
-                } else {
-                    quote!(v)
-                };
+                let binding =
+                    if let Extension::Unnecessary(Property::Both) | Extension::Var(true) = ext {
+                        quote!(Var::Variable(v))
+                    } else {
+                        quote!(v)
+                    };
 
                 quote! {
                     if let Some(#binding) = &self. #property {
@@ -341,7 +352,10 @@ impl ToTokens for WidgetBuilder {
         let mut erased_type_path = self.attributes.type_path.clone();
         if let Some(generics) = &mut erased_type_path.generics {
             erased_type_path.segments.push_punct(Default::default());
-            generics.args.iter_mut().for_each(InterpolatedType::erase_interpolated)
+            generics
+                .args
+                .iter_mut()
+                .for_each(InterpolatedType::erase_interpolated)
         }
         let init_path = &self.attributes.init_path;
         let id = format_ident!("id");

@@ -72,7 +72,11 @@ impl<C: ToComponent> Widget<C> for ImageWidget {
 
 #[derive(Deserialize, WidgetBuilder, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
-#[widget(name = "Image", type_path = "::gui::gui_widget::ImageWidget", init_path = "new")]
+#[widget(
+name = "Image",
+type_path = "::gui::gui_widget::ImageWidget",
+init_path = "new"
+)]
 pub struct ImageBuilder {
     #[widget(static_only = "set_image_from_file", var_only = "set_image")]
     pub image: Option<Var<String>>,

@@ -1,9 +1,9 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{Token, Type, TypeInfer};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::token::PathSep;
+use syn::{Token, Type, TypeInfer};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InterpolatedPath {
@@ -70,7 +70,9 @@ pub enum InterpolatedType {
 impl InterpolatedType {
     pub fn erase_interpolated(&mut self) {
         if let InterpolatedType::Interpolated { .. } = self {
-            *self = InterpolatedType::Type(Type::Infer(TypeInfer { underscore_token: Default::default() }))
+            *self = InterpolatedType::Type(Type::Infer(TypeInfer {
+                underscore_token: Default::default(),
+            }))
         }
     }
 }
@@ -78,7 +80,10 @@ impl InterpolatedType {
 impl Parse for InterpolatedType {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         Ok(if input.peek(Token![#]) {
-            InterpolatedType::Interpolated { pound: input.parse()?, name: input.parse()? }
+            InterpolatedType::Interpolated {
+                pound: input.parse()?,
+                name: input.parse()?,
+            }
         } else {
             InterpolatedType::Type(input.parse()?)
         })
@@ -88,10 +93,8 @@ impl Parse for InterpolatedType {
 impl ToTokens for InterpolatedType {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
-            InterpolatedType::Interpolated { pound, name } => {
-                tokens.extend(quote!(#pound #name))
-            }
-            InterpolatedType::Type(t) => { tokens.extend(quote!(#t)) }
+            InterpolatedType::Interpolated { pound, name } => tokens.extend(quote!(#pound #name)),
+            InterpolatedType::Type(t) => tokens.extend(quote!(#t)),
         }
     }
 }
@@ -105,15 +108,29 @@ mod test {
 
     fn assert_type_params(type_path: &str, expected: &[&str]) {
         let path: InterpolatedPath = syn::parse_str(type_path).unwrap();
-        let found = path.generics.map_or_else(Vec::new, |g| g.args.into_iter().map(|t| t.into_token_stream().to_string()).collect_vec());
+        let found = path.generics.map_or_else(Vec::new, |g| {
+            g.args
+                .into_iter()
+                .map(|t| t.into_token_stream().to_string())
+                .collect_vec()
+        });
         assert_eq!(expected, found);
     }
 
     #[test]
     fn parse_type_path() {
-        assert_type_params("::crate_name::widget_struct<type_param1, type_param2>", &["type_param1", "type_param2"]);
-        assert_type_params("::crate_name::widget_struct<#type_param1, #type_param2>", &["# type_param1", "# type_param2"]);
-        assert_type_params("::crate_name::module::widget_struct<[i32; 2], #type_param2, (u32, u8)>", &["[i32 ; 2]", "# type_param2", "(u32 , u8)"]);
+        assert_type_params(
+            "::crate_name::widget_struct<type_param1, type_param2>",
+            &["type_param1", "type_param2"],
+        );
+        assert_type_params(
+            "::crate_name::widget_struct<#type_param1, #type_param2>",
+            &["# type_param1", "# type_param2"],
+        );
+        assert_type_params(
+            "::crate_name::module::widget_struct<[i32; 2], #type_param2, (u32, u8)>",
+            &["[i32 ; 2]", "# type_param2", "(u32 , u8)"],
+        );
         assert_type_params("::crate_name::module::widget_struct", &[]);
     }
 

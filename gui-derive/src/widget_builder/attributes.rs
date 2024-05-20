@@ -1,9 +1,9 @@
 use itertools::Itertools;
 use proc_macro2::{Ident, Span};
-use syn::{Attribute, Error, Expr, Lit, MetaNameValue, Path, Token};
 use syn::parse::Parse;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
+use syn::{Attribute, Error, Expr, Lit, MetaNameValue, Path, Token};
 
 use crate::widget_builder::interpolated_path::{InterpolatedPath, InterpolatedType};
 
@@ -38,7 +38,7 @@ pub fn parse_from_lit<T: Parse>(expr: Expr) -> syn::Result<T> {
 pub fn require_lit(expr: Expr) -> syn::Result<String> {
     if let Expr::Lit(lit) = &expr {
         if let Lit::Str(str) = &lit.lit {
-            return Ok(str.value())
+            return Ok(str.value());
         }
     }
     Err(Error::new(expr.span(), "Expected literal string"))
@@ -46,7 +46,10 @@ pub fn require_lit(expr: Expr) -> syn::Result<String> {
 
 pub fn require_func_path(path: Path) -> syn::Result<Path> {
     if path.leading_colon.is_some() {
-        Err(Error::new(path.leading_colon.span(), "Unexpected leading colon"))
+        Err(Error::new(
+            path.leading_colon.span(),
+            "Unexpected leading colon",
+        ))
     } else if path.segments.len() > 1 {
         Err(Error::new(path.segments.span(), "Expected a function name"))
     } else {
@@ -60,7 +63,10 @@ pub fn require_attribute<T>(
     name: &str,
 ) -> syn::Result<T> {
     match attribute {
-        None => Err(Error::new(span(), format!("Expected to find a {name} attribute of the form #[widget({name} = ...)]"))),
+        None => Err(Error::new(
+            span(),
+            format!("Expected to find a {name} attribute of the form #[widget({name} = ...)]"),
+        )),
         Some(a) => Ok(a),
     }
 }
@@ -68,7 +74,7 @@ pub fn require_attribute<T>(
 /// Returns whether the path contains a handler
 pub fn check_interpolated_path(path: &InterpolatedPath) -> syn::Result<bool> {
     if path.generics.is_none() {
-        return Ok(false)
+        return Ok(false);
     }
 
     let mut has_handler = false;
@@ -77,10 +83,13 @@ pub fn check_interpolated_path(path: &InterpolatedPath) -> syn::Result<bool> {
             match name.to_string().as_str() {
                 "handler" => {
                     has_handler = true;
-                },
-                "component" | "child" => {},
+                }
+                "component" | "child" => {}
                 name => {
-                    return Err(Error::new(Span::call_site(), format!("Unexpected attribute {name}")));
+                    return Err(Error::new(
+                        Span::call_site(),
+                        format!("Unexpected attribute {name}"),
+                    ));
                 }
             }
         }
@@ -109,7 +118,9 @@ impl StructAttributes {
             match name.to_string().as_str() {
                 "name" if widget_name.is_none() => widget_name = Some(require_lit(expr)?),
                 "type_path" if type_path.is_none() => type_path = Some(parse_from_lit(expr)?),
-                "init_path" if init_path.is_none() => init_path = Some(require_func_path(parse_from_lit(expr)?)?),
+                "init_path" if init_path.is_none() => {
+                    init_path = Some(require_func_path(parse_from_lit(expr)?)?)
+                }
                 _ => return Err(Error::new(name.span(), "Unexpected attribute")),
             }
         }

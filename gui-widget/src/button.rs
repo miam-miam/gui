@@ -206,7 +206,11 @@ impl<T: ToHandler<BaseHandler = C>, C: ToComponent + ButtonHandler<T>, W: Widget
 
 #[derive(Deserialize, WidgetBuilder, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-#[widget(name = "Button", type_path = "::gui::gui_widget::Button<#handler, #component, #child>", init_path = "new")]
+#[widget(
+name = "Button",
+type_path = "::gui::gui_widget::Button<#handler, #component, #child>",
+init_path = "new"
+)]
 pub struct ButtonBuilder {
     #[widget(property = "set_disabled")]
     disabled: Option<Var<bool>>,

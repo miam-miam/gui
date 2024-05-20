@@ -1,6 +1,6 @@
 use proc_macro2::Ident;
-use syn::{Error, Expr, Field, Path};
 use syn::spanned::Spanned;
+use syn::{Error, Expr, Field, Path};
 
 use crate::widget_builder::attributes::{get_attributes, parse_from_lit, require_func_path};
 
@@ -30,7 +30,6 @@ impl PartialEq for FieldAttributes {
     }
 }
 
-
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Extension {
     Unnecessary(Property),
@@ -49,7 +48,7 @@ impl Extension {
             Extension::Static(_) => "_static",
             Extension::Var(_) => "_var",
             Extension::Fluent => "_fluent",
-            Extension::Component => "_component"
+            Extension::Component => "_component",
         }
     }
 
@@ -71,11 +70,11 @@ pub enum Property {
 impl From<Extension> for Property {
     fn from(value: Extension) -> Self {
         match value {
-            Extension::Unnecessary(p) => { p }
-            Extension::Static(_) => { Property::Static }
-            Extension::Var(_) => { Property::Var }
-            Extension::Fluent => { Property::Fluent }
-            Extension::Component => { Property::Component }
+            Extension::Unnecessary(p) => p,
+            Extension::Static(_) => Property::Static,
+            Extension::Var(_) => Property::Var,
+            Extension::Fluent => Property::Fluent,
+            Extension::Component => Property::Component,
         }
     }
 }
@@ -85,7 +84,6 @@ impl From<&Extension> for Property {
         Self::from(*value)
     }
 }
-
 
 impl Property {
     pub fn is_static(self) -> bool {
@@ -99,15 +97,28 @@ impl Property {
 
 impl FieldAttributes {
     pub fn property_names(&self) -> Vec<(Extension, Option<&StaticDefault>, &Path)> {
-        match (&self.static_prop, &self.var_prop, &self.fluent, &self.component) {
+        match (
+            &self.static_prop,
+            &self.var_prop,
+            &self.fluent,
+            &self.component,
+        ) {
             (Some(static_prop), None, None, None) => {
-                return vec![(Extension::Unnecessary(Property::Static), self.static_default.as_ref(), static_prop)];
+                return vec![(
+                    Extension::Unnecessary(Property::Static),
+                    self.static_default.as_ref(),
+                    static_prop,
+                )];
             }
             (None, Some(var_prop), None, None) => {
                 return vec![(Extension::Unnecessary(Property::Var), None, var_prop)];
             }
             (Some(static_prop), Some(var_prop), _, _) if static_prop == var_prop => {
-                let mut result = vec![(Extension::Unnecessary(Property::Both), self.static_default.as_ref(), static_prop)];
+                let mut result = vec![(
+                    Extension::Unnecessary(Property::Both),
+                    self.static_default.as_ref(),
+                    static_prop,
+                )];
                 if let Some(fluent) = &self.fluent {
                     result.push((Extension::Fluent, None, fluent));
                 }
@@ -129,7 +140,11 @@ impl FieldAttributes {
         let contains_var_and_static = self.static_prop.is_some() && self.var_prop.is_some();
 
         if let Some(static_prop) = &self.static_prop {
-            result.push((Extension::Static(contains_var_and_static), self.static_default.as_ref(), static_prop));
+            result.push((
+                Extension::Static(contains_var_and_static),
+                self.static_default.as_ref(),
+                static_prop,
+            ));
         }
         if let Some(var_prop) = &self.var_prop {
             result.push((Extension::Var(contains_var_and_static), None, var_prop));
@@ -187,9 +202,13 @@ impl FieldAttributes {
                 "children" if children.is_none() => {
                     children = Some(require_func_path(parse_from_lit(expr)?)?)
                 }
-                "default" if static_default.is_none() => static_default = Some(StaticDefault::Expression(expr)),
+                "default" if static_default.is_none() => {
+                    static_default = Some(StaticDefault::Expression(expr))
+                }
                 "default_with" if static_default.is_none() => {
-                    static_default = Some(StaticDefault::Function(require_func_path(parse_from_lit(expr)?)?))
+                    static_default = Some(StaticDefault::Function(require_func_path(
+                        parse_from_lit(expr)?,
+                    )?))
                 }
                 _ => return Err(Error::new(name.span(), "Unexpected attribute")),
             }
@@ -202,7 +221,10 @@ impl FieldAttributes {
             || child.is_some()
             || children.is_some())
         {
-            Err(Error::new(field.ident.span(), "Expected at least one widget attribute on this field"))
+            Err(Error::new(
+                field.ident.span(),
+                "Expected at least one widget attribute on this field",
+            ))
         } else if static_default.is_some() && static_prop.is_none() {
             Err(Error::new(
                 field.ident.span(),

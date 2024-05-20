@@ -55,7 +55,11 @@ impl<C: ToComponent> Widget<C> for CompHolder {
 
 #[derive(Deserialize, WidgetBuilder, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
-#[widget(name = "CompHolder", type_path = "::gui::gui_widget::CompHolder", init_path = "new")]
+#[widget(
+name = "CompHolder",
+type_path = "::gui::gui_widget::CompHolder",
+init_path = "new"
+)]
 pub struct CompHolderBuilder {
     #[widget(component = "set_child")]
     pub component: Option<ComponentVar>,

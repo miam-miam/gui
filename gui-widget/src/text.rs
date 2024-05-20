@@ -112,7 +112,11 @@ impl<C: ToComponent> Widget<C> for Text {
 
 #[derive(Deserialize, WidgetBuilder, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
-#[widget(name = "Text", type_path = "::gui::gui_widget::Text", init_path = "new")]
+#[widget(
+name = "Text",
+type_path = "::gui::gui_widget::Text",
+init_path = "new"
+)]
 pub struct TextBuilder {
     #[widget(fluent = "set_text")]
     pub text: Option<Fluent>,
