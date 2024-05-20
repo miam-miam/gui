@@ -1,3 +1,8 @@
+use proc_macro2::{Ident, TokenStream};
+use quote::quote;
+use serde::Deserialize;
+
+use gui_core::{Point, SceneBuilder, ToComponent};
 use gui_core::glazier::kurbo::Size;
 use gui_core::layout::LayoutConstraints;
 use gui_core::parse::var::ComponentVar;
@@ -5,10 +10,7 @@ use gui_core::widget::{
     EventHandle, RenderHandle, ResizeHandle, RuntimeID, UpdateHandle, Widget, WidgetBuilder,
     WidgetEvent, WidgetID,
 };
-use gui_core::{Point, SceneBuilder, ToComponent};
-use proc_macro2::{Ident, TokenStream};
-use quote::quote;
-use serde::Deserialize;
+use gui_derive::WidgetBuilder;
 
 pub struct CompHolder {
     id: WidgetID,
@@ -51,55 +53,10 @@ impl<C: ToComponent> Widget<C> for CompHolder {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, Default)]
+#[derive(Deserialize, WidgetBuilder, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
+#[widget(name = "CompHolder", type_path = "::gui::gui_widget::CompHolder", init_path = "new")]
 pub struct CompHolderBuilder {
+    #[widget(component = "set_child")]
     pub component: Option<ComponentVar>,
-}
-
-#[typetag::deserialize(name = "CompHolder")]
-impl WidgetBuilder for CompHolderBuilder {
-    fn widget_type(
-        &self,
-        _handler: Option<&Ident>,
-        _comp_struct: &Ident,
-        _child: Option<&TokenStream>,
-        stream: &mut TokenStream,
-    ) {
-        stream.extend(quote!(::gui::gui_widget::CompHolder));
-    }
-
-    fn name(&self) -> &'static str {
-        "CompHolder"
-    }
-    fn combine(&mut self, _rhs: &dyn WidgetBuilder) {}
-
-    fn create_widget(&self, id: WidgetID, stream: &mut TokenStream) {
-        stream.extend(quote! {
-            ::gui::gui_widget::CompHolder::new(#id)
-        });
-    }
-
-    #[allow(clippy::single_match)]
-    fn on_property_update(
-        &self,
-        property: &'static str,
-        widget: &Ident,
-        value: &Ident,
-        handle: &Ident,
-        stream: &mut TokenStream,
-    ) {
-        match property {
-            "component" => stream.extend(quote! {#widget.set_child(#value, #handle);}),
-            _ => {}
-        }
-    }
-
-    fn get_components(&self) -> Vec<(&'static str, ComponentVar)> {
-        let mut result = vec![];
-        if let Some(v) = &self.component {
-            result.push(("component", v.clone()));
-        }
-        result
-    }
 }
