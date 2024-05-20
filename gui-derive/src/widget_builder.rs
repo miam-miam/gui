@@ -129,8 +129,8 @@ impl WidgetBuilder {
             .filter_map(|f| f.children.as_ref().map(|_| f.field.ident.as_ref().unwrap()))
             .map(|property| {
                 quote! {
-                    if !self. #property . is_empty() {
-                        result.push(Children::Many(self . #property .iter_mut().collect()));
+                    if let Some(c) = &mut self. #property {
+                        result.push(Children::Many(c.iter_mut().collect()));
                     }
                 }
             })
@@ -151,8 +151,8 @@ impl WidgetBuilder {
 
         let children_ref: TokenStream = self.fields.iter().filter_map(|f| f.children.as_ref().map(|c| (f.field.ident.as_ref().unwrap(), c))).map(|(property, path)| {
             quote! {
-                if !self. #property . is_empty() {
-                    result.push(( quote!( . #path () ), Children::Many(self . #property .iter().collect())));
+                if let Some(c) = &self. #property {
+                    result.push(( quote!( . #path () ), Children::Many(c.iter().collect())));
                 }
             }
         }).collect();
@@ -183,14 +183,14 @@ impl WidgetBuilder {
                 let mut result = vec![];
                 #children_mut
                 #child_mut
-                result
+                Some(result)
             }
 
             fn widgets(&self) -> Option<Vec<(TokenStream, WidgetChildren)>> {
                 let mut result = vec![];
                 #children_ref
                 #child_ref
-                result
+                Some(result)
             }
         })
     }
@@ -338,6 +338,7 @@ impl ToTokens for WidgetBuilder {
         let type_path = &self.attributes.type_path;
         let mut erased_type_path = self.attributes.type_path.clone();
         if let Some(generics) = &mut erased_type_path.generics {
+            erased_type_path.segments.push_punct(Default::default());
             generics.args.iter_mut().for_each(InterpolatedType::erase_interpolated)
         }
         let init_path = &self.attributes.init_path;

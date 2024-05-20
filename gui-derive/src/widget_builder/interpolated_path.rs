@@ -31,9 +31,9 @@ impl Parse for InterpolatedPath {
 
 impl ToTokens for InterpolatedPath {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let segments = self.segments.iter();
+        let segments = &self.segments;
         let generics = &self.generics;
-        tokens.extend(quote!(:: #(#segments)::* #generics ))
+        tokens.extend(quote!(:: #segments #generics ))
     }
 }
 
@@ -56,8 +56,8 @@ impl Parse for InterpolatedGenerics {
 
 impl ToTokens for InterpolatedGenerics {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let args = self.args.iter();
-        tokens.extend(quote!(< #(#args),* >))
+        let args = &self.args;
+        tokens.extend(quote!(< #args >))
     }
 }
 

@@ -3,6 +3,10 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
 
+use gui_core::{
+    Children, LayoutConstraints, MutWidgetChildren, Point, SceneBuilder, Size, ToComponent, Var,
+    WidgetChildren,
+};
 use gui_core::glazier::kurbo::Rect;
 use gui_core::parse::var::Name;
 use gui_core::parse::WidgetDeclaration;
@@ -10,10 +14,7 @@ use gui_core::widget::{
     EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
     WidgetID,
 };
-use gui_core::{
-    Children, LayoutConstraints, MutWidgetChildren, Point, SceneBuilder, Size, ToComponent, Var,
-    WidgetChildren,
-};
+use gui_derive::WidgetBuilder;
 
 enum Axis {
     Horizontal,
@@ -148,182 +149,22 @@ impl<C: ToComponent, W: Widget<C>> Widget<C> for HVStack<W> {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, WidgetBuilder, Debug, Clone)]
 #[serde(deny_unknown_fields)]
+#[widget(name = "HStack", type_path = "::gui::gui_widget::HVStack<#child>", init_path = "new_horizontal")]
 pub struct HStackBuilder {
+    #[widget(property = "set_spacing", default = 0_10f32)]
     spacing: Option<Var<f32>>,
-    #[serde(default)]
-    children: Vec<WidgetDeclaration>,
+    #[widget(children = "widgets")]
+    children: Option<Vec<WidgetDeclaration>>,
 }
 
-#[typetag::deserialize(name = "HStack")]
-impl WidgetBuilder for HStackBuilder {
-    fn widget_type(
-        &self,
-        _handler: Option<&Ident>,
-        _comp_struct: &Ident,
-        children: Option<&TokenStream>,
-        stream: &mut TokenStream,
-    ) {
-        stream.extend(quote!(::gui::gui_widget::HVStack<#children>));
-    }
-
-    fn name(&self) -> &'static str {
-        "HStack"
-    }
-    fn combine(&mut self, rhs: &dyn WidgetBuilder) {
-        if let Some(other) = rhs.as_any().downcast_ref::<Self>() {
-            if let Some(s) = &other.spacing {
-                self.spacing.get_or_insert_with(|| s.clone());
-            }
-        }
-    }
-
-    fn create_widget(&self, id: WidgetID, stream: &mut TokenStream) {
-        stream.extend(quote! {
-            ::gui::gui_widget::HVStack::new_horizontal(#id)
-        });
-    }
-
-    fn on_property_update(
-        &self,
-        property: &'static str,
-        widget: &Ident,
-        value: &Ident,
-        handle: &Ident,
-        stream: &mut TokenStream,
-    ) {
-        #[allow(clippy::single_match)]
-        match property {
-            "spacing" => stream.extend(quote! {#widget.set_spacing(#value, #handle);}),
-            _ => {}
-        }
-    }
-
-    fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
-        let mut array = vec![];
-        match &self.spacing {
-            Some(Var::Value(v)) => array.push(("spacing", v.to_token_stream())),
-            None => array.push(("spacing", 0_10f32.to_token_stream())),
-            _ => {}
-        };
-        array
-    }
-
-    fn get_vars(&self) -> Vec<(&'static str, Name)> {
-        let mut array = vec![];
-        if let Some(Var::Variable(v)) = &self.spacing {
-            array.push(("spacing", v.clone()));
-        }
-        array
-    }
-
-    fn get_widgets(&mut self) -> Option<Vec<MutWidgetChildren>> {
-        let mut array = vec![];
-        if !self.children.is_empty() {
-            array.push(Children::Many(self.children.iter_mut().collect()));
-        }
-        Some(array)
-    }
-
-    fn widgets(&self) -> Option<Vec<(TokenStream, WidgetChildren)>> {
-        let mut array = vec![];
-        if !self.children.is_empty() {
-            array.push((
-                quote!(.widgets()),
-                Children::Many(self.children.iter().collect()),
-            ));
-        }
-        Some(array)
-    }
-}
-
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, WidgetBuilder, Debug, Clone)]
 #[serde(deny_unknown_fields)]
+#[widget(name = "VStack", type_path = "::gui::gui_widget::HVStack<#child>", init_path = "new_vertical")]
 pub struct VStackBuilder {
+    #[widget(property = "set_spacing", default = 0_10f32)]
     spacing: Option<Var<f32>>,
-    #[serde(default)]
-    children: Vec<WidgetDeclaration>,
-}
-
-#[typetag::deserialize(name = "VStack")]
-impl WidgetBuilder for VStackBuilder {
-    fn widget_type(
-        &self,
-        _handler: Option<&Ident>,
-        _comp_struct: &Ident,
-        children: Option<&TokenStream>,
-        stream: &mut TokenStream,
-    ) {
-        stream.extend(quote!(::gui::gui_widget::HVStack<#children>));
-    }
-
-    fn name(&self) -> &'static str {
-        "VStack"
-    }
-    fn combine(&mut self, rhs: &dyn WidgetBuilder) {
-        if let Some(other) = rhs.as_any().downcast_ref::<Self>() {
-            if let Some(s) = &other.spacing {
-                self.spacing.get_or_insert_with(|| s.clone());
-            }
-        }
-    }
-
-    fn create_widget(&self, id: WidgetID, stream: &mut TokenStream) {
-        stream.extend(quote! {
-            ::gui::gui_widget::HVStack::new_vertical(#id)
-        });
-    }
-
-    fn on_property_update(
-        &self,
-        property: &'static str,
-        widget: &Ident,
-        value: &Ident,
-        handle: &Ident,
-        stream: &mut TokenStream,
-    ) {
-        #[allow(clippy::single_match)]
-        match property {
-            "spacing" => stream.extend(quote! {#widget.set_spacing(#value, #handle);}),
-            _ => {}
-        }
-    }
-
-    fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
-        let mut array = vec![];
-        match &self.spacing {
-            Some(Var::Value(v)) => array.push(("spacing", v.to_token_stream())),
-            None => array.push(("spacing", 0_10f32.to_token_stream())),
-            _ => {}
-        };
-        array
-    }
-
-    fn get_vars(&self) -> Vec<(&'static str, Name)> {
-        let mut array = vec![];
-        if let Some(Var::Variable(v)) = &self.spacing {
-            array.push(("spacing", v.clone()));
-        }
-        array
-    }
-
-    fn get_widgets(&mut self) -> Option<Vec<MutWidgetChildren>> {
-        let mut array = vec![];
-        if !self.children.is_empty() {
-            array.push(Children::Many(self.children.iter_mut().collect()));
-        }
-        Some(array)
-    }
-
-    fn widgets(&self) -> Option<Vec<(TokenStream, WidgetChildren)>> {
-        let mut array = vec![];
-        if !self.children.is_empty() {
-            array.push((
-                quote!(.widgets()),
-                Children::Many(self.children.iter().collect()),
-            ));
-        }
-        Some(array)
-    }
+    #[widget(children = "widgets")]
+    children: Option<Vec<WidgetDeclaration>>,
 }
