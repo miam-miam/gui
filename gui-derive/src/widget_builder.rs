@@ -250,7 +250,9 @@ impl WidgetBuilder {
             .map(|(property, ext, ..)| {
                 let property_name = ext.form_prop_name(property);
                 quote! {
-                    result.extend(self . #property .iter().map(|f| ( #property_name, f.clone() )));
+                    if let Some(f) = &self. #property {
+                        result.push((#property_name, f.clone()));
+                    }
                 }
             })
             .collect();
