@@ -4,14 +4,13 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
 
-use gui_core::{Colour, FontContext, SceneBuilder, ToComponent, Var};
 use gui_core::common::text;
 use gui_core::common::text::ParleyBrush;
 use gui_core::glazier::kurbo::Size;
 use gui_core::layout::LayoutConstraints;
 use gui_core::parley::layout::{Alignment, Layout};
-use gui_core::parley::LayoutContext;
 use gui_core::parley::style::{FontWeight, StyleProperty};
+use gui_core::parley::LayoutContext;
 use gui_core::parse::fluent::Fluent;
 use gui_core::parse::var::Name;
 use gui_core::vello::kurbo::Affine;
@@ -20,6 +19,7 @@ use gui_core::widget::{
     EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
     WidgetID,
 };
+use gui_core::{Colour, FontContext, SceneBuilder, ToComponent, Var};
 use gui_derive::WidgetBuilder;
 
 pub struct Text {
@@ -113,9 +113,9 @@ impl<C: ToComponent> Widget<C> for Text {
 #[derive(Deserialize, WidgetBuilder, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
 #[widget(
-name = "Text",
-type_path = "::gui::gui_widget::Text",
-init_path = "new"
+    name = "Text",
+    type_path = "::gui::gui_widget::Text",
+    init_path = "new"
 )]
 pub struct TextBuilder {
     #[widget(fluent = "set_text")]

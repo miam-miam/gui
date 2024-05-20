@@ -10,12 +10,12 @@ use quote::{quote, ToTokens};
 use vello::kurbo::Size;
 use vello::SceneBuilder;
 
-use crate::{MutWidgetChildren, WidgetChildren};
 pub use crate::handles::{EventHandle, Handle, RenderHandle, ResizeHandle, UpdateHandle};
 use crate::layout::LayoutConstraints;
 use crate::parse::fluent::Fluent;
 use crate::parse::var::{ComponentVar, Name};
 use crate::ToComponent;
+use crate::{MutWidgetChildren, WidgetChildren};
 
 /// A unique ID to reference a component, each instantiation increments the ID by 1.
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Default, Hash)]
@@ -159,7 +159,8 @@ pub trait WidgetBuilder: std::fmt::Debug + AsAny + DynClone {
         _value: &Ident,
         _handle: &Ident,
         _stream: &mut TokenStream,
-    ) {}
+    ) {
+    }
     /// The value of a given static and the property it relates to.
     fn get_statics(&self) -> Vec<(&'static str, TokenStream)> {
         vec![]

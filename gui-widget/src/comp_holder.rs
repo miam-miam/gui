@@ -2,7 +2,6 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use serde::Deserialize;
 
-use gui_core::{Point, SceneBuilder, ToComponent};
 use gui_core::glazier::kurbo::Size;
 use gui_core::layout::LayoutConstraints;
 use gui_core::parse::var::ComponentVar;
@@ -10,6 +9,7 @@ use gui_core::widget::{
     EventHandle, RenderHandle, ResizeHandle, RuntimeID, UpdateHandle, Widget, WidgetBuilder,
     WidgetEvent, WidgetID,
 };
+use gui_core::{Point, SceneBuilder, ToComponent};
 use gui_derive::WidgetBuilder;
 
 pub struct CompHolder {
@@ -56,9 +56,9 @@ impl<C: ToComponent> Widget<C> for CompHolder {
 #[derive(Deserialize, WidgetBuilder, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
 #[widget(
-name = "CompHolder",
-type_path = "::gui::gui_widget::CompHolder",
-init_path = "new"
+    name = "CompHolder",
+    type_path = "::gui::gui_widget::CompHolder",
+    init_path = "new"
 )]
 pub struct CompHolderBuilder {
     #[widget(component = "set_child")]

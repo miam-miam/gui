@@ -5,7 +5,6 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use serde::Deserialize;
 
-use gui_core::{SceneBuilder, ToComponent, Var};
 use gui_core::glazier::kurbo::Size;
 use gui_core::layout::LayoutConstraints;
 use gui_core::parse::var::Name;
@@ -15,6 +14,7 @@ use gui_core::widget::{
     EventHandle, RenderHandle, ResizeHandle, UpdateHandle, Widget, WidgetBuilder, WidgetEvent,
     WidgetID,
 };
+use gui_core::{SceneBuilder, ToComponent, Var};
 use gui_derive::WidgetBuilder;
 
 #[derive(Default)]
@@ -73,9 +73,9 @@ impl<C: ToComponent> Widget<C> for ImageWidget {
 #[derive(Deserialize, WidgetBuilder, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
 #[widget(
-name = "Image",
-type_path = "::gui::gui_widget::ImageWidget",
-init_path = "new"
+    name = "Image",
+    type_path = "::gui::gui_widget::ImageWidget",
+    init_path = "new"
 )]
 pub struct ImageBuilder {
     #[widget(static_only = "set_image_from_file", var_only = "set_image")]
